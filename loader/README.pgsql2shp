@@ -1,0 +1,54 @@
+pgsql2shp - Convert PostGIS Table to Shape
+~~~~~~~~~   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+VERSION: 0.7 (2002/05/04)
+
+MORE INFORMATION: http://postgis.refractions.net
+
+INTRODUCTION:
+This program takes PostGIS spatial tables and outputs ESRI
+shape files.
+
+This application uses functionality from shapelib 1.2.9
+by Frank Warmerdam <warmerda@gdal.velocet.ca> to write to ESRI
+Shape files.
+
+
+INSTALLATION:
+
+To build pgsql2shp just run 'make'.
+Copy the binary wherever you like. :)
+
+
+USAGE:
+
+pgsql2shp [<options>] <database> <table> 
+
+The <database> is the name of the database to connect to.
+The <table> is the table to read spatial data from.
+
+Options:
+	-d: set the dump file to be 3 dimensional, the default is 2d only.
+
+        -f <filename>: Use this option to specify the specific name of the 
+		file to create. If not specified the file will be named after
+		the table you dumped with shpafile extensions on it.
+
+        -h <host>: allows you to specify what machine the  database is on.
+		The default machine if not specifid is the localhost.
+
+        -p <port>: allows you to specify a which database port to connect to.
+		The default if not given is port 5432.
+
+        -P <password>: Connect to the database with the specified password.
+
+        -u <user>: Connect to the database as the specified user.
+
+	-g <geometry_column> Specify the geometry column to be exported.
+
+
+EXAMPLES:
+
+  pgsql2shp -f myfile -p 5555 my_db roads_table
+
+
