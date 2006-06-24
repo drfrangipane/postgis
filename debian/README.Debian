@@ -1,0 +1,33 @@
+
+These are the PostGIS packages for Debian.  PostGIS is broken into three
+packages for Debian, they are:
+
+postgresql-8.1-postgis
+  This is the PostGIS module for the PostgreSQL server itself.  It contains
+  the library which is loaded by the server (liblwgeom.so.1.1), the SQL script
+  for creating the SQL functions in a given database (lwpostgis.sql), and an 
+  SQL script which contains the OpenGIS Spatial References 
+  (spatial_ref_sys.sql).
+
+  NOTE: To install PostGIS you must run the lwpostgis.sql script in each
+  PostgreSQL database you want PostGIS in as the PostgreSQL superuser
+  (generally the 'postgres' user)!  The Debian utilities do not do
+  this automatically as they can't be sure what state your database is in,
+  what database(s) you would want PostGIS installed in, or how to 
+  authenticate as the PostgreSQL superuser to your database.  It is likely
+  that a PostGIS user would also want the Spatial References installed and
+  so it is recommended that the spatial_ref_sys.sql also be run in each
+  database you have PostGIS installed in.
+
+  These scripts can be found in the /usr/share/postgresql-8.1/postgis
+  directory.
+
+postgis
+  This package contains the user-oriented PostGIS utilities for loading
+  data into and pulling data out of a PostGIS-enabled PostgreSQL database.
+  These utilities are: pgsql2shp and shp2pgsql.  These utilities can be
+  installed and used separately from the server module on client machines.
+
+libpostgis-java
+  This package contains the Java library for using JDBC with a PostGIS-
+  enabled PostgreSQL server.
