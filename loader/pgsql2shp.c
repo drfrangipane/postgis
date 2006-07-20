@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: pgsql2shp.c,v 1.83 2006/02/03 20:53:36 strk Exp $
+ * $Id: pgsql2shp.c,v 1.85 2006/06/16 14:12:16 strk Exp $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -19,7 +19,7 @@
  **********************************************************************/
 
 static char rcsid[] =
-  "$Id: pgsql2shp.c,v 1.83 2006/02/03 20:53:36 strk Exp $";
+  "$Id: pgsql2shp.c,v 1.85 2006/06/16 14:12:16 strk Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +57,10 @@ static char rcsid[] =
 
 /* Define this to use HEX encoding instead of bytea encoding */
 #define HEXWKB 1
+
+/* Maximum DBF field width (according to ARCGIS) */
+#define MAX_DBF_FIELD_SIZE 255
+
 
 /*typedef unsigned long int uint32;*/
 typedef uint32_t uint32;
@@ -149,9 +153,10 @@ byte * HexDecode(const char *hex);
 #define ZMFLAG(x) (((x)&((WKBZOFFSET)+(WKBMOFFSET)))>>30)
 
 
-static void exit_nicely(PGconn *conn){
+static void exit_nicely(PGconn *conn, int code)
+{
 	PQfinish(conn);
-	exit(1);
+	exit(code);
 }
 
 int
@@ -210,7 +215,7 @@ main(int ARGC, char **ARGV)
 	conn = PQconnectdb("");
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		printf( "%s", PQerrorMessage(conn));
-		exit_nicely(conn);
+		exit_nicely(conn, 1);
 	}
 
 	/* Create temporary table for user query */
@@ -228,7 +233,7 @@ main(int ARGC, char **ARGV)
 
 	/* Initialize shapefile and database infos */
 	fprintf(stdout, "Initializing... "); fflush(stdout);
-	if ( ! initialize() ) exit_nicely(conn);
+	if ( ! initialize() ) exit_nicely(conn, 1);
 	fprintf(stdout, "Done (postgis major version: %d).\n",
 		pgis_major_version); 
 
@@ -248,7 +253,7 @@ main(int ARGC, char **ARGV)
 	res=PQexec(conn, "BEGIN");
 	if ( ! res || PQresultStatus(res) != PGRES_COMMAND_OK ) {
 		printf( "%s", PQerrorMessage(conn));
-		exit_nicely(conn);
+		exit_nicely(conn, 1);
 	}
 	PQclear(res);
 
@@ -271,7 +276,7 @@ main(int ARGC, char **ARGV)
 	free(query);
 	if ( ! res || PQresultStatus(res) != PGRES_COMMAND_OK ) {
 		printf( "MainScanQuery: %s", PQerrorMessage(conn));
-		exit_nicely(conn);
+		exit_nicely(conn, 1);
 	}
 	PQclear(res);
 
@@ -295,7 +300,7 @@ main(int ARGC, char **ARGV)
 		if ( ! res || PQresultStatus(res) != PGRES_TUPLES_OK ) {
 			printf( "RecordFetch: %s",
 				PQerrorMessage(conn));
-			exit_nicely(conn);
+			exit_nicely(conn, 1);
 		}
 
 		/* No more rows, break the loop */
@@ -307,7 +312,7 @@ main(int ARGC, char **ARGV)
 		for(i=0; i<PQntuples(res); i++)
 		{
 			/* Add record in all output files */
-			if ( ! addRecord(res, i, row) ) exit_nicely(conn);
+			if ( ! addRecord(res, i, row) ) exit_nicely(conn, 1);
 			row++; 
 		}
 
@@ -323,13 +328,13 @@ main(int ARGC, char **ARGV)
 
 	if (dbf) DBFClose(dbf);
 	if (shp) SHPClose(shp);
-	exit_nicely(conn);
 
 
 #ifdef DEBUG
 	fclose(debug);
 #endif	 /* DEBUG */
 
+	exit_nicely(conn, 0);
 	return 0;
 }
 
@@ -2091,7 +2096,7 @@ getTableOID(char *schema, char *table)
 	free(query);
 	if ( ! res3 || PQresultStatus(res3) != PGRES_TUPLES_OK ) {
 		printf( "TableOID: %s", PQerrorMessage(conn));
-		exit_nicely(conn);
+		exit_nicely(conn, 1);
 	}
 	if(PQntuples(res3) == 1 ){
 		ret = strdup(PQgetvalue(res3, 0, 0));
@@ -2772,12 +2777,22 @@ initialize(void)
 				/* might 0 be a good size ? */
 			}
 		}
+
+		if ( size > MAX_DBF_FIELD_SIZE )
+		{
+			fprintf(stderr, "Warning: values of field '%s' "
+				"exceeding maximum dbf field width (%d) "
+				"will be truncated.\n",
+				fname, MAX_DBF_FIELD_SIZE);
+			size = MAX_DBF_FIELD_SIZE;
+		}
+
 /*printf( "FIELD_NAME: %s, SIZE: %d\n", field_name, size); */
-		
+
 		/* generic type (use string representation) */
 		if(DBFAddField(dbf, field_name, FTString, size, 0) == -1)
 		{
-			printf( "Error - String field could not "
+			fprintf(stderr, "Error - String field could not "
 					"be created.\n");
 			return 0;
 		}
@@ -3327,6 +3342,13 @@ goodDBFValue(const char *in, char fieldType)
 
 /**********************************************************************
  * $Log: pgsql2shp.c,v $
+ * Revision 1.85  2006/06/16 14:12:16  strk
+ *         - BUGFIX in pgsql2shp successful return code.
+ *         - BUGFIX in shp2pgsql handling of MultiLine WKT.
+ *
+ * Revision 1.84  2006/04/18 14:09:28  strk
+ * Limited text field size to 255 (bug #84)  [will eventually provide a switch to support wider fields ]
+ *
  * Revision 1.83  2006/02/03 20:53:36  strk
  * Swapped stdint.h (unavailable on Solaris9) with inttypes.h
  *

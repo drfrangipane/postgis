@@ -1,3 +1,15 @@
+/**********************************************************************
+ * $Id: ptarray.c,v 1.31 2006/05/30 08:38:58 strk Exp $
+ *
+ * PostGIS - Spatial Types for PostgreSQL
+ * http://postgis.refractions.net
+ * Copyright 2001-2006 Refractions Research Inc.
+ *
+ * This is free software; you can redistribute and/or modify it under
+ * the terms of the GNU General Public Licence. See the COPYING file.
+ * 
+ **********************************************************************/
+
 #include <stdio.h>
 #include <string.h>
 

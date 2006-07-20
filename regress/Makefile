@@ -2,7 +2,31 @@ TMPDIR?=/tmp
 
 include ../Makefile.config
 
-TESTS=regress regress_index lwgeom_regress regress_lrs removepoint setpoint simplify snaptogrid affine
+TESTS = \
+	loader/Point \
+	loader/PointM \
+	loader/PointZ \
+	loader/MultiPoint \
+	loader/MultiPointM \
+	loader/MultiPointZ \
+	loader/Arc \
+	loader/ArcM \
+	loader/ArcZ \
+	loader/Polygon \
+	loader/PolygonM \
+	loader/PolygonZ \
+	regress \
+	regress_index \
+	lwgeom_regress \
+	regress_lrs \
+	removepoint \
+	setpoint \
+	simplify \
+	snaptogrid \
+	affine \
+	wkt \
+	measures \
+	long_xact
 
 ifeq ($(USE_GEOS),1)
 	TESTS += regress_ogc regress_bdpoly
@@ -14,8 +38,8 @@ endif
 
 all: test 
 
-test: lwpostgis.sql ../lwgeom/liblwgeom.so
-	@./run_test $(TESTS)
+test check: lwpostgis.sql ../lwgeom/liblwgeom.so
+	@USE_VERSION="$(USE_VERSION)" ./run_test $(TESTS)
 
 lwpostgis.sql: ../lwgeom/lwpostgis.sql.in 
 	$(MAKE) -C ../lwgeom ../regress/lwpostgis.sql

@@ -43,12 +43,12 @@ ifeq ($(USE_GEOS),1)
 		CSTAR_FLAGS += -I$(GEOS_DIR)/include 
 		GEOS_WRAPPER=
 		JTS_OBJ=lwgeom_geos_c.o
-		SHLIB_LINK += -L$(GEOS_DIR)/lib -lgeos_c
+		SHLIB_LINK += $(GEOS_LDFLAGS) -lgeos_c
 	else
 		CXXFLAGS += -I$(GEOS_DIR)/include 
 		GEOS_WRAPPER=lwgeom_geos_wrapper.o
 		JTS_OBJ=lwgeom_geos.o
-		SHLIB_LINK += -lstdc++ -L$(GEOS_DIR)/lib -lgeos
+		SHLIB_LINK += -lstdc++ $(GEOS_LDFLAGS) -lgeos
 		GEOS_RULES=detect_geos_version
 	endif
 endif
@@ -63,7 +63,7 @@ endif
 
 ifeq ($(USE_PROJ),1)
 	override CFLAGS += -I$(PROJ_DIR)/include -DUSE_PROJ 
-	SHLIB_LINK += -L$(PROJ_DIR)/lib -lproj
+	SHLIB_LINK += -L$(PROJ_LIBDIR) -lproj
 endif
 
 override CFLAGS += $(PGBEINCLUDES) -DAUTOCACHE_BBOX=$(AUTOCACHE_BBOX) 
@@ -84,7 +84,7 @@ override CXXFLAGS += $(CSTAR_FLAGS)
 
 SA_OBJS=measures.o box2d.o ptarray.o lwgeom_api.o lwgeom.o lwpoint.o lwline.o lwpoly.o lwmpoint.o lwmline.o lwmpoly.o lwcollection.o $(GEOS_WRAPPER) $(JTS_WRAPPER) wktunparse.o lwgparse.o wktparse.tab.o lex.yy.o vsprintf.o
 
-OBJS=$(SA_OBJS) liblwgeom.o lwgeom_pg.o lwgeom_debug.o lwgeom_spheroid.o lwgeom_ogc.o lwgeom_functions_analytic.o $(JTS_OBJ) lwgeom_inout.o lwgeom_estimate.o lwgeom_functions_basic.o lwgeom_gist.o lwgeom_btree.o lwgeom_transform.o stringBuffer.o lwgeom_box.o lwgeom_box3d.o lwgeom_box2dfloat4.o lwgeom_chip.o lwgeom_svg.o lwgeom_gml.o lwgeom_triggers.o lwgeom_dump.o lwgeom_functions_lrs.o
+OBJS=$(SA_OBJS) liblwgeom.o lwgeom_pg.o lwgeom_debug.o lwgeom_spheroid.o lwgeom_ogc.o lwgeom_functions_analytic.o $(JTS_OBJ) lwgeom_inout.o lwgeom_estimate.o lwgeom_functions_basic.o lwgeom_gist.o lwgeom_btree.o lwgeom_transform.o stringBuffer.o lwgeom_box.o lwgeom_box3d.o lwgeom_box2dfloat4.o lwgeom_chip.o lwgeom_svg.o lwgeom_gml.o lwgeom_triggers.o lwgeom_dump.o lwgeom_functions_lrs.o long_xact.o
 
 #OTHERS=y.output lex.yy.c wktparse.tab.c wktparse.tab.h lwpostgis.sql
 OTHERS=y.output postgis_geos_version.h
@@ -95,7 +95,7 @@ enable_shared=yes
 include Makefile.shlib
 
 MODULE_FILENAME = $(LPATH)/$(shlib)
-REGRESS_MODULE_FILENAME = $(shell pwd)/$(shlib)
+REGRESS_MODULE_FILENAME = $(shell $(PWDREGRESS))/$(shlib)
 
 #---------------------------------------------------------------
 # Makefile targets
@@ -128,11 +128,11 @@ lwgeom_functions_basic.o: lwgeom_functions_basic.c profile.h
 ../lwpostgis_upgrade.sql: ../lwpostgis.sql ../utils/postgis_proc_upgrade.pl
 	$(PERL) ../utils/postgis_proc_upgrade.pl ../lwpostgis.sql > ../lwpostgis_upgrade.sql
 
-../lwpostgis.sql: lwpostgis.sql.in
+../lwpostgis.sql: lwpostgis.sql.in long_xact.sql
 	cpp -P -traditional-cpp -DUSE_VERSION=$(USE_VERSION) $< | sed -e 's:@MODULE_FILENAME@:$(MODULE_FILENAME):g;s:@POSTGIS_VERSION@:$(POSTGIS_VERSION):g;s:@POSTGIS_SCRIPTS_VERSION@:$(SCRIPTS_VERSION):g;s/@POSTGIS_BUILD_DATE@/$(POSTGIS_BUILD_DATE)/g' | grep -v '^#' > $@
 
-../regress/lwpostgis.sql: lwpostgis.sql.in
-	cpp -P -traditional-cpp -DUSE_VERSION=$(USE_VERSION) $< | sed -e 's:@MODULE_FILENAME@:$(REGRESS_MODULE_FILENAME):g;s:@POSTGIS_VERSION@:$(POSTGIS_VERSION):g;s:@POSTGIS_SCRIPTS_VERSION@:$(SCRIPTS_VERSION):g;s/@POSTGIS_BUILD_DATE@/$(POSTGIS_BUILD_DATE)/g' | grep -v '^#' > $@
+../regress/lwpostgis.sql: lwpostgis.sql.in long_xact.sql
+	cpp -P -traditional-cpp -DUSE_VERSION=$(USE_VERSION) $< | sed -e 's#@MODULE_FILENAME@#$(REGRESS_MODULE_FILENAME)#g;s#@POSTGIS_VERSION@#$(POSTGIS_VERSION)#g;s#@POSTGIS_SCRIPTS_VERSION@#$(SCRIPTS_VERSION)#g;s/@POSTGIS_BUILD_DATE@/$(POSTGIS_BUILD_DATE)/g' | grep -v '^#' > $@
 
 install: all install-lib-shared install-lwgeom-scripts
 

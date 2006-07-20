@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: shp2pgsql.c,v 1.106 2006/01/16 10:42:58 strk Exp $
+ * $Id: shp2pgsql.c,v 1.108 2006/06/16 14:12:17 strk Exp $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -137,7 +137,7 @@ static void print_wkb_int(int val);
 static void print_wkb_double(double val);
 
 static char rcsid[] =
-  "$Id: shp2pgsql.c,v 1.106 2006/01/16 10:42:58 strk Exp $";
+  "$Id: shp2pgsql.c,v 1.108 2006/06/16 14:12:17 strk Exp $";
 
 void *safe_malloc(size_t size)
 {
@@ -862,7 +862,7 @@ InsertLineStringWKT(int id)
 
 		for ( vi=vs; vi<ve; vi++)
 		{
-			if ( vi ) printf(",");
+			if ( vi > vs ) printf(",");
 			printf("%.15g %.15g",
 				obj->padfX[vi],
 				obj->padfY[vi]);
@@ -1680,7 +1680,7 @@ utf8 (const char *fromcode, char *inputbuf)
 		fprintf(stderr, "utf8: malloc: %s\n", strerror (errno));
 		return NULL;
 	}
-	bzero (outputbuf, outbytesleft);
+	memset (outputbuf, 0, outbytesleft);
 	outputptr = outputbuf;
 
 	if (-1==iconv(cd, &inputbuf, &inbytesleft, &outputptr, &outbytesleft))
@@ -1698,6 +1698,13 @@ utf8 (const char *fromcode, char *inputbuf)
 
 /**********************************************************************
  * $Log: shp2pgsql.c,v $
+ * Revision 1.108  2006/06/16 14:12:17  strk
+ *         - BUGFIX in pgsql2shp successful return code.
+ *         - BUGFIX in shp2pgsql handling of MultiLine WKT.
+ *
+ * Revision 1.107  2006/04/18 09:16:26  strk
+ * Substituted bzero() use with memset()
+ *
  * Revision 1.106  2006/01/16 10:42:58  strk
  * Added support for Bool and Date DBF<=>PGIS mapping
  *

@@ -1,5 +1,5 @@
 /*
- * Test.java
+ * Point.java
  * 
  * PostGIS extension for PostgreSQL JDBC driver - geometry model
  * 
@@ -21,7 +21,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: Point.java,v 1.11 2005/11/16 13:04:30 mschaber Exp $
+ * $Id: Point.java,v 1.12 2006/05/10 10:47:35 mschaber Exp $
  */
 
 package org.postgis;

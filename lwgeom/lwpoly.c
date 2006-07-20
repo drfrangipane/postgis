@@ -1,3 +1,15 @@
+/**********************************************************************
+ * $Id: lwpoly.c,v 1.23 2006/05/30 08:38:58 strk Exp $
+ *
+ * PostGIS - Spatial Types for PostgreSQL
+ * http://postgis.refractions.net
+ * Copyright 2001-2006 Refractions Research Inc.
+ *
+ * This is free software; you can redistribute and/or modify it under
+ * the terms of the GNU General Public Licence. See the COPYING file.
+ * 
+ **********************************************************************/
+
 /* basic LWPOLY manipulation */
 
 #include <stdio.h>
@@ -84,8 +96,7 @@ lwpoly_deserialize(uchar *serialized_form)
 
 	if ( TYPE_GETTYPE(type) != POLYGONTYPE)
 	{
-		lwerror("lwpoly_deserialize called with arg of type %d",
-			lwgeom_getType(type));
+		lwerror("lwpoly_deserialize: attempt to deserialize a poly which is really a %s", lwgeom_typename(type));
 		return NULL;
 	}
 

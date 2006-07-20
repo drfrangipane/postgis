@@ -20,7 +20,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsGeometry.java,v 1.10 2006/02/06 20:04:33 mschaber Exp $
+ * $Id: JtsGeometry.java,v 1.11 2006/05/09 13:06:56 mschaber Exp $
  */
 
 package org.postgis.jts;
@@ -140,8 +140,14 @@ public class JtsGeometry extends PGobject {
     }
 
     public boolean equals(Object obj) {
-        if (obj instanceof JtsGeometry)
-            return ((JtsGeometry) obj).getValue().equals(geom);
+        if ((obj != null) && (obj instanceof JtsGeometry)) {
+            Geometry other = ((JtsGeometry) obj).geom;
+            if (this.geom == other) { // handles identity as well as both ==null
+                return true;
+            } else if (this.geom != null && other != null) {
+                return other.equals(this.geom);
+            }
+        }
         return false;
     }
 }

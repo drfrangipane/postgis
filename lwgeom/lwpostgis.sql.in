@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: lwpostgis.sql.in,v 1.155 2006/03/13 10:54:08 strk Exp $
+-- $Id: lwpostgis.sql.in,v 1.159 2006/06/25 23:59:32 strk Exp $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net
@@ -42,6 +42,9 @@
 # define _SECURITY_DEFINER 
 #endif 
 
+#if USE_VERSION >= 73
+# define HAS_SCHEMAS 1
+#endif
 
 BEGIN;
 
@@ -226,7 +229,8 @@ CREATEFUNCTION Scale(geometry,float8,float8)
 -- Availability: 1.1.0 
 CREATEFUNCTION transscale(geometry,float8,float8,float8,float8)
         RETURNS geometry
-        AS 'SELECT affine($1,  $4, 0, 0,  0, $5, 0,  0, 0, 1,  $2*$4, $3*$5, 0)'
+        AS 'SELECT affine($1,  $4, 0, 0,  0, $5, 0, 
+		0, 0, 1,  $2 * $4, $3 * $5, 0)'
         LANGUAGE 'SQL' _IMMUTABLE_STRICT;
 
 -- Availability: 1.1.0
@@ -1255,6 +1259,16 @@ CREATEFUNCTION AsEWKB(geometry)
 	AS '@MODULE_FILENAME@','WKBFromLWGEOM'
 	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
 
+CREATEFUNCTION AsHEXEWKB(geometry)
+	RETURNS TEXT
+	AS '@MODULE_FILENAME@','LWGEOM_asHEXEWKB'
+	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
+CREATEFUNCTION AsHEXEWKB(geometry, text)
+	RETURNS TEXT
+	AS '@MODULE_FILENAME@','LWGEOM_asHEXEWKB'
+	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
 CREATEFUNCTION AsEWKB(geometry,text)
 	RETURNS bytea
 	AS '@MODULE_FILENAME@','WKBFromLWGEOM'
@@ -1388,9 +1402,14 @@ CREATE AGGREGATE polygonize (
 
 CREATE TYPE geometry_dump AS (path integer[], geom geometry);
 
-CREATEFUNCTION dump(geometry)
+CREATEFUNCTION Dump(geometry)
 	RETURNS SETOF geometry_dump
 	AS '@MODULE_FILENAME@', 'LWGEOM_dump'
+	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
+CREATEFUNCTION DumpRings(geometry)
+	RETURNS SETOF geometry_dump
+	AS '@MODULE_FILENAME@', 'LWGEOM_dump_rings'
 	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
 
 #endif
@@ -3670,6 +3689,7 @@ END;
 '
 LANGUAGE 'plpgsql' _IMMUTABLE_STRICT; 
 
+#include "long_xact.sql"
 
 ---------------------------------------------------------------
 -- END

@@ -21,7 +21,7 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: TestParser.java,v 1.13 2005/04/15 14:04:34 mschaber Exp $
+ * $Id: TestParser.java,v 1.16 2006/05/03 08:30:25 mschaber Exp $
  */
 
 package examples;
@@ -59,23 +59,38 @@ public class TestParser {
             ALL, // 3D
             "POINT(10 10 20)"},
         {
+            ALL, // 3D with scientific notation
+            "POINT(1e100 1.2345e-100 -2e-5)"},
+        {
             ONLY10, // 2D + Measures
             "POINTM(10 10 20)"},
         {
             ONLY10, // 3D + Measures
             "POINT(10 10 20 30)"},
         {
-            ALL,
+            ALL, // broken format, see http://lists.jump-project.org/pipermail/jts-devel/2006-April/001572.html
             "MULTIPOINT(11 12, 20 20)"},
         {
-            ALL,
+            ALL,// broken format
             "MULTIPOINT(11 12 13, 20 20 20)"},
         {
-            ONLY10,
+            ONLY10,// broken format
             "MULTIPOINTM(11 12 13, 20 20 20)"},
         {
-            ONLY10,
+            ONLY10,// broken format
             "MULTIPOINT(11 12 13 14,20 20 20 20)"},
+        {
+            ALL, // OGC conforming format
+            "MULTIPOINT((11 12), (20 20))"},
+        {
+            ALL,
+            "MULTIPOINT((11 12 13), (20 20 20))"},
+        {
+            ONLY10,
+            "MULTIPOINTM((11 12 13), (20 20 20))"},
+        {
+            ONLY10,
+            "MULTIPOINT((11 12 13 14),(20 20 20 20))"},            
         {
             ALL,
             "LINESTRING(10 10,20 20,50 50,34 34)"},
@@ -143,8 +158,11 @@ public class TestParser {
             ALL,
             "GEOMETRYCOLLECTION(POLYGON((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)),POLYGON((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)))"},
         {
-            ONLY10, // Cannot be parsed by 0.X servers
+            ONLY10, // Cannot be parsed by 0.X servers, broken format
             "GEOMETRYCOLLECTION(MULTIPOINT(10 10 10, 20 20 20),MULTIPOINT(10 10 10, 20 20 20))"},
+        {
+            ONLY10, // Cannot be parsed by 0.X servers, OGC conformant
+            "GEOMETRYCOLLECTION(MULTIPOINT((10 10 10), (20 20 20)),MULTIPOINT((10 10 10), (20 20 20)))"},
         {
             EQUAL10, // PostGIs 0.X "flattens" this geometry, so it is not
             // equal after reparsing.
@@ -158,8 +176,12 @@ public class TestParser {
             "GEOMETRYCOLLECTION(POINT(10 10 20),LINESTRING(10 10 20,20 20 20, 50 50 50, 34 34 34),POLYGON((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)))"},
         {
             ONLY10, // Collections that contain both X and MultiX do not work on
-            // PostGIS 0.x
+            // PostGIS 0.x, broken format
             "GEOMETRYCOLLECTION(POINT(10 10 20),MULTIPOINT(10 10 10, 20 20 20),LINESTRING(10 10 20,20 20 20, 50 50 50, 34 34 34),POLYGON((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)),MULTIPOLYGON(((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)),((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0))),MULTILINESTRING((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)))"},
+        {
+            ONLY10, // Collections that contain both X and MultiX do not work on
+            // PostGIS 0.x, OGC conformant
+            "GEOMETRYCOLLECTION(POINT(10 10 20),MULTIPOINT((10 10 10), (20 20 20)),LINESTRING(10 10 20,20 20 20, 50 50 50, 34 34 34),POLYGON((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)),MULTIPOLYGON(((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)),((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0))),MULTILINESTRING((10 10 0,20 10 0,20 20 0,20 10 0,10 10 0),(5 5 0,5 6 0,6 6 0,6 5 0,5 5 0)))"},
         {
             ALL, // Old (bad) PostGIS 0.X Representation
             "GEOMETRYCOLLECTION(EMPTY)"},
@@ -521,12 +543,11 @@ public class TestParser {
             dbuser = args[1];
             dbpass = args[2];
         } else {
-            System.err.println("Usage: java examples/TestParser dburls user pass [tablename]");
+            System.err.println("Usage: java examples/TestParser dburls user pass");
             System.err.println("   or: java examples/TestParser offline");
             System.err.println();
             System.err.println("dburls has one or more jdbc urls separated by ; in the following format");
             System.err.println("jdbc:postgresql://HOST:PORT/DATABASENAME");
-            System.err.println("tablename is 'jdbc_test' by default.");
             System.exit(1);
             // Signal the compiler that code flow ends here.
             return;

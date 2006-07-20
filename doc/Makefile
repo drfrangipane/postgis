@@ -3,13 +3,19 @@ include ../Version.config
 
 LAST_RELEASE_VERSION = $(SO_MAJOR_VERSION).$(SO_MINOR_VERSION).$(SO_MICRO_VERSION)
 
-COMMONOPTS = -f docbook -b html -e no-valid
-XSLTPROC_COMMONOPTS = --param section.autolabel 1 \
+JW_COMMONOPTS = -f docbook -b html -e no-valid
+
+XSLTPROC_COMMONOPTS = \
+	--param section.autolabel 1 \
 	--param section.label.includes.component.label 1 \
 	--param chunk.section.depth 0 
+
 XSLTPROC_HTMLOPTS = \
 	--stringparam html.stylesheet style.css \
 
+HTML_DOCBOOK_XSL=$(XSLBASE)/html/docbook.xsl 
+CHUNK_HTML_DOCBOOK_XSL=$(XSLBASE)/html/chunk.xsl 
+FO_DOCBOOK_XSL=$(XSLBASE)/fo/docbook.xsl
 
 all: $(DOC_RULE)
 
@@ -22,20 +28,20 @@ requirements_not_met:
 	@echo "  http://postgis.refractions.net/docs"
 	@echo
 
-postgis-out.xml: postgis.xml ../Version.config
+postgis-out.xml: postgis.xml long_xact.xml ../Version.config
 	cat $< | sed "s/@@LAST_RELEASE_VERSION@@/$(LAST_RELEASE_VERSION)/g" > $@
 
 chunked-html: postgis-out.xml
 	$(XSLTPROC) $(XSLTPROC_COMMONOPTS) $(XSLTPROC_HTMLOPTS) \
 		--output html/ \
 		--stringparam saxon.character.representation decimal \
-		$(XSLBASE)/html/chunk.xsl \
+		$(CHUNK_HTML_DOCBOOK_XSL) \
 		$<
 
 html/postgis.html: postgis-out.xml
-	$(XSLTPROC) $(XSLTPROC_COMMONOPTS) \
+	$(XSLTPROC) $(XSLTPROC_COMMONOPTS) $(XSLTPROC_HTMLOPTS) \
 		--output html/postgis.html \
-		$(XSLBASE)/html/docbook.xsl \
+		$(HTML_DOCBOOK_XSL) \
 		$<
 
 postgis.fo: postgis-out.xml
@@ -46,12 +52,26 @@ postgis.fo: postgis-out.xml
 
 html: html/postgis.html
 
-postgis.pdf: postgis.fo
-	$(PDFXMLTEX) $< > /dev/null ; \
-	$(PDFXMLTEX) $< > /dev/null
+postgis.pdf: postgis-out.xml
+	@if test x"$(DB2PDF)" = x; then \
+	   echo "Error: db2pdf not found, can't build posgis.pdf"; \
+	   echo "       try installing docbook-utils package"; \
+	   false; \
+	else \
+	   $(DB2PDF) $< && mv postgis-out.pdf postgis.pdf; \
+	fi
+
+# this is broken
+_postgis.pdf: postgis.fo
+	@if test x"$(PDFXMLTEX)" = x; then \
+	   echo "Error: pdfxmltex not found, can't build posgis.pdf"; \
+	   false; \
+	else \
+	   $(PDFXMLTEX) $<;  \
+	fi
 
 jw: postgis-out.xml
-	$(JW) $(COMMONOPTS) -o html/ postgis-out.xml
+	$(JW) $(JW_COMMONOPTS) -o html/ postgis-out.xml
 
 clean:
 	@rm -f \

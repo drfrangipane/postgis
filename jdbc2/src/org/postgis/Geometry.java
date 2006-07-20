@@ -21,7 +21,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: Geometry.java,v 1.7 2005/07/28 12:23:16 mschaber Exp $
+ * $Id: Geometry.java,v 1.8 2006/05/09 13:06:55 mschaber Exp $
  */
 
 package org.postgis;
@@ -137,11 +137,12 @@ public abstract class Geometry implements Serializable {
      * java.lang.Object equals implementation
      */
     public boolean equals(Object other) {
-        return (other instanceof Geometry) && equals((Geometry) other);
+        return (other != null) && (other instanceof Geometry) && equals((Geometry) other);
     }
 
     /**
-     * geometry specific equals implementation
+     * geometry specific equals implementation - only defined for non-null
+     * values
      */
     public boolean equals(Geometry other) {
         boolean firstline = (other != null) && (this.dimension == other.dimension)
@@ -201,7 +202,15 @@ public abstract class Geometry implements Serializable {
         return getTypeString(this.type);
     }
 
+    /** Returns whether we have a measure */
+    public boolean isMeasured() {
+        return haveMeasure;
+    }
+
     /**
+     * Queries the number of geometric dimensions of this geometry. This does
+     * not include measures, as opposed to the server.
+     * 
      * @return The dimensionality (eg, 2D or 3D) of this geometry.
      */
     public int getDimension() {

@@ -1,0 +1,599 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>Chapter 6. PostGIS Reference</title><link rel="stylesheet" href="style.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.65.1"><link rel="home" href="index.html" title="PostGIS Manual"><link rel="up" href="index.html" title="PostGIS Manual"><link rel="previous" href="ch05.html" title="Chapter 5. Performance tips"><link rel="next" href="ch07.html" title="Chapter 7. Reporting Bugs"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter 6. PostGIS Reference</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch05.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch07.html">Next</a></td></tr></table><hr></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="id2526096"></a>Chapter 6. PostGIS Reference</h2></div></div><div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="ch06.html#id2526109">6.1. OpenGIS Functions</a></span></dt><dd><dl><dt><span class="sect2"><a href="ch06.html#id2526115">6.1.1. Management Functions</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2526205">6.1.2. Geometry Relationship Functions</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2526581">6.1.3. Geometry Processing Functions</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2526907">6.1.4. Geometry Accessors</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2527394">6.1.5. Geometry Constructors</a></span></dt></dl></dd><dt><span class="sect1"><a href="ch06.html#id2527996">6.2. Postgis Extensions</a></span></dt><dd><dl><dt><span class="sect2"><a href="ch06.html#id2528002">6.2.1. Management Functions</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2528326">6.2.2. Operators</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2528534">6.2.3. Measurement Functions</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2528817">6.2.4. Geometry Outputs</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2528926">6.2.5. Geometry Constructors</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2529258">6.2.6. Geometry Editors</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2529854">6.2.7. Linear Referencing</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2530074">6.2.8. Misc</a></span></dt><dt><span class="sect2"><a href="ch06.html#id2531072">6.2.9. Long Transactions support</a></span></dt></dl></dd></dl></div><p>The functions given below are the ones which a user of PostGIS is
+    likely to need. There are other functions which are required support
+    functions to the PostGIS objects which are not of use to a general
+    user.</p><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2526109"></a>6.1. OpenGIS Functions</h2></div></div><div></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2526115"></a>6.1.1. Management Functions</h3></div></div><div></div></div><div class="variablelist"><dl><dt><a name="AddGeometryColumn"></a><span class="term">AddGeometryColumn(varchar, varchar, varchar, integer,
+            varchar, integer)</span></dt><dd><p>Syntax: AddGeometryColumn(&lt;schema_name&gt;,
+              &lt;table_name&gt;, &lt;column_name&gt;, &lt;srid&gt;,
+              &lt;type&gt;, &lt;dimension&gt;). Adds a geometry column to an
+              existing table of attributes. The <tt class="varname">schema_name</tt>
+              is the name of the table schema (unused for pre-schema
+              PostgreSQL installations). The <tt class="varname">srid</tt> must be
+              an integer value reference to an entry in the SPATIAL_REF_SYS
+              table. The <tt class="varname">type</tt> must be an uppercase string
+              corresponding to the geometry type, eg, 'POLYGON' or
+              'MULTILINESTRING'.</p></dd><dt><span class="term">DropGeometryColumn(varchar, varchar, varchar)</span></dt><dd><p>Syntax: DropGeometryColumn(&lt;schema_name&gt;,
+              &lt;table_name&gt;, &lt;column_name&gt;). Remove a geometry
+              column from a spatial table. Note that schema_name will need to
+              match the f_schema_name field of the table's row in the
+              geometry_columns table.</p></dd><dt><span class="term">SetSRID(geometry, integer)</span></dt><dd><p>Set the SRID on a geometry to a particular integer value.
+              Useful in constructing bounding boxes for queries.</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2526205"></a>6.1.2. Geometry Relationship Functions</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">Distance(geometry, geometry)</span></dt><dd><p>Return the cartesian distance between two geometries in
+              projected units.</p></dd><dt><span class="term">Equals(geometry, geometry)</span></dt><dd><p>Returns 1 (TRUE) if the given Geometries are
+	      "spatially equal". Use this for a 'better' answer than '='.
+	      equals('LINESTRING(0 0, 10 10)','LINESTRING(0 0, 5 5, 10 10)')
+	      is true.</p><p>Performed by the GEOS module</p><p>OGC SPEC s2.1.1.2</p></dd><dt><span class="term">Disjoint(geometry, geometry)</span></dt><dd><p>Returns 1 (TRUE) if the Geometries are "spatially disjoint".
+	      </p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 //s2.1.13.3 - a.Relate(b,
+              'FF*FF****')</p></dd><dt><span class="term">Intersects(geometry, geometry)</span></dt><dd><p>Returns 1 (TRUE) if the Geometries "spatially intersect".
+              </p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 //s2.1.13.3 - Intersects(g1, g2 ) --&gt;
+              Not (Disjoint(g1, g2 ))</p></dd><dt><span class="term">Touches(geometry, geometry)</span></dt><dd><p>Returns 1 (TRUE) if the Geometries "spatially touch".
+              </p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 // s2.1.13.3- a.Touches(b) -&gt; (I(a)
+              intersection I(b) = {empty set} ) and (a intersection b) not
+              empty</p></dd><dt><span class="term">Crosses(geometry, geometry)</span></dt><dd><p>Returns 1 (TRUE) if the Geometries "spatially cross".
+              </p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 // s2.1.13.3 - a.Relate(b,
+              'T*T******')</p></dd><dt><span class="term">Within(geometry A, geometry B)</span></dt><dd><p>Returns 1 (TRUE) if Geometry A is "spatially within"
+              Geometry B.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 // s2.1.13.3 - a.Relate(b,
+              'T*F**F***')</p></dd><dt><span class="term">Overlaps(geometry, geometry)</span></dt><dd><p>Returns 1 (TRUE) if the Geometries "spatially
+              overlap".</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 // s2.1.13.3</p></dd><dt><span class="term">Contains(geometry A, geometry B)</span></dt><dd><p>Returns 1 (TRUE) if Geometry A "spatially contains"
+              Geometry B.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 // s2.1.13.3 - same as
+              within(geometry B, geometry A)</p></dd><dt><span class="term">Intersects(geometry, geometry)</span></dt><dd><p>Returns 1 (TRUE) if the Geometries "spatially
+              intersect".</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 // s2.1.13.3 - NOT
+              disjoint(geometry, geometry)</p></dd><dt><span class="term">Relate(geometry, geometry, intersectionPatternMatrix)</span></dt><dd><p>Returns 1 (TRUE) if this Geometry is spatially related to
+              anotherGeometry, by testing for intersections between the
+              Interior, Boundary and Exterior of the two geometries as
+              specified by the values in the intersectionPatternMatrix.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is the "allowable" version that returns a
+              boolean, not an integer.</p><p>OGC SPEC s2.1.1.2 // s2.1.13.3</p></dd><dt><span class="term">Relate(geometry, geometry)</span></dt><dd><p>returns the DE-9IM (dimensionally extended
+              nine-intersection matrix)</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>not in OGC spec, but implied. see s2.1.13.2</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2526581"></a>6.1.3. Geometry Processing Functions</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">Centroid(geometry)</span></dt><dd><p>Returns the centroid of the geometry as a point.</p><p>Computation will be more accurate if performed by the GEOS
+              module (enabled at compile time).</p></dd><dt><span class="term">Area(geometry)</span></dt><dd><p>Returns the area of the geometry if it is a polygon or
+              multi-polygon. </p></dd><dt><span class="term">Length(geometry)</span></dt><dd><p>The length of this Curve in its associated spatial
+              reference.</p><p>synonym for length2d()</p><p>OGC SPEC 2.1.5.1</p></dd><dt><span class="term">PointOnSurface(geometry)</span></dt><dd><p>Return a Point guaranteed to lie on the surface</p><p>Implemented using GEOS</p><p>OGC SPEC 3.2.14.2 and 3.2.18.2 -</p></dd><dt><span class="term">Boundary(geometry)</span></dt><dd><p>Returns the closure of the combinatorial boundary of this
+              Geometry. The combinatorial boundary is defined as described in
+              section 3.12.3.2 of the OGC SPEC. Because the result of this
+              function is a closure, and hence topologically closed, the
+              resulting boundary can be represented using representational
+              geometry primitives as discussed in the OGC SPEC, section
+              3.12.2.</p><p>Performed by the GEOS module</p><p>OGC SPEC s2.1.1.1</p></dd><dt><span class="term">Buffer(geometry, double, [integer])</span></dt><dd><p>Returns a geometry that represents all points whose
+              distance from this Geometry is less than or equal to distance.
+              Calculations are in the Spatial Reference System of this
+              Geometry. The optional third parameter sets the
+	      number of segment used to approximate a quarter circle
+	      (defaults to 8).</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>OGC SPEC s2.1.1.3</p></dd><dt><span class="term">ConvexHull(geometry)</span></dt><dd><p>Returns a geometry that represents the convex hull of this
+              Geometry.</p><p>Performed by the GEOS module</p><p>OGC SPEC s2.1.1.3</p></dd><dt><span class="term">Intersection(geometry, geometry)</span></dt><dd><p>Returns a geometry that represents the point set
+              intersection of the Geometies.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>OGC SPEC s2.1.1.3</p></dd><dt><span class="term">SymDifference(geometry A, geometry B)</span></dt><dd><p>Returns a geometry that represents the point set symmetric
+              difference of Geometry A with Geometry B.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>OGC SPEC s2.1.1.3</p></dd><dt><span class="term">Difference(geometry A, geometry B)</span></dt><dd><p>Returns a geometry that represents the point set symmetric
+              difference of Geometry A with Geometry B.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>OGC SPEC s2.1.1.3</p></dd><dt><span class="term">GeomUnion(geometry, geometry)</span></dt><dd><p>Returns a geometry that represents the point set union of
+              the Geometries.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection as an
+              argument</p><p>NOTE: this is renamed from "union" because union is an SQL
+              reserved word</p><p>OGC SPEC s2.1.1.3</p></dd><dt><span class="term">GeomUnion(geometry set)</span></dt><dd><p>Returns a geometry that represents the point set union of
+              this all Geometries in given set.</p><p>Performed by the GEOS module</p><p>Do not call with a GeometryCollection in the argument
+              set</p><p>Not explicitly defined in OGC SPEC</p></dd><dt><span class="term">MemGeomUnion(geometry set)</span></dt><dd><p>Same as the above, only memory-friendly (uses less memory
+              and more processor time).</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2526907"></a>6.1.4. Geometry Accessors</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">AsText(geometry)</span></dt><dd><p>Return the Well-Known Text representation of the geometry.
+              For example: POLYGON(0 0,0 1,1 1,1 0,0 0)</p><p>OGC SPEC s2.1.1.1</p></dd><dt><span class="term">AsBinary(geometry)</span></dt><dd><p>Returns the geometry in the OGC "well-known-binary"
+              format, using the endian encoding of the server on which the
+              database is running. This is useful in binary cursors to pull
+              data out of the database without converting it to a string
+              representation.</p><p>OGC SPEC s2.1.1.1 - also see
+              asBinary(&lt;geometry&gt;,'XDR') and
+              asBinary(&lt;geometry&gt;,'NDR')</p></dd><dt><span class="term">SRID(geometry)</span></dt><dd><p>Returns the integer SRID number of the spatial reference
+              system of the geometry.</p><p>OGC SPEC s2.1.1.1</p></dd><dt><span class="term">Dimension(geometry)</span></dt><dd><p>The inherent dimension of this Geometry object, which must
+              be less than or equal to the coordinate dimension. OGC SPEC
+              s2.1.1.1 - returns 0 for points, 1 for lines, 2 for polygons,
+              and the largest dimension of the components of a
+              GEOMETRYCOLLECTION.</p><pre class="programlisting">select dimension('GEOMETRYCOLLECTION(LINESTRING(1 1,0 0),POINT(0 0)'); 
+dimension 
+-----------
+1</pre></dd><dt><span class="term">Envelope(geometry)</span></dt><dd><p>Returns a POLYGON representing the bounding box of the
+              geometry.</p><p>OGC SPEC s2.1.1.1 - The minimum bounding box for this
+              Geometry, returned as a Geometry. The polygon is defined by the
+              corner points of the bounding box ((MINX, MINY), (MAXX, MINY),
+              (MAXX, MAXY), (MINX, MAXY), (MINX, MINY)).</p><p>NOTE:PostGIS will add a Zmin/Zmax coordinate as
+              well.</p></dd><dt><span class="term">IsEmpty(geometry)</span></dt><dd><p>Returns 1 (TRUE) if this Geometry is the empty geometry .
+              If true, then this Geometry represents the empty point set -
+              i.e. GEOMETRYCOLLECTION(EMPTY).</p><p>OGC SPEC s2.1.1.1</p></dd><dt><a name="IsSimple"></a><span class="term">IsSimple(geometry)</span></dt><dd><p>Returns 1 (TRUE) if this Geometry has no anomalous
+              geometric points, such as self intersection or self
+              tangency.</p><p>Performed by the GEOS module</p><p>OGC SPEC s2.1.1.1</p></dd><dt><a name="IsClosed"></a><span class="term">IsClosed(geometry)</span></dt><dd><p>Returns true of the geometry start and end points are
+              coincident.</p></dd><dt><span class="term">IsRing(geometry)</span></dt><dd><p>Returns 1 (TRUE) if this Curve is closed (StartPoint ( ) =
+              EndPoint ( )) and this Curve is simple (does not pass through
+              the same point more than once).</p><p>performed by GEOS</p><p>OGC spec 2.1.5.1</p></dd><dt><span class="term">NumGeometries(geometry)</span></dt><dd><p>If geometry is a GEOMETRYCOLLECTION (or MULTI*) return the
+              number of geometries, otherwise return NULL.</p></dd><dt><span class="term">GeometryN(geometry,int)</span></dt><dd><p>Return the N'th geometry if the geometry is a
+              GEOMETRYCOLLECTION, MULTIPOINT, MULTILINESTRING or MULTIPOLYGON.
+              Otherwise, return NULL.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+		Index is 1-based as for OGC specs since version 0.8.0.
+		Previous versions implemented this as 0-based instead.
+		</p></div></dd><dt><span class="term">NumPoints(geometry)</span></dt><dd><p>Find and return the number of points in the first
+              linestring in the geometry. Return NULL if there is no
+              linestring in the geometry.</p></dd><dt><span class="term">PointN(geometry,integer)</span></dt><dd><p>Return the N'th point in the first linestring in the
+              geometry. Return NULL if there is no linestring in the
+              geometry.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+		Index is 1-based as for OGC specs since version 0.8.0.
+		Previous versions implemented this as 0-based instead.
+		</p></div></dd><dt><span class="term">ExteriorRing(geometry)</span></dt><dd><p>Return the exterior ring of the polygon geometry.
+	      Return NULL if the geometry is not a polygon.</p></dd><dt><span class="term">NumInteriorRings(geometry)</span></dt><dd><p>Return the number of interior rings of the first polygon
+              in the geometry. Return NULL if there is no polygon in the
+              geometry.</p></dd><dt><span class="term">NumInteriorRing(geometry)</span></dt><dd><p>Synonym to NumInteriorRings(geometry). The OpenGIS specs
+	      are ambigous about the exact function naming, so we provide
+	      both spellings.</p></dd><dt><span class="term">InteriorRingN(geometry,integer)</span></dt><dd><p>Return the N'th interior ring of the polygon geometry.
+	      Return NULL if the geometry is not a polygon or the given
+	      N is out of range.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+		Index is 1-based as for OGC specs since version 0.8.0.
+		Previous versions implemented this as 0-based instead.
+		</p></div></dd><dt><span class="term">EndPoint(geometry)</span></dt><dd><p>Returns the last point of the LineString geometry as a point.</p></dd><dt><a name="StartPoint"></a><span class="term">StartPoint(geometry)</span></dt><dd><p>Returns the first point of the LineString geometry as a point.</p></dd><dt><a name="GeometryType"></a><span class="term">GeometryType(geometry)</span></dt><dd><p>Returns the type of the geometry as a string. Eg:
+              'LINESTRING', 'POLYGON', 'MULTIPOINT', etc.</p><p>OGC SPEC s2.1.1.1 - Returns the name of the instantiable
+              subtype of Geometry of which this Geometry instance is a member.
+              The name of the instantiable subtype of Geometry is returned as
+              a string.</p></dd><dt><span class="term">X(geometry)</span></dt><dd><p>Return the X coordinate of the point.
+	      Input must be a point.</p></dd><dt><span class="term">Y(geometry)</span></dt><dd><p>Return the Y coordinate of the point.
+	      Input must be a point.</p></dd><dt><span class="term">Z(geometry)</span></dt><dd><p>Return the Z coordinate of the point,
+	      or NULL if not available.
+	      Input must be a point.</p></dd><dt><span class="term">M(geometry)</span></dt><dd><p>Return the M coordinate of the point, 
+	      or NULL if not available.
+	      Input must be a point.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>This is not (yet) part of the OGC spec,
+		but is listed here to complete the point coordinate
+	        extractor function list.</p></div></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2527394"></a>6.1.5. Geometry Constructors</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">GeomFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p></dd><dt><span class="term">PointFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p><p>Throws an error if the WKT is not a Point</p></dd><dt><span class="term">LineFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p><p>Throws an error if the WKT is not a Line</p></dd><dt><span class="term">LinestringFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>from the conformance suite</p><p>Throws an error if the WKT is not a Line</p></dd><dt><span class="term">PolyFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p><p>Throws an error if the WKT is not a Polygon</p></dd><dt><span class="term">PolygonFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>from the conformance suite</p><p>Throws an error if the WKT is not a Polygon</p></dd><dt><span class="term">MPointFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p><p>Throws an error if the WKT is not a MULTIPOINT</p></dd><dt><span class="term">MLineFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p><p>Throws an error if the WKT is not a MULTILINESTRING</p></dd><dt><span class="term">MPolyFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p><p>Throws an error if the WKT is not a MULTIPOLYGON</p></dd><dt><span class="term">GeomCollFromText(text,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKT with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p><p>Throws an error if the WKT is not a
+              GEOMETRYCOLLECTION</p></dd><dt><span class="term">GeomFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.6.2 - option SRID is from the conformance
+              suite</p></dd><dt><span class="term">GeomFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p></dd><dt><span class="term">PointFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p><p>throws an error if WKB is not a POINT</p></dd><dt><span class="term">LineFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p><p>throws an error if WKB is not a LINESTRING</p></dd><dt><span class="term">LinestringFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>from the conformance suite</p><p>throws an error if WKB is not a LINESTRING</p></dd><dt><span class="term">PolyFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p><p>throws an error if WKB is not a POLYGON</p></dd><dt><span class="term">PolygonFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>from the conformance suite</p><p>throws an error if WKB is not a POLYGON</p></dd><dt><span class="term">MPointFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p><p>throws an error if WKB is not a MULTIPOINT</p></dd><dt><span class="term">MLineFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p><p>throws an error if WKB is not a MULTILINESTRING</p></dd><dt><span class="term">MPolyFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p><p>throws an error if WKB is not a MULTIPOLYGON</p></dd><dt><span class="term">GeomCollFromWKB(bytea,[&lt;srid&gt;])</span></dt><dd><p>Makes a Geometry from WKB with the given SRID. If SRID is
+              not give, it defaults to -1.</p><p>OGC SPEC 3.2.7.2 - option SRID is from the conformance
+              suite</p><p>throws an error if WKB is not a GEOMETRYCOLLECTION</p></dd><dt><a name="BdPolyFromText"></a><span class="term">BdPolyFromText(text WKT, integer SRID)</span></dt><dd><p>
+		Construct a Polygon given an arbitrary
+		collection of closed linestrings as a
+		MultiLineString text representation.
+		</p><p>
+	      Throws an error if WKT is not a MULTILINESTRING.
+	      Throws an error if output is a MULTIPOLYGON; use <a href="ch06.html#BdMPolyFromText">BdMPolyFromText</a> in
+	      that case, or see 
+		<a href="ch06.html#BuildArea">BuildArea()</a>
+		for a postgis-specific approach.
+		</p><p>OGC SFSQL 1.1 - 3.2.6.2</p><p>
+		    Availability: 1.1.0 - requires GEOS &gt;= 2.1.0.
+		</p></dd><dt><a name="BdMPolyFromText"></a><span class="term">BdMPolyFromText(text WKT, integer SRID)</span></dt><dd><p>
+		Construct a MultiPolygon given an arbitrary
+		collection of closed linestrings as a
+		MultiLineString text representation.
+		</p><p>
+                Throws an error if WKT is not a MULTILINESTRING.
+		Forces MULTIPOLYGON output even when result is really
+		only composed by a single POLYGON; use <a href="ch06.html#BdPolyFromText">BdPolyFromText</a> if you're sure
+		a single POLYGON will result from
+		operation, or see
+		<a href="ch06.html#BuildArea">BuildArea()</a>
+		for a postgis-specific approach.
+		</p><p>OGC SFSQL 1.1 - 3.2.6.2</p><p>
+		    Availability: 1.1.0 - requires GEOS &gt;= 2.1.0.
+		</p></dd></dl></div></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2527996"></a>6.2. Postgis Extensions</h2></div></div><div></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2528002"></a>6.2.1. Management Functions</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">DropGeometryTable([&lt;schema_name&gt;],
+		  &lt;table_name&gt;)</span></dt><dd><p>Drops a table and all its references in geometry_columns.
+		    Note: uses current_schema() on schema-aware pgsql installations if
+		    schema is not provided.</p></dd><dt><span class="term">UpdateGeometrySRID([&lt;schema_name&gt;],
+		  &lt;table_name&gt;, &lt;column_name&gt;, &lt;srid&gt;)</span></dt><dd><p>Update the SRID of all features in a geometry column updating constraints and reference in geometry_columns.
+		    Note: uses current_schema() on schema-aware pgsql installations if schema is not provided.</p></dd><dt><span class="term">update_geometry_stats([&lt;table_name&gt;,
+		  &lt;column_name&gt;])</span></dt><dd><p>Update statistics about spatial tables for use by the query
+		    planner. You will also need to run "VACUUM ANALYZE [table_name]
+		    [column_name]" for the statistics gathering process to be
+		    complete. NOTE: starting with PostgreSQL 8.0 statistics gathering
+		    is automatically performed running "VACUUM ANALYZE".</p></dd><dt><span class="term">postgis_version()</span></dt><dd><p>Returns PostGIS version number and compile-time options</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+		Prior to version 1.1.0 this was a procedural function, thus possibly
+		returning inaccurate information (in case of incomplete database upgrades).
+		</p></div></dd><dt><a name="postgis_lib_version"></a><span class="term">postgis_lib_version()</span></dt><dd><p>Returns the version number of the PostGIS library.</p><p>
+	Availability: 0.9.0
+		</p></dd><dt><span class="term">postgis_lib_build_date()</span></dt><dd><p>Returns build date of the PostGIS library.</p><p>
+	Availability: 1.0.0RC1
+		</p></dd><dt><span class="term">postgis_script_build_date()</span></dt><dd><p>Returns build date of the PostGIS scripts.</p><p>
+	Availability: 1.0.0RC1
+		</p></dd><dt><span class="term">postgis_scripts_installed()</span></dt><dd><p>
+		Returns version of the postgis scripts
+		installed in this database.
+		</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+		If the output of this function doesn't match the output of
+		<a href="ch06.html#postgis_scripts_released">postgis_scripts_released()</a>
+		you probably missed to properly upgrade an existing database.
+		See the <a href="ch02.html#upgrading" title="2.2.1. Upgrading">Upgrading</a> section for more info.
+		</p></div><p>
+	Availability: 0.9.0
+		</p></dd><dt><a name="postgis_scripts_released"></a><span class="term">postgis_scripts_released()</span></dt><dd><p>Returns the version number of the lwpostgis.sql script
+            released with the installed postgis lib.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+		Starting with version 1.1.0 this function returns the same
+		value of <a href="ch06.html#postgis_lib_version">postgis_lib_version()</a>.
+		Kept for backward compatibility.
+		</p></div><p>
+	Availability: 0.9.0 
+		</p></dd><dt><span class="term">postgis_geos_version()</span></dt><dd><p>Returns the version number of the GEOS library, or NULL if
+            GEOS support is not enabled.</p><p>
+	Availability: 0.9.0
+		</p></dd><dt><span class="term">postgis_jts_version()</span></dt><dd><p>Returns the version number of the JTS library, or NULL if
+            JTS support is not enabled.</p><p>
+	Availability: 1.1.0
+		</p></dd><dt><span class="term">postgis_proj_version()</span></dt><dd><p>Returns the version number of the PROJ4 library, or NULL if
+            PROJ4 support is not enabled.</p><p>
+	Availability: 0.9.0
+		</p></dd><dt><span class="term">postgis_uses_stats()</span></dt><dd><p>Returns true if STATS usage has been enabled, false
+            otherwise.</p><p>
+	Availability: 0.9.0
+		</p></dd><dt><a name="postgis_full_version"></a><span class="term">postgis_full_version()</span></dt><dd><p>Reports full postgis version and build configuration
+            infos.</p><p>Availability: 0.9.0</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2528326"></a>6.2.2. Operators</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">A &amp;&lt; B</span></dt><dd><p>The "&amp;&lt;" operator returns true if A's bounding box
+		    overlaps or is to the left of B's bounding box.</p></dd><dt><span class="term">A &amp;&gt; B</span></dt><dd><p>The "&amp;&gt;" operator returns true if A's bounding box
+		    overlaps or is to the right of B's bounding box.</p></dd><dt><span class="term">A &lt;&lt; B</span></dt><dd><p>The "&lt;&lt;" operator returns true if A's bounding box is
+		    strictly to the left of B's bounding box.</p></dd><dt><span class="term">A &gt;&gt; B</span></dt><dd><p>The "&gt;&gt;" operator returns true if A's bounding box is
+		    strictly to the right of B's bounding box.</p></dd><dt><span class="term">A &amp;&lt;| B</span></dt><dd><p>The "&amp;&lt;|" operator returns true if A's bounding box
+		    overlaps or is below B's bounding box.</p></dd><dt><span class="term">A |&amp;&gt; B</span></dt><dd><p>The "|&amp;&gt;" operator returns true if A's bounding box
+		    overlaps or is above B's bounding box.</p></dd><dt><span class="term">A &lt;&lt;| B</span></dt><dd><p>The "&lt;&lt;|" operator returns true if A's bounding box is
+		    strictly below B's bounding box.</p></dd><dt><span class="term">A |&gt;&gt; B</span></dt><dd><p>The "|&gt;&gt;" operator returns true if A's bounding box is
+		    strictly above B's bounding box.</p></dd><dt><span class="term">A ~= B</span></dt><dd><p>The "~=" operator is the "same as" operator. It tests actual
+		    geometric equality of two features. So if A and B are the same
+		    feature, vertex-by-vertex, the operator returns true.</p></dd><dt><span class="term">A @ B</span></dt><dd><p>The "@" operator returns true if A's bounding box is
+		    completely contained by B's bounding box.</p></dd><dt><span class="term">A ~ B</span></dt><dd><p>The "~" operator returns true if A's bounding box completely
+		    contains B's bounding box.</p></dd><dt><span class="term">A &amp;&amp; B</span></dt><dd><p>The "&amp;&amp;" operator is the "overlaps" operator. If A's
+		    bounding boux overlaps B's bounding box the operator returns
+		    true.</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2528534"></a>6.2.3. Measurement Functions</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">area2d(geometry)</span></dt><dd><p>Returns the area of the geometry if it is a polygon or
+		    multi-polygon.</p></dd><dt><span class="term">distance_sphere(point, point)</span></dt><dd><p>Returns linear distance in meters between two lat/lon
+            points. Uses a spherical earth and radius of 6370986 meters.
+            Faster than <a href="ch06.html#distance_spheroid">distance_spheroid()</a>, but
+            less accurate.
+			Only implemented for points.</p></dd><dt><a name="distance_spheroid"></a><span class="term">distance_spheroid(point, point, spheroid)</span></dt><dd><p>Returns linear distance between two lat/lon points given a
+            particular spheroid. See the explanation of spheroids given for
+            <a href="ch06.html#length_spheroid">length_spheroid()</a>.
+            Currently only implemented for points.</p></dd><dt><a name="length2d"></a><span class="term">length2d(geometry)</span></dt><dd><p>Returns the 2-dimensional length of the geometry if it is a
+            linestring or multi-linestring.</p></dd><dt><span class="term">length3d(geometry)</span></dt><dd><p>Returns the 3-dimensional length of the geometry if it is a
+            linestring or multi-linestring.</p></dd><dt><a name="length_spheroid"></a><span class="term">length_spheroid(geometry,spheroid)</span></dt><dd><p>Calculates the length of of a geometry on an elipsoid. This
+            is useful if the coordinates of the geometry are in
+            latitude/longitude and a length is desired without reprojection.
+            The elipsoid is a separate database type and can be constructed as
+            follows:</p><div class="literallayout"><p>SPHEROID[&lt;NAME&gt;,&lt;SEMI-MAJOR AXIS&gt;,&lt;INVERSE FLATTENING&gt;]</p></div><p>Eg:</p><div class="literallayout"><p>SPHEROID["GRS_1980",6378137,298.257222101]</p></div><p>An example calculation might look like this:</p><div class="literallayout"><p>SELECT<br>
+ length_spheroid(<br>
+  geometry_column,<br>
+  'SPHEROID["GRS_1980",6378137,298.257222101]'<br>
+ )<br>
+FROM geometry_table;</p></div></dd><dt><span class="term">length3d_spheroid(geometry,spheroid)</span></dt><dd><p>Calculates the length of of a geometry on an elipsoid,
+            taking the elevation into account. This is just like
+            length_spheroid except vertical coordinates (expressed in the same
+            units as the spheroid axes) are used to calculate the extra
+            distance vertical displacement adds.</p></dd><dt><span class="term">distance(geometry, geometry)</span></dt><dd><p>Returns the smaller distance between two geometries.</p></dd><dt><span class="term">max_distance(linestring,linestring)</span></dt><dd><p>Returns the largest distance between two line
+            strings.</p></dd><dt><span class="term">perimeter(geometry)</span></dt><dd><p>Returns the 2-dimensional perimeter of the geometry, if it
+            is a polygon or multi-polygon.</p></dd><dt><span class="term">perimeter2d(geometry)</span></dt><dd><p>Returns the 2-dimensional perimeter of the geometry, if it
+            is a polygon or multi-polygon.</p></dd><dt><span class="term">perimeter3d(geometry)</span></dt><dd><p>Returns the 3-dimensional perimeter of the geometry, if it
+            is a polygon or multi-polygon.</p></dd><dt><span class="term">azimuth(geometry, geometry)</span></dt><dd><p>
+	Returns the azimuth of the segment defined by the given Point
+	geometries, or NULL if the two points are coincident.
+	Return value is in radians.
+            </p><p>
+			Availability: 1.1.0
+		</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2528817"></a>6.2.4. Geometry Outputs</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">AsBinary(geometry,{'NDR'|'XDR'})</span></dt><dd><p>Returns the geometry in the OGC "well-known-binary" format as a bytea, using little-endian (NDR) or big-endian (XDR) encoding. This is useful in binary cursors to pull data out of the database without converting it to a string representation.</p></dd><dt><span class="term">AsEWKT(geometry)</span></dt><dd><p>Returns a Geometry in EWKT format (as text).</p></dd><dt><span class="term">AsEWKB(geometry, {'NDR'|'XDR'})</span></dt><dd><p>Returns a Geometry in EWKB format (as bytea) using either little-endian (NDR) or big-endian (XDR) encoding.</p></dd><dt><span class="term">AsHEXEWKB(geometry, {'NDR'|'XDR'})</span></dt><dd><p>Returns a Geometry in HEXEWKB format (as text) using either little-endian (NDR) or big-endian (XDR) encoding.</p></dd><dt><span class="term">AsSVG(geometry, [rel], [precision])</span></dt><dd><p>Return the geometry as an SVG path data. Use 1 as second argument to have the path data implemented in terms of relative moves, the default (or 0) uses absolute moves. Third argument may be used to reduce the maximum number of decimal digits used in output (defaults to 15). Point geometries will be rendered as cx/cy when 'rel' arg is 0, x/y when 'rel' is 1.</p></dd><dt><span class="term">AsGML(geometry, [precision])</span></dt><dd><p>Return the geometry as a GML element.  Second argument may be used to reduce the maximum number of significant digits used in output (defaults to 15).</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2528926"></a>6.2.5. Geometry Constructors</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">GeomFromEWKT(text)</span></dt><dd><p>Makes a Geometry from EWKT.</p></dd><dt><span class="term">GeomFromEWKB(bytea)</span></dt><dd><p>Makes a Geometry from EWKB.</p></dd><dt><span class="term">MakePoint(&lt;x&gt;, &lt;y&gt;, [&lt;z&gt;], [&lt;m&gt;])</span></dt><dd><p>Creates a 2d,3dz or 4d point geometry.</p></dd><dt><span class="term">MakePointM(&lt;x&gt;, &lt;y&gt;, &lt;m&gt;)</span></dt><dd><p>Creates a 3dm point geometry.</p></dd><dt><span class="term">MakeBox2D(&lt;LL&gt;, &lt;UR&gt;)</span></dt><dd><p>Creates a BOX2D defined by the given point geometries.</p></dd><dt><span class="term">MakeBox3D(&lt;LLB&gt;, &lt;URT&gt;)</span></dt><dd><p>Creates a BOX3D defined by the given point geometries.</p></dd><dt><span class="term">MakeLine(geometry set)</span></dt><dd><p>Creates a Linestring from a set of point geometries.
+		    You might want to use a subselect to order points before
+		    feeding them to this aggregate.</p></dd><dt><span class="term">MakeLine(geometry, geometry)</span></dt><dd><p>Creates a Linestring from the two given point
+		    geometries.</p></dd><dt><span class="term">LineFromMultiPoint(multipoint)</span></dt><dd><p>Creates a LineString from a MultiPoint geometry.</p></dd><dt><span class="term">MakePolygon(linestring, [linestring[]])</span></dt><dd><p>Creates a Polygon formed by the given 
+		    shell and array of holes. You can construct
+		    a geometry array using <a href="ch06.html#Accum">Accum</a>.
+		    Input geometries must be closed LINESTRINGS (see <a href="ch06.html#IsClosed">IsClosed</a> and <a href="ch06.html#GeometryType">GeometryType</a>).
+		    </p></dd><dt><a name="BuildArea"></a><span class="term">BuildArea(geometry)</span></dt><dd><p>Creates an areal geometry formed by the costituent
+		    linework of given geometry. The return type can
+		    be a Polygon or MultiPolygon, depending on input.
+		    If the input lineworks do not form polygons NULL is
+		    returned.
+		    </p><p>
+		    See also <a href="ch06.html#BdPolyFromText">BdPolyFromText</a> and <a href="ch06.html#BdMPolyFromText">BdMPolyFromText</a> - wrappers to this function with standard OGC interface.
+		    </p><p>
+		    Availability: 1.1.0 - requires GEOS &gt;= 2.1.0.
+		</p></dd><dt><span class="term">Polygonize(geometry set)</span></dt><dd><p>
+			Aggregate. Creates a GeometryCollection containing
+			possible polygons formed from the costituent linework
+			of a set of geometries.
+		</p><p>
+		    Availability: 1.0.0RC1 - requires GEOS &gt;= 2.1.0.
+		</p></dd><dt><span class="term">Collect(geometry set)</span></dt><dd><p>This function returns a GEOMETRYCOLLECTION or a MULTI object from a set
+		    of geometries. The collect() function is an "aggregate" function
+		    in the terminology of PostgreSQL. That means that it operators on
+		    lists of data, in the same way the sum() and mean() functions do.
+		    For example, "SELECT COLLECT(GEOM) FROM GEOMTABLE GROUP BY
+		    ATTRCOLUMN" will return a separate GEOMETRYCOLLECTION for each
+		    distinct value of ATTRCOLUMN.</p></dd><dt><span class="term">Collect(geometry, geometry)</span></dt><dd><p>This function returns a geometry being a collection
+		    of two input geometries. Output type can be a MULTI* or 
+		    a GEOMETRYCOLLECTION.</p></dd><dt><span class="term">Dump(geometry)</span></dt><dd><p>This is a set-returning function (SRF).
+		    It returns a set of geometry_dump rows, formed
+		    by a geometry (geom) and an array of integers (path).
+		    When the input geometry is a simple type
+		    (POINT,LINESTRING,POLYGON)
+		    a single record will be returned with an empty
+		    path array and the input geometry as geom.
+		    When the input geometry is a collection or multi
+		    it will return a record for each of the collection
+		    components, and the path will express the position
+		    of the component inside the collection.
+		    </p><p>
+		    Availability: PostGIS 1.0.0RC1.
+		    Requires PostgreSQL 7.3 or higher.
+		</p></dd><dt><span class="term">DumpRings(geometry)</span></dt><dd><p>This is a set-returning function (SRF).
+		    It returns a set of geometry_dump rows, formed
+		    by a geometry (geom) and an array of integers (path).
+		    The 'path' field holds the polygon ring index, contains
+		    a single element: 0 for the shell, hole number for holes.
+		    The 'geom' field contains the corresponding ring
+		    as a polygon.
+		    </p><p>
+		    Availability: PostGIS 1.1.3.
+		    Requires PostgreSQL 7.3 or higher.
+		</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2529258"></a>6.2.6. Geometry Editors</h3></div></div><div></div></div><div class="variablelist"><dl><dt><a name="addbbox"></a><span class="term">AddBBOX(geometry)</span></dt><dd><p>Add bounding box to the geometry. This would make bounding
+	    box based queries faster, but will increase the size of the
+	    geometry.</p></dd><dt><a name="dropbbox"></a><span class="term">DropBBOX(geometry)</span></dt><dd><p>Drop the bounding box cache from the geometry.
+	    This reduces geometry size, but makes bounding-box based
+	    queries slower.</p></dd><dt><span class="term">AddPoint(linestring, point, [&lt;position&gt;])</span></dt><dd><p>Adds a point to a LineString before point &lt;pos&gt;
+	    (0-based index).
+	    Third parameter can be omitted or set to -1 for appending.
+	    </p></dd><dt><span class="term">RemovePoint(linestring, offset)</span></dt><dd><p>
+			Removes point from a linestring. Offset is 0-based.
+		</p><p>
+			Availability: 1.1.0
+		</p></dd><dt><span class="term">SetPoint(linestring, N, point)</span></dt><dd><p>
+			Replace point N of linestring with given point.
+			Index is 0-based.
+		</p><p>
+			Availability: 1.1.0
+		</p></dd><dt><span class="term">Force_collection(geometry)</span></dt><dd><p>Converts the geometry into a GEOMETRYCOLLECTION. This is
+            useful for simplifying the WKB representation.</p></dd><dt><a name="force_2d"></a><span class="term">Force_2d(geometry)</span></dt><dd><p>Forces the geometries into a "2-dimensional mode" so that
+            all output representations will only have the X and Y coordinates.
+            This is useful for force OGC-compliant output (since OGC only
+            specifies 2-D geometries).</p></dd><dt><a name="force_3dz"></a><span class="term">Force_3dz(geometry), </span><span class="term">Force_3d(geometry), </span></dt><dd><p>Forces the geometries into XYZ mode.</p></dd><dt><a name="force_3dm"></a><span class="term">Force_3dm(geometry)</span></dt><dd><p>Forces the geometries into XYM mode.</p></dd><dt><a name="force_4d"></a><span class="term">Force_4d(geometry)</span></dt><dd><p>Forces the geometries into XYZM mode.</p></dd><dt><span class="term">Multi(geometry)</span></dt><dd><p>Returns the geometry as a MULTI* geometry. If the geometry
+            is already a MULTI*, it is returned unchanged.</p></dd><dt><span class="term">Transform(geometry,integer)</span></dt><dd><p>Returns a new geometry with its coordinates transformed to
+            the SRID referenced by the integer parameter. The destination SRID
+            must exist in the <tt class="varname">SPATIAL_REF_SYS</tt> table.</p></dd><dt><span class="term">Affine(geometry,float8,float8,float8,float8,float8,float8,float8,float8,float8,float8,float8,float8)</span></dt><dd><p>Applies an 3d affine transformation to the geometry. The call 
+                </p><pre class="programlisting">
+                    Affine(geom, a, b, c, d, e, f, g, h, i, xoff, yoff, zoff)
+                </pre><p>
+                represents the transformation matrix
+                </p><pre class="programlisting">
+                    /  a  b  c  xoff  \
+                    |  d  e  f  yoff  |
+                    |  g  h  i  zoff  |
+                    \  0  0  0  1     /
+                </pre><p>
+                and the vertices are transformed as follows:
+                </p><pre class="programlisting">
+                    x' = a*x + b*y + c*z + xoff
+                    y' = d*x + e*y + f*z + yoff
+                    z' = g*x + h*y + i*z + zoff   
+                </pre><p>
+                All of the translate / scale functions below are expressed via such an affine transformation.
+            </p><p>
+                Availability: 1.1.2.
+            </p></dd><dt><span class="term">Affine(geometry,float8,float8,float8,float8,float8,float8)</span></dt><dd><p>Applies an 2d affine transformation to the geometry. The call 
+                </p><pre class="programlisting">
+                    Affine(geom, a, b, d, e, xoff, yoff)
+                </pre><p>
+                represents the transformation matrix
+                </p><pre class="programlisting">
+                    /  a  b  0  xoff  \        /  a  b  xoff  \
+                    |  d  e  0  yoff  |  rsp.  |  d  e  yoff  |
+                    |  0  0  1  0     |        \  0  0  1     /
+                    \  0  0  0  1     /
+                </pre><p>
+                and the vertices are transformed as follows:
+                </p><pre class="programlisting">
+                    x' = a*x + b*y + xoff
+                    y' = d*x + e*y + yoff
+                    z' = z   
+                </pre><p>
+                This method is a subcase of the 3D method above.
+            </p><p>
+		Availability: 1.1.2.
+            </p></dd><dt><span class="term">Translate(geometry,float8,float8,float8)</span></dt><dd><p>Translates the geometry to a new location using the numeric
+            parameters as offsets. Ie: translate(geom, X, Y, Z).</p></dd><dt><span class="term">Scale(geometry,float8,float8,float8)</span></dt><dd><p>scales the geometry to a new size by multiplying the
+            ordinates with the parameters. Ie: scale(geom, Xfactor, Yfactor, Zfactor).</p><p>
+			Availability: 1.1.0
+		</p></dd><dt><a name="Rotate"></a><span class="term">RotateZ(geometry,float8), </span><span class="term">RotateX(geometry,float8), </span><span class="term">RotateY(geometry,float8), </span></dt><dd><p>
+			Rotate the geometry around the Z, X or Y axis by
+			the given angle given in radians. Follows the
+			right-hand rule. This is the same in
+			PostScript but opposite of SVG.
+		</p><p>
+			Availability: 1.1.2.
+		</p></dd><dt><span class="term">TransScale(geometry,float8,float8,float8,float8)</span></dt><dd><p>First, translates the geometry using the first two floats, then scales it
+                    using the second two floats, working in 2D only. Using
+                    <tt class="code">transscale(geom, X, Y, XFactor, YFactor)</tt> internally calls
+                    <tt class="code">affine(geom, XFactor, 0, 0,  0, YFactor, 0,  0, 0, 1,  X*XFactor, Y*YFactor, 0)</tt>.                
+                </p><p>
+                        Availability: 1.1.0.
+                </p></dd><dt><span class="term">Reverse(geometry)</span></dt><dd><p>Returns the geometry with vertex order reversed.</p></dd><dt><span class="term">ForceRHR(geometry)</span></dt><dd><p>Force polygons of the collection to obey Right-Hand-Rule.</p></dd><dt><span class="term">Simplify(geometry, tolerance)</span></dt><dd><p>Returns a "simplified" version of the given geometry using
+            the Douglas-Peuker algorithm. Will actually do something only with
+            (multi)lines and (multi)polygons but you can safely call it with
+            any kind of geometry. Since simplification occurs on a
+            object-by-object basis you can also feed a GeometryCollection to
+            this function. Note that returned geometry might loose its
+            simplicity (see <a href="ch06.html#IsSimple">IsSimple</a>)</p></dd><dt><span class="term">SnapToGrid(geometry, originX, originY, sizeX, sizeY), </span><span class="term">SnapToGrid(geometry, sizeX, sizeY), </span><span class="term">SnapToGrid(geometry, size), </span></dt><dd><p>Snap all points of the input geometry to the grid
+	    defined by its origin and cell size.
+            Remove consecutive points falling on the same cell,
+	    eventually returning NULL if output points are not
+	    enough to define a geometry of the given type.
+	    Collapsed geometries in a collection are stripped
+	    from it.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+            The returned geometry might loose its
+            simplicity (see <a href="ch06.html#IsSimple">IsSimple</a>).
+	</p></div><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+            Before release 1.1.0 this function always returned
+	    a 2d geometry. Starting at 1.1.0 the returned geometry
+	    will have same dimensionality as the input one with higher
+	    dimension values untouched. Use the version taking a second
+	    geometry argument to define all grid dimensions.
+	</p></div><p>
+			Availability: 1.0.0RC1
+		</p></dd><dt><span class="term">SnapToGrid(geometry, geometry, sizeX, sizeY, sizeZ, sizeM)</span></dt><dd><p>
+	    Snap all points of the input geometry to the grid
+	    defined by its origin (the second argument, must be a point)
+	    and cell sizes. Specify 0 as size for any dimension you don't
+	    want to snap to a grid.
+	    </p><p>
+			Availability: 1.1.0
+		</p></dd><dt><span class="term">Segmentize(geometry, maxlength)</span></dt><dd><p>Return a modified geometry having no segment
+            longer then the given distance. Interpolated points will have Z
+            and M values (if needed) set to 0. Distance computation is
+            performed in 2d only.</p></dd><dt><span class="term">LineMerge(geometry)</span></dt><dd><p>
+			Returns a (set of) LineString(s) formed by sewing
+			togheter costituent linework of input.
+		</p><p>
+			Availability: 1.1.0 - requires GEOS &gt;= 2.1.0
+		</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2529854"></a>6.2.7. Linear Referencing</h3></div></div><div></div></div><div class="variablelist"><dl><dt><a name="line_interpolate_point"></a><span class="term">line_interpolate_point(linestring, location)</span></dt><dd><p>
+		Returns a poin interpolated along a line.
+		First argument must be a LINESTRING.
+		Second argument is a float8 between 0 and 1
+		representing fraction of total
+		<a href="ch06.html#length2d">2d length</a> the point has
+		to be located.
+		</p><p>
+		See <a href="ch06.html#line_locate_point">line_locate_point()</a>
+		for computing the line location nearest to a Point.
+		</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+            Since release 1.1.1 this function also interpolates
+	    M and Z values (when present), while prior releases
+	    set them to 0.0.
+	</p></div><p>
+			Availability: 0.8.2
+		</p></dd><dt><a name="line_substring"></a><span class="term">line_substring(linestring, start, end)</span></dt><dd><p>
+		Return a linestring being a substring of the input one starting
+		and ending at the given fractions of total 2d length. Second
+		and third arguments are float8 values between 0 and 1.
+		</p><p>
+		If 'start' and 'end' have the same value this is equivalent 
+		to <a href="ch06.html#line_interpolate_point">line_interpolate_point()</a>.
+		</p><p>
+		See <a href="ch06.html#line_locate_point">line_locate_point()</a>
+		for computing the line location nearest to a Point.
+		</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+            Since release 1.1.1 this function also interpolates
+	    M and Z values (when present), while prior releases
+	    set them to unspecified values.
+	</p></div><p>
+			Availability: 1.1.0
+		</p></dd><dt><a name="line_locate_point"></a><span class="term">line_locate_point(LineString, Point)</span></dt><dd><p>
+		Returns a float between 0 and 1 representing 
+		the location of the closest point on LineString
+		to the given Point, as a fraction of
+		total <a href="ch06.html#length2d">2d line</a> length.
+		</p><p>
+	You can use the returned location to extract a Point (<a href="ch06.html#line_interpolate_point">line_interpolate_point</a>) or a substring (<a href="ch06.html#line_substring">line_substring</a>).
+		</p><p>
+			Availability: 1.1.0
+		</p></dd><dt><span class="term">locate_along_measure(geometry, float8)</span></dt><dd><p>
+		Return a derived geometry collection value with elements that
+		match the specified measure.
+		Polygonal elements are not supported.
+		</p><p>
+		Semantic is specified by: ISO/IEC CD 13249-3:200x(E) -
+		Text for Continuation CD Editing Meeting
+		</p><p>
+			Availability: 1.1.0
+		</p></dd><dt><span class="term">locate_between_measures(geometry, float8, float8)</span></dt><dd><p>
+		Return a derived geometry collection value with elements that
+		match the specified range of measures inclusively.
+		Polygonal elements are not supported. 
+		</p><p>
+		Semantic is specified by: ISO/IEC CD 13249-3:200x(E) -
+		Text for Continuation CD Editing Meeting
+		</p><p>
+			Availability: 1.1.0
+		</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2530074"></a>6.2.8. Misc</h3></div></div><div></div></div><div class="variablelist"><dl><dt><span class="term">Summary(geometry)</span></dt><dd><p>Returns a text summary of the contents of the geometry.</p></dd><dt><span class="term">box2d(geometry)</span></dt><dd><p>Returns a BOX2D representing the maximum extents of the geometry.</p></dd><dt><span class="term">box3d(geometry)</span></dt><dd><p>Returns a BOX3D representing the maximum extents of the geometry.</p></dd><dt><span class="term">extent(geometry set)</span></dt><dd><p>The extent() function is an "aggregate" function in the terminology of PostgreSQL. That means that it operators on lists of data, in the same way the sum() and mean() functions do. For example, "SELECT EXTENT(GEOM) FROM GEOMTABLE" will return a BOX3D giving the maximum extend of all features in the table. Similarly, "SELECT EXTENT(GEOM) FROM GEOMTABLE GROUP BY CATEGORY" will return one extent result for each category.</p></dd><dt><a name="zmflag"></a><span class="term">zmflag(geometry)</span></dt><dd><p>Returns ZM (dimension semantic) flag of the geometries as a small int. Values are: 0=2d, 1=3dm, 2=3dz, 3=4d.  </p></dd><dt><a name="hasbbox"></a><span class="term">HasBBOX(geometry)</span></dt><dd><p>Returns TRUE if the bbox of this geometry is cached, FALSE otherwise. Use <a href="ch06.html#addbbox">addBBOX()</a> and <a href="ch06.html#dropbbox">dropBBOX()</a> to control caching.</p></dd><dt><a name="ndims"></a><span class="term">ndims(geometry)</span></dt><dd><p>Returns number of dimensions of the geometry as a small int. Values are: 2,3 or 4.</p></dd><dt><span class="term">nrings(geometry)</span></dt><dd><p>If the geometry is a polygon or multi-polygon returns the number of rings.</p></dd><dt><span class="term">npoints(geometry)</span></dt><dd><p>Returns the number of points in the geometry.</p></dd><dt><a name="IsValid"></a><span class="term">isvalid(geometry)</span></dt><dd><p>returns true if this geometry is valid.</p></dd><dt><span class="term">expand(geometry, float)</span></dt><dd><p>This function returns a bounding box expanded in all
+		    directions from the bounding box of the input geometry, by an
+		    amount specified in the second argument. Very useful for
+		    distance() queries, to add an index filter to the query.</p></dd><dt><span class="term">estimated_extent([schema], table, geocolumn)</span></dt><dd><p> Return the 'estimated' extent of the given spatial table.  The estimated is taken from the geometry column's statistics. The current schema will be used if not specified.</p><p>For PostgreSQL&gt;=8.0.0 statistics are gathered by VACUUM ANALYZE and resulting extent will be about 95% of the real one.</p><p>For PostgreSQL&lt;8.0.0 statistics are gathered by update_geometry_stats() and resulting extent will be exact.</p></dd><dt><span class="term">find_srid(varchar,varchar,varchar)</span></dt><dd><p>The syntax is find_srid(&lt;db/schema&gt;, &lt;table&gt;,
+            &lt;column&gt;) and the function returns the integer SRID of the
+            specified column by searching through the GEOMETRY_COLUMNS table.
+            If the geometry column has not been properly added with the
+            AddGeometryColumns() function, this function will not work
+            either.</p></dd><dt><span class="term">mem_size(geometry)</span></dt><dd><p>Returns the amount of space (in bytes) the geometry
+            takes.</p></dd><dt><span class="term">numb_sub_objects(geometry)</span></dt><dd><p>Returns the number of objects stored in the geometry. This
+            is useful for MULTI-geometries and GEOMETRYCOLLECTIONs.</p></dd><dt><span class="term">point_inside_circle(geometry,float,float,float)</span></dt><dd><p>The syntax for this functions is
+            point_inside_circle(&lt;geometry&gt;,&lt;circle_center_x&gt;,&lt;circle_center_y&gt;,&lt;radius&gt;).
+            Returns the true if the geometry is a point and is inside the
+            circle. Returns false otherwise.</p></dd><dt><span class="term">xmin(box3d) ymin(box3d) zmin(box3d)</span></dt><dd><p>Returns the requested minima of a bounding box.</p></dd><dt><span class="term">xmax(box3d) ymax(box3d) zmax(box3d)</span></dt><dd><p>Returns the requested maxima of a bounding box.</p></dd><dt><a name="Accum"></a><span class="term">Accum(geometry set)</span></dt><dd><p>Aggregate. Constructs an array of geometries.</p></dd></dl></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2531072"></a>6.2.9. Long Transactions support</h3></div></div><div></div></div><p>
+This module and associated pl/pgsql functions have been implemented
+to provide long locking support required by
+<a href="https://portal.opengeospatial.org/files/?artifact_id=7176" target="_top">Web Feature Service</a> specification.
+	</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+  Users must use <a href="http://www.postgresql.org/docs/7.4/static/transaction-iso.html" target="_top">serializable transaction level</a> otherwise locking mechanism would break.
+	  </p></div><div class="variablelist"><dl><dt><a name="EnableLongTransactions"></a><span class="term">EnableLongTransactions()</span></dt><dd><p>
+		Enable long transaction support. This function creates the
+		required metadata tables, needs to be called once before
+		using the other functions in this section. Calling it twice
+		is harmless.
+	    </p><p>
+		    Availability: 1.1.3
+		</p></dd><dt><a name="DisableLongTransactions"></a><span class="term">DisableLongTransactions()</span></dt><dd><p>
+		Disable long transaction support. This function removes the
+		long transaction support metadata tables, and drops all
+		triggers attached to lock-checked tables.
+	    </p><p>
+		    Availability: 1.1.3
+		</p></dd><dt><a name="CheckAuth"></a><span class="term">CheckAuth([&lt;schema&gt;], &lt;table&gt;, &lt;rowid_col&gt;)</span></dt><dd><p>
+		Check updates and deletes of rows in
+		given table for being authorized.
+		Identify rows using &lt;rowid_col&gt; column.
+	    </p><p>
+		    Availability: 1.1.3
+		</p></dd><dt><a name="LockRow"></a><span class="term">LockRow([&lt;schema&gt;], &lt;table&gt;, &lt;rowid&gt;, &lt;authid&gt;, [&lt;expires&gt;])</span></dt><dd><p>
+	Set lock/authorization for specific row in table
+	&lt;authid&gt; is a text value, &lt;expires&gt; is a timestamp
+	defaulting to now()+1hour.
+	Returns 1 if lock has been assigned, 0 otherwise
+	(already locked by other auth)
+	    </p><p>
+		    Availability: 1.1.3
+		</p></dd><dt><a name="UnlockRows"></a><span class="term">UnlockRows(&lt;authid&gt;)</span></dt><dd><p>
+	Remove all locks held by specified authorization id.
+	Returns the number of locks released.
+	    </p><p>
+		    Availability: 1.1.3
+		</p></dd><dt><a name="AddAuth"></a><span class="term">AddAuth(&lt;authid&gt;)</span></dt><dd><p>
+	Add an authorization token to be used in current
+	transaction. 
+	    </p><p>
+		    Availability: 1.1.3
+		</p></dd></dl></div></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch05.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="index.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch07.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 5. Performance tips </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 7. Reporting Bugs</td></tr></table></div></body></html>

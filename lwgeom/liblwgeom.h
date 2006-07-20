@@ -81,9 +81,13 @@ typedef struct chiptag
 	int datatype;	/* 1 = float32,
 			 * 5 = 24bit integer,
 			 * 6 = 16bit integer (short)
+			 * 7 = 16bit ???
+			 * 8 = 8bit ???
 			 * 101 = float32 (NDR),
 			 * 105 = 24bit integer (NDR),
-			 * 106=16bit int (NDR)
+			 * 106 = 16bit int (NDR)
+			 * 107 = 16bit ??? (NDR)
+			 * 108 = 8bit ??? (NDR) (this doesn't make sense)
 			 */
 	int height;
 	int width;
@@ -984,8 +988,14 @@ extern LWPOINT  *lwpoint_construct(int SRID, BOX2DFLOAT4 *bbox,
 	POINTARRAY *point);
 extern LWLINE *lwline_construct(int SRID, BOX2DFLOAT4 *bbox,
 	POINTARRAY *points);
+
+/*
+ * Construct a new LWPOLY.  arrays (points/points per ring) will NOT be copied
+ * use SRID=-1 for unknown SRID (will have 8bit type's S = 0)
+ */
 extern LWPOLY *lwpoly_construct(int SRID, BOX2DFLOAT4 *bbox,
 	unsigned int nrings, POINTARRAY **points);
+
 extern LWCOLLECTION *lwcollection_construct(unsigned int type, int SRID,
 	BOX2DFLOAT4 *bbox, unsigned int ngeoms, LWGEOM **geoms);
 extern LWCOLLECTION *lwcollection_construct_empty(int SRID,

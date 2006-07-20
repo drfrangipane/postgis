@@ -1,3 +1,15 @@
+/**********************************************************************
+ * $Id: lwpoint.c,v 1.23 2006/05/30 08:38:58 strk Exp $
+ *
+ * PostGIS - Spatial Types for PostgreSQL
+ * http://postgis.refractions.net
+ * Copyright 2001-2006 Refractions Research Inc.
+ *
+ * This is free software; you can redistribute and/or modify it under
+ * the terms of the GNU General Public Licence. See the COPYING file.
+ * 
+ **********************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -256,7 +268,11 @@ lwpoint_deserialize(uchar *serialized_form)
 
 	type = serialized_form[0];
 
-	if ( lwgeom_getType(type) != POINTTYPE) return NULL;
+	if ( lwgeom_getType(type) != POINTTYPE)
+	{
+		lwerror("lwpoint_deserialize: attempt to deserialize a point which is really a %s", lwgeom_typename(type));
+		return NULL;
+	}
 	result->type = type;
 
 	loc = serialized_form+1;
