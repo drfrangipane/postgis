@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: WFS_locks.sql.in,v 1.4 2006/06/25 22:33:55 strk Exp $
+-- $Id: WFS_locks.sql.in 2394 2006-06-25 22:33:55Z strk $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net

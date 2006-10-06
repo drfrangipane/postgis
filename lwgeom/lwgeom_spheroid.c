@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_spheroid.c,v 1.14 2006/01/09 15:12:02 strk Exp $
+ * $Id: lwgeom_spheroid.c 2272 2006-01-09 15:12:02Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net

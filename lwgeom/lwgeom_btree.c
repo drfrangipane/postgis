@@ -1,6 +1,6 @@
 /***********************************************************
  *
- * $Id: lwgeom_btree.c,v 1.9 2006/01/09 15:55:55 strk Exp $
+ * $Id: lwgeom_btree.c 2273 2006-01-09 15:55:55Z strk $
  *
  * Comparision function for use in Binary Tree searches
  * (ORDER BY, GROUP BY, DISTINCT)
@@ -458,7 +458,7 @@ Datum lwgeom_cmp(PG_FUNCTION_ARGS)
 
 /***********************************************************
  *
- * $Log: lwgeom_btree.c,v $
+ * $Log$
  * Revision 1.9  2006/01/09 15:55:55  strk
  * ISO C90 comments (finished in lwgeom/)
  *

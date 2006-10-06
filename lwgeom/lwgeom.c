@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom.c,v 1.33 2006/05/30 08:47:00 strk Exp $
+ * $Id: lwgeom.c 2370 2006-05-30 08:47:00Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net

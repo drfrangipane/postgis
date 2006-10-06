@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: test_estimation.pl,v 1.9 2005/04/18 13:30:25 strk Exp $
+# $Id: test_estimation.pl 1631 2005-04-18 13:30:25Z strk $
 # 
 # TODO:
 #
@@ -285,7 +285,7 @@ sub test_extent
 }
 
 # 
-# $Log: test_estimation.pl,v $
+# $Log$
 # Revision 1.9  2005/04/18 13:30:25  strk
 # Fixed to work against LWGEOM installations
 #

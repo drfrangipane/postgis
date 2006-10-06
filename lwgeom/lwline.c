@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwline.c,v 1.32 2006/05/30 08:38:58 strk Exp $
+ * $Id: lwline.c 2369 2006-05-30 08:38:58Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net

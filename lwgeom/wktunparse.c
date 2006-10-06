@@ -4,7 +4,7 @@
  * Copyright Telogis 2004
  * www.telogis.com
  *
- * $Id: wktunparse.c,v 1.23 2006/02/06 11:12:22 strk Exp $
+ * $Id: wktunparse.c 2305 2006-02-06 11:12:22Z strk $
  */
 
 
@@ -612,7 +612,7 @@ unparse_WKB(uchar* serialized, allocator alloc, freeor free, char endian, size_t
 
 
 /******************************************************************
- * $Log: wktunparse.c,v $
+ * $Log$
  * Revision 1.23  2006/02/06 11:12:22  strk
  * uint32_t typedef moved back from wktparse.h to lwgparse.c and wktunparse.c
  *

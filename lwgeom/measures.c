@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: measures.c,v 1.11 2006/05/30 08:38:58 strk Exp $
+ * $Id: measures.c 2369 2006-05-30 08:38:58Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net

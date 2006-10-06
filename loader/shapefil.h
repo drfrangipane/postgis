@@ -2,7 +2,7 @@
 #define _SHAPEFILE_H_INCLUDED
 
 /******************************************************************************
- * $Id: shapefil.h,v 1.5 2006/01/16 10:42:58 strk Exp $
+ * $Id: shapefil.h 2280 2006-01-16 10:42:58Z strk $
  *
  * Project:  Shapelib
  * Purpose:  Primary include file for Shapelib.
@@ -36,7 +36,7 @@
  * DEALINGS IN THE SOFTWARE.
  ******************************************************************************
  *
- * $Log: shapefil.h,v $
+ * $Log$
  * Revision 1.5  2006/01/16 10:42:58  strk
  * Added support for Bool and Date DBF<=>PGIS mapping
  *

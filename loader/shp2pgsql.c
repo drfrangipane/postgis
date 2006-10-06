@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: shp2pgsql.c,v 1.108 2006/06/16 14:12:17 strk Exp $
+ * $Id: shp2pgsql.c 2383 2006-06-16 14:12:17Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -137,7 +137,7 @@ static void print_wkb_int(int val);
 static void print_wkb_double(double val);
 
 static char rcsid[] =
-  "$Id: shp2pgsql.c,v 1.108 2006/06/16 14:12:17 strk Exp $";
+  "$Id: shp2pgsql.c 2383 2006-06-16 14:12:17Z strk $";
 
 void *safe_malloc(size_t size)
 {
@@ -1697,7 +1697,7 @@ utf8 (const char *fromcode, char *inputbuf)
 #endif /* defined USE_ICONV */
 
 /**********************************************************************
- * $Log: shp2pgsql.c,v $
+ * $Log$
  * Revision 1.108  2006/06/16 14:12:17  strk
  *         - BUGFIX in pgsql2shp successful return code.
  *         - BUGFIX in shp2pgsql handling of MultiLine WKT.

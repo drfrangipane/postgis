@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: dbfopen.c,v 1.8 2006/01/16 10:42:57 strk Exp $
+ * $Id: dbfopen.c 2472 2006-09-09 16:32:57Z pramsey $
  *
  * Project:  Shapelib
  * Purpose:  Implementation of .dbf access API documented in dbf_api.html.
@@ -33,7 +33,7 @@
  * DEALINGS IN THE SOFTWARE.
  ******************************************************************************
  *
- * $Log: dbfopen.c,v $
+ * $Log$
  * Revision 1.8  2006/01/16 10:42:57  strk
  * Added support for Bool and Date DBF<=>PGIS mapping
  *
@@ -204,7 +204,7 @@
  */
 
 static char rcsid[] = 
-  "$Id: dbfopen.c,v 1.8 2006/01/16 10:42:57 strk Exp $";
+  "$Id: dbfopen.c 2472 2006-09-09 16:32:57Z pramsey $";
 
 #include "shapefil.h"
 
@@ -919,7 +919,7 @@ DBFIsAttributeNULL( DBFHandle psDBF, int iRecord, int iField )
 
       case 'D':
         /* NULL date fields have value "00000000" */
-        return strncmp(pszValue,"00000000",8) == 0;
+        return (strncmp(pszValue,"00000000",8) == 0 || strlen(pszValue) == 0);
 
       case 'L':
         /* NULL boolean fields have value "?" */ 

@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_estimate.c,v 1.39 2006/05/30 08:38:58 strk Exp $
+ * $Id: lwgeom_estimate.c 2369 2006-05-30 08:38:58Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -2629,7 +2629,7 @@ Datum LWGEOM_estimated_extent(PG_FUNCTION_ARGS)
 
 
 /**********************************************************************
- * $Log: lwgeom_estimate.c,v $
+ * $Log$
  * Revision 1.39  2006/05/30 08:38:58  strk
  * Added some missing copyright headers.
  *

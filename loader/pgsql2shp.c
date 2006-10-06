@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: pgsql2shp.c,v 1.85 2006/06/16 14:12:16 strk Exp $
+ * $Id: pgsql2shp.c 2486 2006-09-27 08:24:08Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -19,7 +19,7 @@
  **********************************************************************/
 
 static char rcsid[] =
-  "$Id: pgsql2shp.c,v 1.85 2006/06/16 14:12:16 strk Exp $";
+  "$Id: pgsql2shp.c 2486 2006-09-27 08:24:08Z strk $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +34,8 @@ static char rcsid[] =
 #include "shapefil.h"
 #include "getopt.h"
 #include "compat.h"
+#include <sys/types.h> // for getpid()
+#include <unistd.h> // for getpid()
 
 #ifdef __CYGWIN__
 #include <sys/param.h>       
@@ -52,6 +54,7 @@ static char rcsid[] =
  * Verbosity:
  *   set to 1 to see record fetching progress
  *   set to 2 to see also shapefile creation progress
+ *   set to 3 for debugging
  */
 #define VERBOSE 1
 
@@ -69,6 +72,7 @@ typedef unsigned char byte;
 /* Global data */
 PGconn *conn;
 int rowbuflen;
+char temptablename[256];
 char *geo_col_name, *table, *shp_file, *schema, *usrquery;
 int type_ary[256];
 char *main_scan_query;
@@ -2505,7 +2509,6 @@ initialize(void)
 		return 0;
 	}
 
-
 	/* Get geometry oid */
 	geo_oid = getGeometryOID(conn);
 	if ( geo_oid == -1 )
@@ -3240,7 +3243,15 @@ parse_table(char *spec)
 	if ( strstr(spec, "SELECT ") || strstr(spec, "select ") )
 	{
 		usrquery = spec;
-		table = "__pgsql2shp_tmp_table";
+
+		/*
+		 * encode pid in table name to reduce 
+		 * clashes probability (see bug#115)
+		 */
+		sprintf(temptablename,
+			"__pgsql2shp%lu_tmp_table",
+			(long)getpid());
+		table = temptablename; 
 	}
 	else
 	{
@@ -3341,7 +3352,7 @@ goodDBFValue(const char *in, char fieldType)
 }
 
 /**********************************************************************
- * $Log: pgsql2shp.c,v $
+ * $Log$
  * Revision 1.85  2006/06/16 14:12:16  strk
  *         - BUGFIX in pgsql2shp successful return code.
  *         - BUGFIX in shp2pgsql handling of MultiLine WKT.

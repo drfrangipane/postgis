@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: shpopen.c,v 1.5 2003/12/01 20:52:00 strk Exp $
+ * $Id: shpopen.c 398 2003-12-01 20:52:00Z strk $
  *
  * Project:  Shapelib
  * Purpose:  Implementation of core Shapefile read/write functions.
@@ -33,7 +33,7 @@
  * DEALINGS IN THE SOFTWARE.
  ******************************************************************************
  *
- * $Log: shpopen.c,v $
+ * $Log$
  * Revision 1.5  2003/12/01 20:52:00  strk
  * shapelib put in sync with gdal cvs
  *
@@ -174,7 +174,7 @@
  */
 
 static char rcsid[] = 
-  "$Id: shpopen.c,v 1.5 2003/12/01 20:52:00 strk Exp $";
+  "$Id: shpopen.c 398 2003-12-01 20:52:00Z strk $";
 
 #include "shapefil.h"
 

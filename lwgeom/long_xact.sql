@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: long_xact.sql,v 1.1 2006/06/25 23:59:32 strk Exp $
+-- $Id: long_xact.sql 2406 2006-07-07 13:56:52Z strk $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net
@@ -286,7 +286,7 @@ BEGIN
 			''n.nspname as schema, '' ||
 #endif
 			''c.relname as table, trim('' ||
-			quote_literal(''\\\\000'') ||
+			quote_literal(chr(92) || ''000'') ||
 			'' from t.tgargs) as id_column '' ||
 			''FROM pg_trigger t, pg_class c, pg_proc p '' ||
 #ifdef HAS_SCHEMAS

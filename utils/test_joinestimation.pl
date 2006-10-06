@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: test_joinestimation.pl,v 1.3 2005/04/18 13:50:14 strk Exp $
+# $Id: test_joinestimation.pl 1633 2005-04-18 13:50:14Z strk $
 # 
 # TODO:
 #
@@ -255,7 +255,7 @@ sub get_num_rows
 }
 
 # 
-# $Log: test_joinestimation.pl,v $
+# $Log$
 # Revision 1.3  2005/04/18 13:50:14  strk
 # Fixed bug in table2 schema parsing.
 #

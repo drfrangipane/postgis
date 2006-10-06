@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: profile_intersects.pl,v 1.4 2004/09/27 08:23:45 strk Exp $
+# $Id: profile_intersects.pl 895 2004-09-27 08:23:45Z strk $
 # 
 # TODO:
 #
@@ -379,7 +379,7 @@ sub test_distance
 }
 
 # 
-# $Log: profile_intersects.pl,v $
+# $Log$
 # Revision 1.4  2004/09/27 08:23:45  strk
 # Added USE_GIST variable on top of file. Changed true values report
 # as fraction of total rows.

@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: topology.sql.in,v 1.5 2005/11/01 11:56:20 strk Exp $
+-- $Id: topology.sql.in 2469 2006-09-06 11:16:59Z strk $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net
@@ -702,12 +702,6 @@ AS '
 '
 LANGUAGE 'sql' _VOLATILE;
 
-CREATEFUNCTION topology.AddTopoGeometryColumn(varchar, varchar, varchar, varchar, varchar)
-	RETURNS integer
-AS '
-	SELECT topology.AddTopoGeometryColumn($1, $2, $3, $4, $5, NULL);
-'
-LANGUAGE 'sql' _VOLATILE;
 --
 --} AddTopoGeometryColumn
 

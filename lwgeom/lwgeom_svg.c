@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_svg.c,v 1.11 2006/01/09 15:55:55 strk Exp $
+ * $Id: lwgeom_svg.c 2273 2006-01-09 15:55:55Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -279,7 +279,7 @@ print_svg_path_rel(char *result, POINTARRAY *pa, int precision)
 
 
 /**********************************************************************
- * $Log: lwgeom_svg.c,v $
+ * $Log$
  * Revision 1.11  2006/01/09 15:55:55  strk
  * ISO C90 comments (finished in lwgeom/)
  *

@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_gml.c,v 1.13 2006/01/09 15:55:55 strk Exp $
+ * $Id: lwgeom_gml.c 2273 2006-01-09 15:55:55Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -504,7 +504,7 @@ getSRSbySRID(int SRID)
 }
 
 /**********************************************************************
- * $Log: lwgeom_gml.c,v $
+ * $Log$
  * Revision 1.13  2006/01/09 15:55:55  strk
  * ISO C90 comments (finished in lwgeom/)
  *
