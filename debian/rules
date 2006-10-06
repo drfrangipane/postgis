@@ -45,7 +45,7 @@ clean:
 	rm -f build-arch-stamp build-indep-stamp
 	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
 	-$(MAKE) distclean
-	-$(MAKE) -C jdbc2 clean
+	-$(MAKE) -C java/jdbc clean
 	dh_clean 
 
 install: install-indep install-arch
@@ -61,9 +61,9 @@ install-indep:
 		--infodir=\$${prefix}/share/info
 
 	# PostGIS JDBC (with debug support)
-	$(MAKE) -C jdbc2 clean
-	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=jikes-classpath $(MAKE) -C jdbc2 jar
-	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=jikes-classpath $(MAKE) -C jdbc2 install DESTDIR=$(CURDIR)/debian/libpostgis-java/usr/share/java/$(JAVA_PATH)
+	$(MAKE) -C java/jdbc clean
+	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=jikes-classpath $(MAKE) -C java/jdbc jar
+	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=jikes-classpath $(MAKE) -C java/jdbc install DESTDIR=$(CURDIR)/debian/libpostgis-java/usr/share/java/$(JAVA_PATH)
 	$(MAKE) distclean
 	dh_install -i
 
