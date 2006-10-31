@@ -19,9 +19,12 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsBinaryWriter.java 2497 2006-10-02 23:26:34Z mschaber $
+ * $Id: JtsBinaryWriter.java 2410 2006-07-19 13:31:18Z mschaber $
  */
-package org.postgis.jts;
+package org.postgis.pljava;
+
+import java.sql.SQLException;
+import java.sql.SQLOutput;
 
 import com.vividsolutions.jts.geom.CoordinateSequence;
 import com.vividsolutions.jts.geom.Geometry;
@@ -33,8 +36,6 @@ import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 
-import org.postgis.binary.ByteSetter;
-import org.postgis.binary.ValueSetter;
 
 /**
  * Create binary representation of geometries. Currently, only text rep (hexed)
@@ -51,86 +52,41 @@ import org.postgis.binary.ValueSetter;
  * @author markus.schaber@logi-track.com
  * 
  */
-public class JtsBinaryWriter {
+public class PLJtsWriter {
 
-    /**
-     * Get the appropriate ValueGetter for my endianness
-     * 
-     * @param bytes
-     *            The appropriate Byte Getter
-     * 
-     * @return the ValueGetter
-     */
-    public static ValueSetter valueSetterForEndian(ByteSetter bytes, byte endian) {
-        if (endian == ValueSetter.XDR.NUMBER) { // XDR
-            return new ValueSetter.XDR(bytes);
-        } else if (endian == ValueSetter.NDR.NUMBER) {
-            return new ValueSetter.NDR(bytes);
-        } else {
-            throw new IllegalArgumentException("Unknown Endian type:" + endian);
-        }
+    public void writeBinary(Geometry geom, SQLOutput dest) throws SQLException {
+        writeGeometry(geom, dest);
     }
 
-    /**
-     * Write a hex encoded geometry
-     * 
-     * Currently, geometries with more than 2 dimensions and measures are not
-     * cleanly supported, but SRID is honored.
-     */
-    public String writeHexed(Geometry geom, byte REP) {
-        int length = estimateBytes(geom);
-        ByteSetter.StringByteSetter bytes = new ByteSetter.StringByteSetter(length);
-        writeGeometry(geom, valueSetterForEndian(bytes, REP));
-        return bytes.result();
-    }
-
-    public String writeHexed(Geometry geom) {
-        return writeHexed(geom, ValueSetter.NDR.NUMBER);
-    }
-
-    /**
-     * Write a binary encoded geometry.
-     * 
-     * Currently, geometries with more than 2 dimensions and measures are not
-     * cleanly supported, but SRID is honored.
-     */
-    public byte[] writeBinary(Geometry geom, byte REP) {
-        int length = estimateBytes(geom);
-        ByteSetter.BinaryByteSetter bytes = new ByteSetter.BinaryByteSetter(length);
-        writeGeometry(geom, valueSetterForEndian(bytes, REP));
-        return bytes.result();
-    }
-
-    public byte[] writeBinary(Geometry geom) {
-        return writeBinary(geom, ValueSetter.NDR.NUMBER);
-    }
-
-    /** Parse a geometry starting at offset. */
-    protected void writeGeometry(Geometry geom, ValueSetter dest) {
+    /** Parse a geometry starting at offset. 
+     * @throws SQLException */
+    protected void writeGeometry(Geometry geom, SQLOutput dest) throws SQLException {
+        // TODO: Add bbox
+        // TODO: Add proper handling of Measures
+        
+        
         final int dimension = getCoordDim(geom);
         if (dimension < 2 || dimension > 4) {
             throw new IllegalArgumentException("Unsupported geometry dimensionality: " + dimension);
         }
-        // write endian flag
-        dest.setByte(dest.endian);
-
+        
         // write typeword
         final int plaintype = getWKBType(geom);
-        int typeword = plaintype;
+        byte typeword = (byte)plaintype;
         if (dimension == 3 || dimension == 4) {
-            typeword |= 0x80000000;
+            typeword |= 0x20;
         }
         if (dimension == 4) {
-            typeword |= 0x40000000;
+            typeword |= 0x10;
         }
         if (checkSrid(geom)) {
-            typeword |= 0x20000000;
+            typeword |= 0x40;
         }
 
-        dest.setInt(typeword);
+        dest.writeByte(typeword);
 
         if (checkSrid(geom)) {
-            dest.setInt(geom.getSRID());
+            dest.writeInt(geom.getSRID());
         }
 
         switch (plaintype) {
@@ -183,57 +139,59 @@ public class JtsBinaryWriter {
     /**
      * Writes a "slim" Point (without endiannes, srid ant type, only the
      * ordinates and measure. Used by writeGeometry.
+     * @throws SQLException 
      */
-    private void writePoint(Point geom, ValueSetter dest) {
+    private void writePoint(Point geom, SQLOutput dest) throws SQLException {
         writeCoordinates(geom.getCoordinateSequence(), getCoordDim(geom), dest);
     }
 
     /**
      * Write a Coordinatesequence, part of LinearRing and Linestring, but not
      * MultiPoint!
+     * @throws SQLException 
      */
-    private void writeCoordinates(CoordinateSequence seq, int dims, ValueSetter dest) {
+    private void writeCoordinates(CoordinateSequence seq, int dims, SQLOutput dest) throws SQLException {
         for (int i = 0; i < seq.size(); i++) {
             for (int d = 0; d < dims; d++) {
-                dest.setDouble(seq.getOrdinate(i, d));
+                dest.writeDouble(seq.getOrdinate(i, d));
             }
         }
     }
 
-    private void writeMultiPoint(MultiPoint geom, ValueSetter dest) {
-        dest.setInt(geom.getNumPoints());
+    private void writeMultiPoint(MultiPoint geom, SQLOutput dest) throws SQLException {
+        dest.writeInt(geom.getNumPoints());
         for (int i = 0; i < geom.getNumPoints(); i++) {
             writeGeometry(geom.getGeometryN(i), dest);
         }
     }
 
-    private void writeLineString(LineString geom, ValueSetter dest) {
-        dest.setInt(geom.getNumPoints());
+    private void writeLineString(LineString geom, SQLOutput dest) throws SQLException {
+        dest.writeInt(geom.getNumPoints());
         writeCoordinates(geom.getCoordinateSequence(), getCoordDim(geom), dest);
     }
 
-    private void writePolygon(Polygon geom, ValueSetter dest) {
-        dest.setInt(geom.getNumInteriorRing() + 1);
+    private void writePolygon(Polygon geom, SQLOutput dest) throws SQLException {
+        dest.writeInt(geom.getNumInteriorRing() + 1);
         writeLineString(geom.getExteriorRing(), dest);
         for (int i = 0; i < geom.getNumInteriorRing(); i++) {
             writeLineString(geom.getInteriorRingN(i), dest);
         }
     }
 
-    private void writeMultiLineString(MultiLineString geom, ValueSetter dest) {
+    private void writeMultiLineString(MultiLineString geom, SQLOutput dest) throws SQLException {
         writeGeometryArray(geom, dest);
     }
 
-    private void writeMultiPolygon(MultiPolygon geom, ValueSetter dest) {
+    private void writeMultiPolygon(MultiPolygon geom, SQLOutput dest) throws SQLException {
         writeGeometryArray(geom, dest);
     }
 
-    private void writeCollection(GeometryCollection geom, ValueSetter dest) {
+    private void writeCollection(GeometryCollection geom, SQLOutput dest) throws SQLException {
         writeGeometryArray(geom, dest);
     }
 
-    private void writeGeometryArray(Geometry geom, ValueSetter dest) {
-        dest.setInt(geom.getNumGeometries());
+    private void writeGeometryArray(Geometry geom, SQLOutput dest) throws SQLException {
+        dest.writeInt(geom.getNumGeometries());
         for (int i = 0; i < geom.getNumGeometries(); i++) {
             writeGeometry(geom.getGeometryN(i), dest);
         }
@@ -241,13 +199,11 @@ public class JtsBinaryWriter {
 
     /** Estimate how much bytes a geometry will need in WKB. */
     protected int estimateBytes(Geometry geom) {
+        // Todo: include bbox
         int result = 0;
 
-        // write endian flag
+        // write type byte
         result += 1;
-
-        // write typeword
-        result += 4;
 
         if (checkSrid(geom)) {
             result += 4;

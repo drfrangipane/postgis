@@ -21,7 +21,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: Geometry.java 2343 2006-05-09 13:06:56Z mschaber $
+ * $Id: Geometry.java 2495 2006-10-02 15:58:43Z mschaber $
  */
 
 package org.postgis;
@@ -145,15 +145,13 @@ public abstract class Geometry implements Serializable {
      * values
      */
     public boolean equals(Geometry other) {
-        boolean firstline = (other != null) && (this.dimension == other.dimension)
-                && (this.type == other.type);
-        boolean sridequals = (this.srid == other.srid);
-        boolean measEquals = (this.haveMeasure == other.haveMeasure);
-        boolean secondline = sridequals && measEquals;
-        boolean classequals = other.getClass().equals(this.getClass());
-        boolean equalsintern = this.equalsintern(other);
-        boolean result = firstline && secondline && classequals && equalsintern;
-        return result;
+        return (other != null) 
+                && (this.dimension == other.dimension)
+                && (this.type == other.type)
+                && (this.srid == other.srid) 
+                && (this.haveMeasure == other.haveMeasure) 
+                && other.getClass().equals(this.getClass()) 
+                && this.equalsintern(other);
     }
 
     /**

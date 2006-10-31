@@ -1,5 +1,5 @@
 Todo for PostGIS 1.0 compatible JDBC classes
-$Id: todo.txt 1622 2005-04-15 14:04:34Z mschaber $
+$Id: todo.txt 2491 2006-09-27 15:50:33Z mschaber $
 
 - even more Testing, especialy against different postgis, 
   pgjdbc and postgresql releases.
@@ -20,3 +20,7 @@ $Id: todo.txt 1622 2005-04-15 14:04:34Z mschaber $
 - Possibly adding server side code to support plJava
   http://gborg.postgresql.org/project/pljava/projdisplay.php
 
+- Rework the BinaryParser/BinaryWriter to work on SQLInput/SQLOutput 
+  instances, as well as reworking ValueGetter/ValueSetter to implment those interfaces.
+
+- Unify the build of app java projects

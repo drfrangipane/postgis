@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: pgsql2shp.c 2486 2006-09-27 08:24:08Z strk $
+ * $Id: pgsql2shp.c 2485 2006-09-27 08:23:40Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -19,7 +19,7 @@
  **********************************************************************/
 
 static char rcsid[] =
-  "$Id: pgsql2shp.c 2486 2006-09-27 08:24:08Z strk $";
+  "$Id: pgsql2shp.c 2485 2006-09-27 08:23:40Z strk $";
 
 #include <stdio.h>
 #include <stdlib.h>

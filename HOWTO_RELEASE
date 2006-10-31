@@ -1,0 +1,35 @@
+How to release
+~~~~~~~~~~~~~~
+  Date: 2006-09-27
+
+Versioning Scheme
+-----------------
+
+Release version is composed by REL_MAJOR_VERSION, REL_MINOR_VERSION
+and REL_MICRO_VERSION components. "REL" here matches SO for the server
+side of PostGIS, and JDBC for the java side.
+
+By default only [REL_MICRO_VERSION] increments between releases.
+
+[REL_MINOR_VERSION] is incremented (and MICRO set to 0) when minor
+additions have been introduced (one or two functions can be considered
+*micro* additions)
+
+[REL_MAJOR_VERSION] is incremented (and MICRO and MINOR set to 0) when
+a dump/reload of existing spatial databases is *REQUIRED* for things
+to work or rather *HIGHLY RECOMMENDED* to get new functionalities.
+
+Release procedure
+-----------------
+
+1) Update Version.config as specified in Versioning Scheme above.
+2) Edit CHANGES: set release date and check all notable changes are
+   been reported.
+3) Add release notes in doc/postgis.xml
+4) Tag the release:
+   $ base=http://svn.refractions.net/postgis/
+   $ rel=MAJ.MIN.MIC
+   $ svn copy -m "Tagged release $rel" $base/trunk $base/tags/$rel
+5) Run: sh make_dist.sh MAJ.MIN.MIC
+6) Publish
+7) Announce 

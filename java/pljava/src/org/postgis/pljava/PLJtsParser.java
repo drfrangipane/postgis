@@ -19,16 +19,25 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsBinaryParser.java 2493 2006-10-02 14:30:47Z mschaber $
+ * $Id: JtsBinaryParser.java 2407 2006-07-18 18:13:31Z mschaber $
  */
-package org.postgis.jts;
+package org.postgis.pljava;
 
-import org.postgis.binary.ByteGetter;
-import org.postgis.binary.ValueGetter;
-import org.postgis.binary.ByteGetter.BinaryByteGetter;
-import org.postgis.binary.ByteGetter.StringByteGetter;
+import java.sql.SQLException;
+import java.sql.SQLInput;
 
-import com.vividsolutions.jts.geom.*;
+
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.CoordinateSequence;
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryCollection;
+import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.LinearRing;
+import com.vividsolutions.jts.geom.MultiLineString;
+import com.vividsolutions.jts.geom.MultiPoint;
+import com.vividsolutions.jts.geom.MultiPolygon;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.impl.PackedCoordinateSequence;
 
 /**
@@ -46,63 +55,36 @@ import com.vividsolutions.jts.geom.impl.PackedCoordinateSequence;
  * @author Markus Schaber, markus.schaber@logix-tt.com
  * 
  */
-public class JtsBinaryParser {
+public class PLJtsParser {
 
-    /**
-     * Get the appropriate ValueGetter for my endianness
-     * 
-     * @param bytes
-     *            The appropriate Byte Getter
-     * 
-     * @return the ValueGetter
-     */
-    public static ValueGetter valueGetterForEndian(ByteGetter bytes) {
-        if (bytes.get(0) == ValueGetter.XDR.NUMBER) { // XDR
-            return new ValueGetter.XDR(bytes);
-        } else if (bytes.get(0) == ValueGetter.NDR.NUMBER) {
-            return new ValueGetter.NDR(bytes);
-        } else {
-            throw new IllegalArgumentException("Unknown Endian type:" + bytes.get(0));
-        }
-    }
-
-    /**
-     * Parse a hex encoded geometry
-     */
-    public Geometry parse(String value) {
-        StringByteGetter bytes = new ByteGetter.StringByteGetter(value);
-        return parseGeometry(valueGetterForEndian(bytes));
-    }
-
-    /**
-     * Parse a binary encoded geometry.
-     */
-    public Geometry parse(byte[] value) {
-        BinaryByteGetter bytes = new ByteGetter.BinaryByteGetter(value);
-        return parseGeometry(valueGetterForEndian(bytes));
-    }
-
-    /** Parse a geometry starting at offset. */
-    protected Geometry parseGeometry(ValueGetter data) {
+    /** Parse a geometry 
+     * @throws SQLException */
+    public Geometry parseGeometry(SQLInput data) throws SQLException {
         return parseGeometry(data, 0, false);
     }
 
-    /** Parse with a known geometry factory */
-    protected Geometry parseGeometry(ValueGetter data, int srid, boolean inheritSrid) {
-        byte endian = data.getByte(); // skip and test endian flag
-        if (endian != data.endian) {
-            throw new IllegalArgumentException("Endian inconsistency!");
+    /** Parse with a known geometry factory 
+     * @throws SQLException */
+    protected Geometry parseGeometry(SQLInput data, int srid, boolean inheritSrid) throws SQLException {
+        int typeword = data.readByte() & 0xFF;
+        
+        int realtype = typeword & 0x0F; // cut off high flag bits
+
+        boolean haveBBox = (typeword & 0x80) != 0;
+        boolean haveS = (typeword & 0x40) != 0;
+        boolean haveZ = (typeword & 0x20) != 0;
+        boolean haveM = (typeword & 0x10) != 0;
+
+        if (haveBBox) {
+            // skip bbox, currently ignored
+            data.readFloat();
+            data.readFloat();
+            data.readFloat();
+            data.readFloat();
         }
-        int typeword = data.getInt();
-
-        int realtype = typeword & 0x1FFFFFFF; // cut off high flag bits
-
-        boolean haveZ = (typeword & 0x80000000) != 0;
-        boolean haveM = (typeword & 0x40000000) != 0;
-        boolean haveS = (typeword & 0x20000000) != 0;
-
+        
         if (haveS) {
-            int newsrid = data.getInt();
+            int newsrid = data.readInt();
             if (inheritSrid && newsrid != srid) {
                 throw new IllegalArgumentException("Inconsistent srids in complex geometry: " + srid + ", " + newsrid);
             } else {
@@ -144,26 +126,27 @@ public class JtsBinaryParser {
         return result;
     }
 
-    private Point parsePoint(ValueGetter data, boolean haveZ, boolean haveM) {
-        double X = data.getDouble();
-        double Y = data.getDouble();
+    private Point parsePoint(SQLInput data, boolean haveZ, boolean haveM) throws SQLException {
+        double X = data.readDouble();
+        double Y = data.readDouble();
         Point result;
         if (haveZ) {
-            double Z = data.getDouble();
-            result = JtsGeometry.geofac.createPoint(new Coordinate(X, Y, Z));
+            double Z = data.readDouble();
+            result = PLJGeometry.geofac.createPoint(new Coordinate(X, Y, Z));
         } else {
-            result = JtsGeometry.geofac.createPoint(new Coordinate(X, Y));
+            result = PLJGeometry.geofac.createPoint(new Coordinate(X, Y));
         }
 
         if (haveM) { // skip M value
-            data.getDouble();
+            data.readDouble();
         }
         
         return result;
     }
 
-    /** Parse an Array of "full" Geometries */
-    private void parseGeometryArray(ValueGetter data, Geometry[] container, int srid) {
+    /** Parse an Array of "full" Geometries 
+     * @throws SQLException */
+    private void parseGeometryArray(SQLInput data, Geometry[] container, int srid) throws SQLException {
         for (int i = 0; i < container.length; i++) {
             container[i] = parseGeometry(data, srid, true);
         }
@@ -175,39 +158,40 @@ public class JtsBinaryParser {
      * 
      * @param haveZ
      * @param haveM
+     * @throws SQLException 
      */
-    private CoordinateSequence parseCS(ValueGetter data, boolean haveZ, boolean haveM) {
-        int count = data.getInt();
+    private CoordinateSequence parseCS(SQLInput data, boolean haveZ, boolean haveM) throws SQLException {
+        int count = data.readInt();
         int dims = haveZ ? 3 : 2;
         CoordinateSequence cs = new PackedCoordinateSequence.Double(count, dims);
 
         for (int i = 0; i < count; i++) {
             for (int d = 0; d < dims; d++) {
-                cs.setOrdinate(i, d, data.getDouble());
+                cs.setOrdinate(i, d, data.readDouble());
             }
             if (haveM) { // skip M value
-                data.getDouble();
+                data.readDouble();
             }
         }
         return cs;
     }
 
-    private MultiPoint parseMultiPoint(ValueGetter data, int srid) {
-        Point[] points = new Point[data.getInt()];
+    private MultiPoint parseMultiPoint(SQLInput data, int srid) throws SQLException {
+        Point[] points = new Point[data.readInt()];
         parseGeometryArray(data, points, srid);
-        return JtsGeometry.geofac.createMultiPoint(points);
+        return PLJGeometry.geofac.createMultiPoint(points);
     }
 
-    private LineString parseLineString(ValueGetter data, boolean haveZ, boolean haveM) {
-        return JtsGeometry.geofac.createLineString(parseCS(data, haveZ, haveM));
+    private LineString parseLineString(SQLInput data, boolean haveZ, boolean haveM) throws SQLException {
+        return PLJGeometry.geofac.createLineString(parseCS(data, haveZ, haveM));
     }
 
-    private LinearRing parseLinearRing(ValueGetter data, boolean haveZ, boolean haveM) {
-        return JtsGeometry.geofac.createLinearRing(parseCS(data, haveZ, haveM));
+    private LinearRing parseLinearRing(SQLInput data, boolean haveZ, boolean haveM) throws SQLException {
+        return PLJGeometry.geofac.createLinearRing(parseCS(data, haveZ, haveM));
     }
 
-    private Polygon parsePolygon(ValueGetter data, boolean haveZ, boolean haveM, int srid) {
-        int holecount = data.getInt() - 1;
+    private Polygon parsePolygon(SQLInput data, boolean haveZ, boolean haveM, int srid) throws SQLException {
+        int holecount = data.readInt() - 1;
         LinearRing[] rings = new LinearRing[holecount];
         LinearRing shell = parseLinearRing(data, haveZ, haveM);
         shell.setSRID(srid);
@@ -215,27 +199,27 @@ public class JtsBinaryParser {
             rings[i] = parseLinearRing(data, haveZ, haveM);
             rings[i].setSRID(srid);
         }
-        return JtsGeometry.geofac.createPolygon(shell, rings);
+        return PLJGeometry.geofac.createPolygon(shell, rings);
     }
 
-    private MultiLineString parseMultiLineString(ValueGetter data, int srid) {
-        int count = data.getInt();
+    private MultiLineString parseMultiLineString(SQLInput data, int srid) throws SQLException {
+        int count = data.readInt();
         LineString[] strings = new LineString[count];
         parseGeometryArray(data, strings, srid);
-        return JtsGeometry.geofac.createMultiLineString(strings);
+        return PLJGeometry.geofac.createMultiLineString(strings);
     }
 
-    private MultiPolygon parseMultiPolygon(ValueGetter data, int srid) {
-        int count = data.getInt();
+    private MultiPolygon parseMultiPolygon(SQLInput data, int srid) throws SQLException {
+        int count = data.readInt();
         Polygon[] polys = new Polygon[count];
         parseGeometryArray(data, polys, srid);
-        return JtsGeometry.geofac.createMultiPolygon(polys);
+        return PLJGeometry.geofac.createMultiPolygon(polys);
     }
 
-    private GeometryCollection parseCollection(ValueGetter data, int srid) {
-        int count = data.getInt();
+    private GeometryCollection parseCollection(SQLInput data, int srid) throws SQLException {
+        int count = data.readInt();
         Geometry[] geoms = new Geometry[count];
         parseGeometryArray(data, geoms, srid);
-        return JtsGeometry.geofac.createGeometryCollection(geoms);
+        return PLJGeometry.geofac.createGeometryCollection(geoms);
     }
 }

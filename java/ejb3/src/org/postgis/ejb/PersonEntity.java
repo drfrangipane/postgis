@@ -3,7 +3,7 @@
  * 
  * PostGIS extension for PostgreSQL JDBC driver - EJB3 Tutorial
  * 
- * (C) 2006  Noarman Barker <nbarker@ittvis.com>
+ * (C) 2006  Norman Barker <norman.barker@gmail.com>
  * 
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: PersonEntity.java 2476 2006-09-20 09:03:12Z mschaber $
+ * $Id: PersonEntity.java 2500 2006-10-09 17:12:46Z mschaber $
  */
 package org.postgis.ejb;
 

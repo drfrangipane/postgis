@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: BinaryWriter.java 1622 2005-04-15 14:04:34Z mschaber $
+ * $Id: BinaryWriter.java 2497 2006-10-02 23:26:34Z mschaber $
  */
 package org.postgis.binary;
 
@@ -190,9 +190,6 @@ public class BinaryWriter {
     /**
      * Write an Array of "slim" Points (without endianness, srid and type, part
      * of LinearRing and Linestring, but not MultiPoint!
-     * 
-     * @param haveZ
-     * @param haveM
      */
     private void writePointArray(Point[] geom, ValueSetter dest) {
         // number of points
@@ -304,9 +301,6 @@ public class BinaryWriter {
     /**
      * Write an Array of "slim" Points (without endianness and type, part of
      * LinearRing and Linestring, but not MultiPoint!
-     * 
-     * @param haveZ
-     * @param haveM
      */
     private int estimatePointArray(Point[] geom) {
         // number of points

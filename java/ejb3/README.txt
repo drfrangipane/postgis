@@ -1,5 +1,5 @@
-$Id: README.txt 2489 2006-09-27 08:47:10Z mschaber $
-(This code was contributed by Norman Barker <nbarker@ittvis.com>)
+$Id: README.txt 2505 2006-10-11 10:45:28Z mschaber $
+(This code was contributed by Norman Barker <norman.barker@gmail.com>)
 
 Spatial EJB3
 
@@ -13,7 +13,8 @@ the dependency on JBoss and Hibernate to incorporate other Application
 Services. 
 
 Since it is useful to display screenshots in a tutorial this has been written
-as a PDF and the document and source are available here.
+as an Openoffice Document. For easy viewing and printing, a PDF version is
+also available.
 
 
 COMPILING:

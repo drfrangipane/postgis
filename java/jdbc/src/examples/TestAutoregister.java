@@ -19,7 +19,7 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: TestAutoregister.java 1622 2005-04-15 14:04:34Z mschaber $
+ * $Id: TestAutoregister.java 2497 2006-10-02 23:26:34Z mschaber $
  */
 
 package examples;
@@ -88,6 +88,8 @@ public class TestAutoregister {
             System.err.println("Connection initialization failed, aborting.");
             e.printStackTrace();
             System.exit(1);
+            // signal the compiler that code flow ends here:
+            throw new AssertionError();
         }
 
         int postgisServerMajor = 0;
@@ -96,8 +98,9 @@ public class TestAutoregister {
         } catch (SQLException e) {
             System.err.println("Error fetching PostGIS version: " + e.getMessage());
             System.err.println("Is PostGIS really installed in the database?");
-            // Signal the compiler that code flow ends here.
-            System.exit(1);
+             System.exit(1);
+            // signal the compiler that code flow ends here:
+            throw new AssertionError();
         }
 
         System.out.println("PostGIS Version: " + postgisServerMajor);

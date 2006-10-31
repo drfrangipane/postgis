@@ -1,5 +1,18 @@
-PostGIS 1.1.4
+PostGIS 1.1.5
+2006/10/13
+	- Java:
+	  - Removed obsolete synchronization from Jts code.
+	  - fixed nullpointer Exception in Geometry.equals() method
+          - Added EJB3Spatial.odt to fulfill the GPL requirement of
+            distributing the "preferred form of modification"
+	- Added -S option for non-multi geometries to shp2pgsql
+	- Updated heavily outdated README files for shp2pgsql/pgsql2shp by 
+	  merging them with the manpages.
+	- Fixed MingW link error that was causing pgsql2shp to
+	  segfault on Win32 when compiled for PostgreSQL 8.2
 
+PostGIS 1.1.4
+2006/09/27
 	- Fixed support for PostgreSQL 8.2
 	- Fixed bug in collect() function discarding SRID of
 	  input
