@@ -4,7 +4,7 @@
  * Copyright Telogis 2004
  * www.telogis.com
  *
- * $Id: wktunparse.c 2305 2006-02-06 11:12:22Z strk $
+ * $Id: wktunparse.c 2521 2006-11-02 07:55:32Z strk $
  */
 
 
@@ -577,7 +577,7 @@ unparse_WKB(uchar* serialized, allocator alloc, freeor free, char endian, size_t
 	out_start = out_pos = alloc(len);
 	lwgi=0;
 
-	if ( endian == -1 )
+	if ( endian == (char)-1 )
 	{
 		endianbyte = getMachineEndian();
 		if ( hex ) write_wkb_bytes = write_wkb_hex_bytes;

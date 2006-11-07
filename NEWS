@@ -1,3 +1,17 @@
+PostGIS 1.1.6
+2006/11/02
+
+	- fixed CAPI change that broke 64-bit platforms
+	- use Z ordinate in reprojections
+	- spatial_ref_sys.sql updated to EPSG 6.11.1 
+        - Simplified Version.config infrastructure to use a single
+          pack of version variables for everything.
+        - Include the Version.config in loader/dumper USAGE messages
+        - Replace hand-made, fragile JDBC version parser with Properties
+        - Fixed setSRID() bug in JDBC, thanks to Thomas Marti
+        - loader/dumper: fixed regression tests and usage output
+
+
 PostGIS 1.1.5
 2006/10/13
 	- Java:

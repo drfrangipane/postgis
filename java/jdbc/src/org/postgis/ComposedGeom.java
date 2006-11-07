@@ -21,7 +21,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: ComposedGeom.java 1839 2005-07-28 12:23:16Z mschaber $
+ * $Id: ComposedGeom.java 2523 2006-11-02 09:03:30Z mschaber $
  */
 
 package org.postgis;
@@ -260,6 +260,13 @@ public abstract class ComposedGeom extends Geometry {
             return true;
         } else {
             return false;
+        }
+    }
+
+    public void setSrid(int srid) {
+        super.setSrid(srid);
+        for (int i = 0; i < subgeoms.length; i++) {
+            subgeoms[i].setSrid(srid);
         }
     }
 }
