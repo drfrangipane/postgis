@@ -1,6 +1,8 @@
+Debian README for Postgis
+=========================
 
-These are the PostGIS packages for Debian.  PostGIS is broken into three
-packages for Debian, they are:
+These are the PostGIS packages for Debian. PostGIS is splitted into three
+Debian packages:
 
 postgresql-8.1-postgis
   This is the PostGIS module for the PostgreSQL server itself.  It contains
@@ -31,3 +33,130 @@ postgis
 libpostgis-java
   This package contains the Java library for using JDBC with a PostGIS-
   enabled PostgreSQL server.
+
+
+
+How to create a Postgis-enabled database
+========================================
+
+Type as root:
+
+  # Become a postgresql superuser
+  su - postgres
+
+  # Create the user (allowed to log in and with password)
+  createuser <username> -l -W
+
+  # Shall the new role be a superuser? (y/n) n
+  # Shall the new role be allowed to create databases? (y/n) n
+  # Shall the new role be allowed to create more new roles? (y/n) n
+  # Password: <type the user password>
+
+  # create database ownered by user
+  createdb <databasename> --o <username>
+
+  # Need to enable plpgsql for the database before loading the functions
+  createlang plpgsql -d <databasename>
+
+  # Finally, load the functions and reference system tables
+  psql <databasename> -f /usr/share/postgresql-8.1-postgis/lwpostgis.sql
+  psql <databasename> -f /usr/share/postgresql-8.1-postgis/spatial_ref_sys.sql
+
+  # login in new database (still as superuser postgres)
+  psql <databasename>
+
+  # grant privilege on standard ogc tables to user
+  grant all on geometry_columns to <username>;
+  grant select on spatial_ref_sys to <username>;
+
+  # exit from postgres
+  \q
+
+  # log out from unix user postgres and from root. As normal user, enter
+  # in your new db:
+  psql -h <host> -U <username> -d <databasename>
+
+  # you are in your new geodb
+  # have a look of tables
+  \dt
+
+  # have a look of functions
+  \df
+
+  # have a look of spatial_ref_sys
+  select * from spatial_ref_sys;
+
+
+
+How to create a Postgis-enabled template database
+=================================================
+
+If you want to create a template_gis to use as template for every new
+geodatabase, type as root:
+
+  # Become a postgresql superuser
+  su - postgres
+
+  # create database (owner:postgres)
+  createdb template_gis
+
+  # Need to enable plpgsql for the database beforeloading the functions
+  createlang plpgsql -d template_gis
+
+  # Finally, load the functions and reference system tables
+  psql template_gis -f /usr/share/postgresql-8.1-postgis/lwpostgis.sql
+  psql template_gis -f /usr/share/postgresql-8.1-postgis/spatial_ref_sys.sql
+
+  # login in new database (still as superuser postgres)
+  psql template_gis
+
+  # transform new db in template
+  update pg_database SET datistemplate='true' where datname='template_gis';
+
+  # exit from postgres
+  \q
+
+
+How to create a Postgis-enabled database using the template
+===========================================================
+
+Type as root:
+
+  # Become a postgresql superuser (or another superuser if there is)
+  su - postgres
+
+  # Create the user  (allowed to log in and with password, wich must 
+  # beo wner of new db) skip if you still have your user
+  createuser <username> -l -W
+
+  # Shall the new role be a superuser? (y/n) n
+  # Shall the new role be allowed to create databases? (y/n) n
+  # Shall the new role be allowed to create more new roles? (y/n) n
+  # Password: <type the user password>
+
+  # create database (from template_gis) ownered by user
+  createdb <databasename> --o <username> - T template_gis
+
+  # login in new database (still as superuser postgres)
+  psql <databasename>
+
+  # grant privilege on standard ogc tables to user
+  grant all on geometry_columns to <username>;
+  grant select on spatial_ref_sys to <username>;
+
+  # exit from postgres
+  \q
+
+  # log out from unix user postgres and from root. As normal user, enter
+  # in your new db:
+  psql -h <host> -U <username> -d <databasename>
+
+  # you are in your new geodb
+  # have a look of tables
+  \dt
+
+  # have a look of functions
+  \df
+
+  # have a look of spatial_ref_sys
+  select * from spatial_ref_sys;
