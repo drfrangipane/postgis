@@ -542,14 +542,18 @@ Datum LWGEOM_gist_compress(PG_FUNCTION_ARGS)
 			if (in != (PG_LWGEOM*)DatumGetPointer(entry->key))
 				pfree(in);  /* PG_FREE_IF_COPY */
 
+#if USE_VERSION >= 82
 			gistentryinit(*retval, PointerGetDatum(rr),
 				entry->rel, entry->page,
-#if USE_VERSION >= 82
 				entry->offset,
-#else
-				entry->offset, sizeof(BOX2DFLOAT4),
-#endif
 				FALSE);
+#else
+			gistentryinit(*retval, PointerGetDatum(rr),
+				entry->rel, entry->page,
+				entry->offset, sizeof(BOX2DFLOAT4),
+				FALSE);
+#endif
+
 
 		}
 		else
@@ -557,12 +561,15 @@ Datum LWGEOM_gist_compress(PG_FUNCTION_ARGS)
 #ifdef PGIS_DEBUG_GIST4
 		elog(NOTICE,"GIST: LWGEOM_gist_compress got a NULL key");
 #endif
-			gistentryinit(*retval, (Datum) 0, entry->rel,
+
 #if USE_VERSION >= 82
+			gistentryinit(*retval, (Datum) 0, entry->rel,
 				entry->page, entry->offset, FALSE);
 #else
+			gistentryinit(*retval, (Datum) 0, entry->rel,
 				entry->page, entry->offset, 0, FALSE);
 #endif
+
 		}
 
 	}
@@ -951,14 +958,23 @@ Datum LWGEOM_gist_penalty(PG_FUNCTION_ARGS)
 	elog(NOTICE,"GIST: LWGEOM_gist_penalty called");
 #endif
 
+	if (DatumGetPointer(origentry->key) == NULL && DatumGetPointer(newentry->key) == NULL)
+	{
+#ifdef PGIS_DEBUG_GIST6
+		elog(NOTICE,"GIST: LWGEOM_gist_penalty called with both inputs NULL");
+#endif
+		*result = 0;
+	}
+	else
+	{
+		ud = DirectFunctionCall2(BOX2D_union, origentry->key, newentry->key);
+		/*ud = BOX2D_union(origentry->key, newentry->key); */
+		tmp1 = size_box2d_double(ud);
+		if (DatumGetPointer(ud) != NULL)
+			pfree(DatumGetPointer(ud));
+		*result = tmp1 - size_box2d_double(origentry->key);
+	}
 
-	ud = DirectFunctionCall2(BOX2D_union, origentry->key, newentry->key);
-	/*ud = BOX2D_union(origentry->key, newentry->key); */
-	tmp1 = size_box2d_double(ud);
-	if (DatumGetPointer(ud) != NULL)
-		pfree(DatumGetPointer(ud));
-
-	*result = tmp1 - size_box2d_double(origentry->key);
 
 #ifdef PGIS_DEBUG_GIST6
 	elog(NOTICE,"GIST: LWGEOM_gist_penalty called and returning %.15g", *result);

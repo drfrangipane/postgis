@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_spheroid.c 2272 2006-01-09 15:12:02Z strk $
+ * $Id: lwgeom_spheroid.c 2532 2006-12-01 22:16:44Z mleslie $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -205,9 +205,9 @@ distance_ellipse(double lat1, double long1,
 	/*result2 =  distance_sphere_method(lat1, long1,lat2,long2, sphere);*/
 
 #ifdef PGIS_DEBUG
-	elog(NOTICE, "delta = %lf, skae says: %.15lf,2 circle says: %.15lf",
+	/*elog(NOTICE, "delta = %lf, skae says: %.15lf,2 circle says: %.15lf",
 		(result2-result),result,result2);
-	elog(NOTICE,"2 circle says: %.15lf",result2);
+	elog(NOTICE,"2 circle says: %.15lf",result2);*/
 #endif
 
 	if (result != result)  /* NaN check

@@ -82,22 +82,25 @@ PGPASS?=guess
 PGURL?=//$(PGHOST):$(PGPORT)/$(PGDATABASE)
 
 # Where to put the output from regression tests. If you want to have it on
-# stdout, set TESTOUT to the empty string. Be careful - this will be deleted
-# by "make clean".
+# stdout, set TESTRD to the empty string. If you want to have it in another
+# file, set TESTOUTPUT to the file path.
+# Be careful - that file will be deleted by "make clean".
 TESTOUTPUT?=test.log
+# Output redirect for tests
+TESTRD?= >>$(TESTOUTPUT) 
 
 ### Config variable section ends ###
 
 # build internal constants follow:
-SRCDIR=src
+SRCDIR=./src
 EXAMPLES=examples
-BUILD=bin
+BUILD=./bin
 RUNCP=$(POSTGIS_BUILD_CLASSPATH)$(CPSEP)./postgis.jar
 BUILDCP=$(STUBBUILD)$(CPSEP)$(POSTGIS_BUILD_CLASSPATH)$(CPSEP)$(SRCDIR)
 
 # The pgjdbc 7.2/7.4/8.0 compatibility stub stuff
 STUBDIR=stubs
-STUBBUILD=stubbin/
+STUBBUILD=./stubbin/
 
 # What to put into the JAR files:
 JARCONTENTS=-C $(BUILD) org \
@@ -122,8 +125,6 @@ VERSION=$(REL_MAJOR_VERSION).$(REL_MINOR_VERSION).$(REL_MICRO_VERSION)
 VERSIONPATH=$(BUILD)/org/postgis
 VERSIONTARGET=$(VERSIONPATH)/version.properties
 
-# Output redirect for tests
-TESTRD?= >>$(TESTOUTPUT) 
 
 # Preliminary jts support - not stable yet!
 JTSDIR=jtssrc
@@ -137,12 +138,13 @@ SRC = $(SRCDIR)/org/postgis/*.java $(SRCDIR)/org/postgis/*/*.java $(SRCDIR)/exam
 
 STUBSRC = $(STUBDIR)/org/postgresql/*.java
 
-JTSSRC = $(JTSDIR)/org/postgis/jts/*.java
+JTSSRC = $(JTSDIR)/org/postgis/jts/*.java $(JTSDIR)/examples/*.java
 
 
 # Now the makefile targets that do the work:
 # The default target:
 all:	jar \
+		postgis-jdbc-javadoc.zip \
 	offlinetests
 
 # Packing the archives
@@ -225,6 +227,7 @@ clean:
 	echo cleaning...
 	$(DELETE) $(BUILD) bin stubbin postgis.jar postgis_debug.jar \
 		compile stubcompile jtscompile $(JTSBUILD) postgis_jts.jar \
+		javadoc-build postgis-jdbc-javadoc.zip \
 		$(TESTOUTPUT) \
 		postgis_$(VERSION).jar \
 		postgis_debug_$(VERSION).jar \
@@ -242,6 +245,14 @@ install: jar installdirs
 
 installdirs:
 	@mkdir -p $(DESTDIR)
+
+postgis-jdbc-javadoc.zip: javadoc-build
+	$(JAR) -cf postgis-jdbc-javadoc.zip -C javadoc-build .
+
+javadoc-build: jtscompile compile
+	$(MKDIR) javadoc-build
+	javadoc -d javadoc-build -sourcepath src:jtssrc \
+		org.postgis org.postgis.jts org.postgis.binary org.postgis.java2d examples
 
 # Preliminary JTS support
 

@@ -184,6 +184,11 @@ canonicalize_typename
 		$arg = 'geometry';
 	}
 
+	# Timestamp with or without time zone
+	if ( $arg =~ /timestamp .* time zone/ ) {
+		$arg = 'timestamp';
+	}
+
 	return $arg;
 }
 
@@ -677,7 +682,7 @@ close(OUTPUT);
 # Create the new db and install plpgsql language
 #
 print "Creating db ($dbname)\n";
-`createdb $dbname $createdb_opt`;
+`createdb $createdb_opt $dbname`;
 die "Database creation failed\n" if ($?);
 print "Adding plpgsql\n";
 `createlang plpgsql $dbname`;

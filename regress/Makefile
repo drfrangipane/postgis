@@ -17,6 +17,7 @@ TESTS = \
 	loader/PolygonZ \
 	regress \
 	regress_index \
+	regress_index_nulls \
 	lwgeom_regress \
 	regress_lrs \
 	removepoint \
@@ -27,7 +28,8 @@ TESTS = \
 	wkt \
 	measures \
 	long_xact \
-	ctors
+	ctors \
+	sql-mm-serialize
 
 ifeq ($(USE_GEOS),1)
 	TESTS += regress_ogc regress_bdpoly

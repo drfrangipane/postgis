@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: lwpostgis.sql.in 2406 2006-07-07 13:56:52Z strk $
+-- $Id: lwpostgis.sql.in 2550 2006-12-15 10:48:56Z strk $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net
@@ -19,32 +19,7 @@
 --
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-
-#define CREATEFUNCTION CREATE OR REPLACE FUNCTION
-
-#if USE_VERSION > 72
-# define _IMMUTABLE_STRICT IMMUTABLE STRICT
-# define _IMMUTABLE IMMUTABLE
-# define _STABLE_STRICT STABLE STRICT
-# define _STABLE STABLE
-# define _VOLATILE_STRICT VOLATILE STRICT
-# define _VOLATILE VOLATILE
-# define _STRICT STRICT
-# define _SECURITY_DEFINER SECURITY DEFINER
-#else 
-# define _IMMUTABLE_STRICT  with(iscachable,isstrict)
-# define _IMMUTABLE with(iscachable)
-# define _STABLE_STRICT with(isstrict)
-# define _STABLE 
-# define _VOLATILE_STRICT with(isstrict)
-# define _VOLATILE 
-# define _STRICT with(isstrict)
-# define _SECURITY_DEFINER 
-#endif 
-
-#if USE_VERSION >= 73
-# define HAS_SCHEMAS 1
-#endif
+#include "sqldefines.h"
 
 BEGIN;
 
@@ -1912,15 +1887,29 @@ BEGIN
 		   (new_type =''POLYGONM'') or
 		   (new_type =''MULTIPOLYGONM'') or
 		   (new_type =''LINESTRINGM'') or
-		   (new_type =''MULTILINESTRINGM'')) )
+		   (new_type =''MULTILINESTRINGM'') or
+                   (new_type = ''CIRCULARSTRING'') or
+                   (new_type = ''CIRCULARSTRINGM'') or
+                   (new_type = ''COMPOUNDCURVE'') or
+                   (new_type = ''COMPOUNDCURVEM'') or
+                   (new_type = ''CURVEPOLYGON'') or
+                   (new_type = ''CURVEPOLYGONM'') or
+                   (new_type = ''MULTICURVE'') or
+                   (new_type = ''MULTICURVEM'') or
+                   (new_type = ''MULTISURFACE'') or
+                   (new_type = ''MULTISURFACEM'')) )
 	THEN
 		RAISE EXCEPTION ''Invalid type name - valid ones are: 
 			GEOMETRY, GEOMETRYCOLLECTION, POINT, 
 			MULTIPOINT, POLYGON, MULTIPOLYGON, 
 			LINESTRING, MULTILINESTRING,
+                        CIRCULARSTRING, COMPOUNDCURVE,
+                        CURVEPOLYGON, MULTICURVE, MULTISURFACE,
 			GEOMETRYCOLLECTIONM, POINTM, 
 			MULTIPOINTM, POLYGONM, MULTIPOLYGONM, 
-			LINESTRINGM, or MULTILINESTRINGM '';
+			LINESTRINGM, MULTILINESTRINGM 
+                        CIRCULARSTRINGM, COMPOUNDCURVEM,
+                        CURVEPOLYGONM, MULTICURVEM or MULTISURFACEM'';
 		return ''fail'';
 	END IF;
 
@@ -3068,6 +3057,45 @@ CREATEFUNCTION AsGML(geometry)
 	AS '@MODULE_FILENAME@','LWGEOM_asGML'
 	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
 
+-----------------------------------------------------------------------
+-- KML OUTPUT
+-----------------------------------------------------------------------
+-- AsUKML(geom, precision, version)
+CREATEFUNCTION AsUKML(geometry, int4, int4)
+	RETURNS TEXT
+	AS '@MODULE_FILENAME@','LWGEOM_asKML'
+	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
+-- AsUKML(geom, precision) / version=2
+CREATEFUNCTION AsUKML(geometry, int4)
+	RETURNS TEXT
+	AS '@MODULE_FILENAME@','LWGEOM_asKML'
+	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
+-- AsUKML(geom) / precision=15 version=2
+CREATEFUNCTION AsUKML(geometry)
+	RETURNS TEXT
+	AS '@MODULE_FILENAME@','LWGEOM_asKML'
+	LANGUAGE 'C' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
+-- AsKML(geom, precision, version)
+CREATE OR REPLACE FUNCTION AsKML(geometry, int4, int4)
+	RETURNS TEXT
+	AS 'SELECT AsUKML(transform($1,4326),$2,$3)' 
+	LANGUAGE 'SQL' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
+-- AsKML(geom, precision) / version=2
+CREATE OR REPLACE FUNCTION AsKML(geometry, int4) 
+	RETURNS TEXT
+	AS 'SELECT AsUKML(transform($1,4326),$2)' 
+	LANGUAGE 'SQL' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
+-- AsKML(geom) / precision=15 version=2
+CREATE OR REPLACE FUNCTION AsKML(geometry) 
+	RETURNS TEXT
+	AS 'SELECT AsUKML(transform($1,4326))' 
+	LANGUAGE 'SQL' _IMMUTABLE_STRICT; -- WITH (isstrict,iscachable);
+
 ------------------------------------------------------------------------
 -- OGC defined
 ------------------------------------------------------------------------
@@ -3689,7 +3717,8 @@ END;
 '
 LANGUAGE 'plpgsql' _IMMUTABLE_STRICT; 
 
-#include "long_xact.sql"
+#include "long_xact.sql.in"
+#include "sqlmm.sql.in"
 
 ---------------------------------------------------------------
 -- END

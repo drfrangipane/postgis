@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_transform.c 2515 2006-10-24 12:35:00Z strk $
+ * $Id: lwgeom_transform.c 2553 2006-12-15 11:00:50Z strk $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -760,9 +760,19 @@ Datum transform(PG_FUNCTION_ARGS)
 	geom = (PG_LWGEOM *)PG_DETOAST_DATUM_COPY(PG_GETARG_DATUM(0));
 	if (pglwgeom_getSRID(geom) == -1)
 	{
-		pfree(geom);
+		PG_FREE_IF_COPY(geom, 0);
 		elog(ERROR,"Input geometry has unknown (-1) SRID");
 		PG_RETURN_NULL();
+	}
+
+	/*
+	 * If input SRID and output SRID are equal, return geometry
+	 * without transform it
+	 */
+	if (pglwgeom_getSRID(geom) == result_srid)
+	{
+		pfree(geom);
+		PG_RETURN_POINTER(PG_GETARG_DATUM(0));
 	}
 
 	/*

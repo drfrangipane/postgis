@@ -19,17 +19,19 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: DriverWrapper.java 1978 2005-10-20 16:04:03Z mschaber $
+ * $Id: DriverWrapper.java 2570 2007-01-08 10:48:31Z mschaber $
  */
 
 package org.postgis;
 
-import org.postgresql.Driver;
-import org.postgresql.PGConnection;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.postgresql.Driver;
+import org.postgresql.PGConnection;
 
 /**
  * DriverWrapper
@@ -69,9 +71,11 @@ import java.util.Properties;
  */
 public class DriverWrapper extends Driver {
 
+    protected static final Logger logger = Logger.getLogger("org.postgis.DriverWrapper");
+    
     public static final String POSTGRES_PROTOCOL = "jdbc:postgresql:";
     public static final String POSTGIS_PROTOCOL = "jdbc:postgresql_postGIS:";
-    public static final String REVISION = "$Revision: 1978 $";
+    public static final String REVISION = "$Revision: 2570 $";
     protected static TypesAdder ta72 = null;
     protected static TypesAdder ta74 = null;
     protected static TypesAdder ta80 = null;
@@ -90,7 +94,7 @@ public class DriverWrapper extends Driver {
         typesAdder = getTypesAdder(this);
         // The debug method is @since 7.2
         if (super.getMajorVersion() > 8 || super.getMinorVersion() > 1) {
-            Driver.debug(this.getClass().getName() + " loaded TypesAdder: "
+            logger.fine(this.getClass().getName() + " loaded TypesAdder: "
                     + typesAdder.getClass().getName());
         }
     }
@@ -130,7 +134,7 @@ public class DriverWrapper extends Driver {
             // Try to register ourself to the DriverManager
             java.sql.DriverManager.registerDriver(new DriverWrapper());
         } catch (SQLException e) {
-            Driver.info("Error registering PostGIS Wrapper Driver", e);
+            logger.log(Level.WARNING, "Error registering PostGIS Wrapper Driver", e);
         }
     }
 

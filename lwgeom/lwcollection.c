@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwcollection.c 2369 2006-05-30 08:38:58Z strk $
+ * $Id: lwcollection.c 2532 2006-12-01 22:16:44Z mleslie $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -30,6 +30,10 @@ lwcollection_construct(unsigned int type, int SRID, BOX2DFLOAT4 *bbox,
 	unsigned int i;
 #endif
 
+#ifdef PGIS_DEBUG_CALLS
+        lwnotice("lwcollection_construct called.");
+#endif        
+
 	hasz = 0;
 	hasm = 0;
 	if ( ngeoms > 0 )
@@ -38,10 +42,16 @@ lwcollection_construct(unsigned int type, int SRID, BOX2DFLOAT4 *bbox,
 		hasm = TYPE_HASM(geoms[0]->type);
 #ifdef CHECK_LWGEOM_ZM
 		zm = TYPE_GETZM(geoms[0]->type);
+#ifdef PGIS_DEBUG
+                lwnotice("lwcollection_construct type[0]=%d", geoms[0]->type);
+#endif
 		for (i=1; i<ngeoms; i++)
 		{
+#ifdef PGIS_DEBUG
+                        lwnotice("lwcollection_construct type=[%d]=%d", i, geoms[i]->type);
+#endif
 			if ( zm != TYPE_GETZM(geoms[i]->type) )
-				lwerror("lwcollection_construct: mixed dimension geometries");
+				lwerror("lwcollection_construct: mixed dimension geometries: %d/%d", zm, TYPE_GETZM(geoms[i]->type));
 		}
 #endif
 	}

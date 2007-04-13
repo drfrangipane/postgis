@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: DriverWrapperLW.java 1622 2005-04-15 14:04:34Z mschaber $
+ * $Id: DriverWrapperLW.java 2570 2007-01-08 10:48:31Z mschaber $
  */
 
 package org.postgis;
@@ -28,6 +28,7 @@ import org.postgresql.Driver;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.logging.Level;
 
 /**
  * DriverWrapperLW
@@ -48,7 +49,7 @@ import java.sql.SQLException;
 public class DriverWrapperLW extends DriverWrapper {
 
     public static final String POSTGIS_LWPROTOCOL = "jdbc:postgresql_lwgis:";
-    public static final String REVISIONLW = "$Revision: 1622 $";
+    public static final String REVISIONLW = "$Revision: 2570 $";
 
     /**
      * Default constructor.
@@ -62,7 +63,7 @@ public class DriverWrapperLW extends DriverWrapper {
             // Try to register ourself to the DriverManager
             java.sql.DriverManager.registerDriver(new DriverWrapperLW());
         } catch (SQLException e) {
-            Driver.info("Error registering PostGIS LW Wrapper Driver", e);
+            logger.log(Level.WARNING, "Error registering PostGIS LW Wrapper Driver", e);
         }
     }
 

@@ -20,17 +20,19 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsWrapper.java 1977 2005-10-20 15:58:52Z mschaber $
+ * $Id: JtsWrapper.java 2570 2007-01-08 10:48:31Z mschaber $
  */
 
 package org.postgis.jts;
 
-import org.postgresql.Driver;
-import org.postgresql.PGConnection;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.postgresql.Driver;
+import org.postgresql.PGConnection;
 
 /**
  * DriverWrapper
@@ -55,9 +57,11 @@ import java.util.Properties;
  */
 public class JtsWrapper extends Driver {
 
+    protected static final Logger logger = Logger.getLogger("org.postgis.DriverWrapper");
+
     private static final String POSTGRES_PROTOCOL = "jdbc:postgresql:";
     private static final String POSTGIS_PROTOCOL = "jdbc:postgres_jts:";
-    public static final String REVISION = "$Revision: 1977 $";
+    public static final String REVISION = "$Revision: 2570 $";
 
     public JtsWrapper() {
         super();
@@ -68,7 +72,7 @@ public class JtsWrapper extends Driver {
             // Try to register ourself to the DriverManager
             java.sql.DriverManager.registerDriver(new JtsWrapper());
         } catch (SQLException e) {
-            Driver.info("Error registering PostgreSQL Jts Wrapper Driver", e);
+            logger.log(Level.WARNING, "Error registering PostgreSQL Jts Wrapper Driver", e);
         }
     }
 

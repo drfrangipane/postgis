@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: GeometryType.java 2501 2006-10-09 17:22:15Z mschaber $
+ * $Id: GeometryType.java 2531 2006-11-22 10:42:17Z mschaber $
  */
 package org.postgis.hibernate;
 
@@ -86,11 +86,13 @@ public class GeometryType implements UserType {
 	 */
 	public Object nullSafeGet(ResultSet resultSet, 
 		      String[] names, Object owner) throws HibernateException, SQLException {
-	    Geometry result = null;
-	    String geom = resultSet.getString(names[0]);
-	    BinaryParser parser = new BinaryParser();
-	    result = parser.parse(geom);
-	    return result;
+        Geometry result = null;
+        String geom = resultSet.getString(names[0]);
+        if(geom != null ) {
+            BinaryParser parser = new BinaryParser();
+            result = parser.parse(geom);
+        }
+        return result;
 	}
 
 	/**

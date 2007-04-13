@@ -25,7 +25,7 @@ pgsql2shp.o: pgsql2shp.c
 	$(CC) $(CFLAGS) $(PGFEINCLUDES) -c $<
 
 pgsql2shp$(EXE): $(OBJS) pgsql2shp.o PQunescapeBytea.o
-	$(CC) $(CFLAGS) $(OBJS) PQunescapeBytea.o pgsql2shp.o $(LDFLAGS) -lpq -o $@ 
+	$(CC) $(CFLAGS) $(OBJS) PQunescapeBytea.o pgsql2shp.o $(LDFLAGS) $(PGFELIBS) -o $@ 
 
 shp2pgsql$(EXE): $(OBJS) shp2pgsql.o
 	$(CC) $(CFLAGS) $(OBJS) shp2pgsql.o $(LDFLAGS) -o $@ 

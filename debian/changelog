@@ -1,3 +1,9 @@
+postgis (1.2.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Fabio Tranchitella <kobold@debian.org>  Fri, 13 Apr 2007 09:19:18 +0200
+
 postgis (1.1.6-2) unstable; urgency=low
 
   * debian/README.Debian: added documentation for the new users on how to use

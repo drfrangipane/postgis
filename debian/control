@@ -37,7 +37,7 @@ Description: geographic objects support for PostgreSQL -- common files
 
 Package: libpostgis-java
 Architecture: all
-Section: libs
+Section: science
 Depends: libpg-java
 Suggests: postgresql-8.1-postgis | postgresql-7.4-postgis
 Conflicts: libpostgis-jdbc, libpostgisjava, postgresql-postgis-java
