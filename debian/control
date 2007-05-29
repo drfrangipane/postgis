@@ -3,26 +3,24 @@ Section: misc
 Priority: optional
 Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
 Uploaders: Stephen Frost <sfrost@debian.org>, Fabio Tranchitella <kobold@debian.org>
-Build-Depends: debhelper (>= 5.0.0), autotools-dev, flex, bison, postgresql-server-dev-8.1, libgeos-dev, proj, libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, jikes-classpath, fastjar
+Build-Depends: debhelper (>= 5.0.0), autotools-dev, flex, bison, postgresql-server-dev-8.2, libgeos-dev, proj, libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, jikes-classpath, fastjar
 Standards-Version: 3.7.2
 
-Package: postgresql-8.1-postgis
+Package: postgresql-8.2-postgis
 Architecture: any
-Depends: ${shlibs:Depends}, postgis, postgresql-8.1
-Provides: postgresql-postgis, postgresql-postgis1, postgresql-8.1-postgis1
-Conflicts: postgis (<< 1.1.2), libpostgis1-pg8.1, postgresql-8.1-postgis1
-Replaces: libpostgis, libpostgis1-pg8.1, postgresql-8.1-postgis1
-Description: geographic objects support for PostgreSQL 8.1
+Depends: ${shlibs:Depends}, postgis, postgresql-8.2
+Conflicts: postgis (<< 1.2.1)
+Description: geographic objects support for PostgreSQL 8.2
  PostGIS adds support for geographic objects to the PostgreSQL object-relational
  database. In effect, PostGIS "spatially enables" the PostgreSQL server, 
  allowing it to be used as a backend spatial database for geographic information
  systems (GIS), much like ESRI's SDE or Oracle's Spatial extension. PostGIS
  follows the OpenGIS "Simple Features Specification for SQL".
  .
- This package supports PostgreSQL 8.1.
+ This package supports PostgreSQL 8.2.
 
 Package: postgis
-Suggests: postgresql-8.1-postgis | postgresql-7.4-postgis
+Suggests: postgresql-8.2-postgis | postgresql-8.1-postgis | postgresql-7.4-postgis
 Depends: ${shlibs:Depends}
 Architecture: any
 Description: geographic objects support for PostgreSQL -- common files
@@ -39,7 +37,7 @@ Package: libpostgis-java
 Architecture: all
 Section: science
 Depends: libpg-java
-Suggests: postgresql-8.1-postgis | postgresql-7.4-postgis
+Suggests: postgresql-8.2-postgis | postgresql-8.1-postgis | postgresql-7.4-postgis
 Conflicts: libpostgis-jdbc, libpostgisjava, postgresql-postgis-java
 Replaces: libpostgis-jdbc, libpostgisjava, postgresql-postgis-java
 Description: geographic objects support for PostgreSQL -- JDBC support

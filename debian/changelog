@@ -1,8 +1,12 @@
 postgis (1.2.1-1) unstable; urgency=low
 
   * New upstream release.
+  * Migrate to PostgreSQL 8.2-only (Closes: #419297)
+  * Remove busted templategis from the build (new in 1.2.1 anyway).
+    (Currently attempts to install files in /etc/default, doesn't
+     respect $DESTDIR and overall looks like a godawful mess)
 
- -- Fabio Tranchitella <kobold@debian.org>  Fri, 13 Apr 2007 09:19:18 +0200
+ -- Stephen Frost <sfrost@debian.org>  Fri, 13 Apr 2007 09:19:18 +0200
 
 postgis (1.1.6-2) unstable; urgency=low
 

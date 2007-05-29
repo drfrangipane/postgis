@@ -4,7 +4,10 @@ Mon, 15 May 2006 14:49:25 +0200.
 Additional debianization and changes by Stephen Frost <sfrost@debian.org>
 on or about Wed, 31 May 2006
 
-It was downloaded from http://www.postgis.org/download/postgis-1.1.2.tar.gz
+Additional debianization and changes by Stephen Frost <sfrost@debian.org>
+for PostGIS 1.2.1 on or about Mon, 28 May 2007 21:28:24 -0400
+
+It was downloaded from http://www.postgis.org/download/postgis-1.2.1.tar.gz
 
 Copyright Holder: Refractions Research
                   Sandro Santilli, Paul Ramsey, 
