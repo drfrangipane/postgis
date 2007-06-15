@@ -27,7 +27,7 @@
 
 # Configure the helper executables used during build.
 
-JAVAC?=javac -target 1.2 -source 1.2
+JAVAC?=javac -target 1.3 -source 1.3
 JAVA?=java
 JAR?=jar
 MKDIR?=mkdir -p
@@ -58,7 +58,7 @@ DEBUGJAR?=postgis_debug.jar
 # set, we try to guess a default location that works on most unixoid systems.
 
 ifeq (${CLASSPATH},)
-	POSTGIS_BUILD_CLASSPATH?=/usr/share/java/postgresql.jar
+	POSTGIS_BUILD_CLASSPATH?=/usr/share/java/postgresql.jar:/usr/share/java/jts.jar
 else
 	POSTGIS_BUILD_CLASSPATH?=${CLASSPATH}
 endif
