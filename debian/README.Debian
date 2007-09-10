@@ -160,3 +160,75 @@ Type as root:
 
   # have a look of spatial_ref_sys
   select * from spatial_ref_sys;
+
+
+Upgrading existing spatial databases
+====================================
+
+Upgrading existing spatial databases can be tricky as it requires
+replacement or introduction of new PostGIS object definitions.
+
+Unfortunately not all definitions can be easily replaced in 
+a live database, so sometimes your best bet is a dump/reload
+process. 
+
+PostGIS provides a SOFT UPGRADE procedure for minor or bugfix
+releases, and an HARD UPGRADE procedure for major releases.
+
+--- SOFT UPGRADE ---
+
+Soft upgrade consists of sourcing the lwpostgis_upgrade.sql
+script in your spatial database:
+
+  psql -f lwpostgis_upgrade.sql -d your_spatial_database
+
+If a soft upgrade is not possible the script will abort and 
+you will be warned about HARD UPGRADE being required,
+so do not hesitate to try a soft upgrade first.
+
+--- HARD UPGRADE ---
+
+Hard upgrade is a PostgreSQL dump/restore procedure combined 
+with a filter to selectively update PostGIS functions and 
+objects to point to a new library version.
+
+Hard upgrades are required when object definitions have changed,
+aggregates have changed or been added, and when the underlying
+PostgreSQL database itself has undergone a major update.
+
+For this purpose, PostGIS provides a utility script to restore a dump
+in "custom" format. The hard upgrade procedure is as follows:
+
+	# Create a "custom-format" dump of the database you want
+	# to upgrade (let's call it "olddb")
+	$ pg_dump -Fc olddb olddb.dump
+
+	# Restore the dump while upgrading postgis into
+	# a new database. 
+        # Note: The new database does NOT have to exist.
+	# Let's call it "newdb"
+	$ sh utils/postgis_restore.pl lwpostgis.sql newdb olddb.dump > restore.log
+
+	# Check that all restored dump objects really had to be 
+        # restored from dump and do not conflict with the 
+        # ones defined in lwpostgis.sql
+	$ grep ^KEEPING restore.log | less
+
+	# If upgrading from PostgreSQL < 8.0 to >= 8.0 you will want to 
+	# drop the attrelid, varattnum and stats columns in the geometry_columns
+	# table, which are no-more needed. Keeping them won't hurt.
+	# !!! DROPPING THEM WHEN REALLY NEEDED WILL DO HARM !!!!
+	$ psql newdb -c "ALTER TABLE geometry_columns DROP attrelid"
+	$ psql newdb -c "ALTER TABLE geometry_columns DROP varattnum"
+	$ psql newdb -c "ALTER TABLE geometry_columns DROP stats"
+
+	# The spatial_ref_sys table is restored from the dump, to 
+        # ensure your custom additions are kept, but the distributed 
+        # one might contain modification so you should backup your 
+        # entries, drop the table and source the new one.
+	# If you did make additions we assume you know how to backup them before
+	# upgrading the table. Replace it with the new like this:
+	$ psql newdb
+	newdb=> DELETE FROM spatial_ref_sys;
+	DROP
+	newdb=> \i spatial_ref_sys.sql
