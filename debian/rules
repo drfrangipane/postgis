@@ -44,8 +44,8 @@ clean:
 	dh_testroot
 	rm -f build-arch-stamp build-indep-stamp
 	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
-	-$(MAKE) distclean
-	-$(MAKE) -C java/jdbc clean
+	[ ! -f Makefile ] || $(MAKE) distclean
+	[ ! -f java/jdbc/Makefile ] || $(MAKE) -C java/jdbc clean
 	dh_clean 
 
 install: install-indep install-arch
