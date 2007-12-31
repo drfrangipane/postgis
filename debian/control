@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
 Uploaders: Stephen Frost <sfrost@debian.org>, Fabio Tranchitella <kobold@debian.org>, Francesco Paolo Lovergine <frankie@debian.org>
 Build-Depends: debhelper (>= 5.0.0), autotools-dev, flex, bison, postgresql-server-dev-8.2, libgeos-dev, proj, libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, jikes-classpath, fastjar, libjts-java (>=1.7)
-Standards-Version: 3.7.2
+Standards-Version: 3.7.3
 Homepage: http://postgis.refractions.net/
 
 Package: postgresql-8.2-postgis
