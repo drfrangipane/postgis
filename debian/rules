@@ -96,6 +96,26 @@ install-arch:
 	mv $(CURDIR)/debian/postgresql-8.2-postgis/usr/lib/postgresql/8.2/bin $(CURDIR)/debian/postgis/usr
 	$(MAKE) distclean
 
+	# PostGIS for PostgreSQL 8.3
+	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
+		--host=$(DEB_HOST_GNU_TYPE) \
+		--build=$(DEB_BUILD_GNU_TYPE) \
+		--prefix=/usr \
+		--with-docdir=$(CURDIR)/debian/postgis/usr/share/doc \
+		--exec-prefix=\$${prefix}/lib/postgresql/8.3 \
+		--datadir=\$${prefix}/share/postgresql-8.3-postgis \
+		--mandir=\$${prefix}/share/man \
+		--infodir=\$${prefix}/share/info \
+		--with-pgsql=/usr/lib/postgresql/8.3/bin/pg_config \
+		--with-geos \
+		--with-proj
+	$(MAKE)
+	$(MAKE) -C doc
+	$(MAKE) install prefix=$(CURDIR)/debian/postgresql-8.3-postgis/usr
+	$(MAKE) -C doc install prefix=$(CURDIR)/debian/postgis/usr
+	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/bin $(CURDIR)/debian/postgis/usr
+	$(MAKE) distclean
+
 	dh_install -s
 
 # Must not depend on anything. This is to be called by
