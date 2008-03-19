@@ -92,8 +92,7 @@ install-arch:
 	$(MAKE)
 	$(MAKE) -C doc
 	$(MAKE) install prefix=$(CURDIR)/debian/postgresql-8.2-postgis/usr
-	$(MAKE) -C doc install prefix=$(CURDIR)/debian/postgis/usr
-	mv $(CURDIR)/debian/postgresql-8.2-postgis/usr/lib/postgresql/8.2/bin $(CURDIR)/debian/postgis/usr
+	rm -r $(CURDIR)/debian/postgresql-8.2-postgis/usr/lib/postgresql/8.2/bin
 	$(MAKE) distclean
 
 	# PostGIS for PostgreSQL 8.3
