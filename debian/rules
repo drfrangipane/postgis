@@ -107,7 +107,9 @@ install-arch:
 	sed -e 's/@POSTGIS_VERSION@/1.3.3/' \
 	    -e 's/@POSTGRES_VERSION@/8.3/' \
 	    -e 's/@SOVERSION@/1.3/' \
-	    $(CURDIR)/debian/postgis-generic.postinst.in >$(CURDIR)/debian/postgresql-8.3-postgis.postinst
+	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.3-postgis.postinst
+	sed -e 's/@POSTGRES_VERSION@/8.3/' \
+	    $(CURDIR)/debian/postgis-generic.postinst.in >$(CURDIR)/debian/postgis.postinst
 	dh_install -s
 
 # Must not depend on anything. This is to be called by

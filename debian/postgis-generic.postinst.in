@@ -2,11 +2,9 @@
 
 set -e
 
-if [ "$1" = "configure" ]; then
-	if [ -f /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@ ]; then
-		ln -f /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@ \
-		      /usr/lib/postgresql/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@
-	fi
+# Removes all postgis shared libs links
+if [ "$1" = "purge" ]; then
+     find /usr/lib/postgresql/@POSTGRES_VERSION@/lib -type f -name "liblwgeom.so.*" -delete
 fi
 
 #DEBHELPER#
