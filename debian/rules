@@ -23,6 +23,11 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 CFLAGS = -Wall -g
 
+MAJOR_VERSION = $(shell grep REL_MAJOR_VERSION Version.config|cut -d= -f2)
+MINOR_VERSION = $(shell grep REL_MINOR_VERSION Version.config|cut -d= -f2)
+MICRO_VERSION = $(shell grep REL_MICRO_VERSION Version.config|cut -d= -f2)
+VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(MICRO_VERSION)
+
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
 else
@@ -46,6 +51,7 @@ clean:
 	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
 	[ ! -f Makefile ] || $(MAKE) distclean
 	[ ! -f java/jdbc/Makefile ] || $(MAKE) -C java/jdbc clean
+	rm -f $(CURDIR)/debian/*.postinst
 	dh_clean 
 
 install: install-indep install-arch
@@ -93,9 +99,15 @@ install-arch:
 	$(MAKE) -C doc
 	$(MAKE) install prefix=$(CURDIR)/debian/postgresql-8.3-postgis/usr
 	$(MAKE) -C doc install prefix=$(CURDIR)/debian/postgis/usr
+	install -o root -g root -d $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib
+	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/lib/liblwgeom.so.$(MAJOR_VERSION).$(MINOR_VERSION) \
+	   $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib
 	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/bin $(CURDIR)/debian/postgis/usr
 	$(MAKE) distclean
-
+	sed -e 's/@POSTGIS_VERSION@/1.3.3/' \
+	    -e 's/@POSTGRES_VERSION@/8.3/' \
+	    -e 's/@SOVERSION@/1.3/' \
+	    $(CURDIR)/debian/postgis-generic.postinst.in >$(CURDIR)/debian/postgresql-8.3-postgis.postinst
 	dh_install -s
 
 # Must not depend on anything. This is to be called by

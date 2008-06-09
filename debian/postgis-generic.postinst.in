@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "config" ]; then
+	if [ -f /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@ ]; then
+		ln /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@ \
+		   /usr/lib/postgresql/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@
+	fi
+fi
+
+#DEBHELPER#
+
+exit 0
