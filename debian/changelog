@@ -1,12 +1,12 @@
-postgis (1.3.3-3) UNRELEASED; urgency=low
+postgis (1.3.3-3) unstable; urgency=low
 
   * Added Vcs-* fields in debian/control.
   * Fixed download URL in debian/copyright.
   * Now it installs the shared lib in a private postgis path and makes a
     hard link in the postgres library path at configure time. That would
     allow coexistence of different flavors of the library which could be
-    used by different DBs at run-time.
-    (closes: #441794, #441797)
+    used by different DBs at run-time and allowing soft/hard-upgrade scripts
+    working. (closes: #441794, #441797)
 
  -- Francesco Paolo Lovergine <frankie@debian.org>  Mon, 09 Jun 2008 13:03:04 +0200
 
