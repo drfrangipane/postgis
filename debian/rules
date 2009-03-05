@@ -13,6 +13,8 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+include /usr/share/dpatch/dpatch.make
+
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
@@ -34,7 +36,7 @@ else
 	CFLAGS += -O2
 endif
 
-build: build-arch build-indep
+build: patch build-arch build-indep
 
 build-arch: build-arch-stamp
 build-arch-stamp:
@@ -44,7 +46,8 @@ build-indep: build-indep-stamp
 build-indep-stamp:
 	touch build-indep-stamp
 
-clean:
+clean: clean-patched unpatch
+clean-patched:
 	dh_testdir
 	dh_testroot
 	rm -f build-arch-stamp build-indep-stamp

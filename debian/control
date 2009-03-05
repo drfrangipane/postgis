@@ -3,8 +3,7 @@ Section: misc
 Priority: optional
 Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
 Uploaders: Stephen Frost <sfrost@debian.org>, Fabio Tranchitella <kobold@debian.org>, Francesco Paolo Lovergine <frankie@debian.org>
-Build-Depends: debhelper (>= 5.0.0), autotools-dev, flex, bison, postgresql-server-dev-8.3, libgeos-dev, proj, 
-               libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, jikes-classpath, fastjar, libjts-java (>=1.7)
+Build-Depends: debhelper (>= 5.0.0), autotools-dev, flex, bison, postgresql-server-dev-8.3, libgeos-dev, proj, libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, jikes-classpath, fastjar, libjts-java (>=1.7), dpatch
 Standards-Version: 3.8.0
 Homepage: http://postgis.refractions.net/
 Vcs-Browser: http://svn.debian.org/wsvn/pkg-grass/packages/postgis/
