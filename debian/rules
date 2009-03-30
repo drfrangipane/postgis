@@ -61,7 +61,7 @@ install: install-indep install-arch
 install-indep:
 	dh_testdir
 	dh_testroot
-	dh_clean -k -i 
+	dh_prep -i 
 	dh_installdirs -i
 	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
 		--with-docdir=\$${prefix}/share/doc/postgis \
@@ -77,7 +77,7 @@ install-indep:
 install-arch:
 	dh_testdir
 	dh_testroot
-	dh_clean -k -s 
+	dh_prep -s 
 	dh_installdirs -s
 	# Documentation and common files for PostGIS
 	[ ! -f doc/html/postgis.html.prev ] && cp doc/html/postgis.html doc/html/postgis.html.prev || true

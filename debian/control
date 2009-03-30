@@ -3,15 +3,16 @@ Section: misc
 Priority: optional
 Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
 Uploaders: Stephen Frost <sfrost@debian.org>, Fabio Tranchitella <kobold@debian.org>, Francesco Paolo Lovergine <frankie@debian.org>
-Build-Depends: debhelper (>= 5.0.0), autotools-dev, flex, bison, postgresql-server-dev-8.3, libgeos-dev, proj, libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, jikes-classpath, fastjar, libjts-java (>=1.7), dpatch
-Standards-Version: 3.8.0
+Build-Depends: debhelper (>= 7), autotools-dev, flex, bison, postgresql-server-dev-8.3, libgeos-dev, libproj-dev, 
+               libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, jikes-classpath, fastjar, libjts-java (>= 1.7), dpatch
+Standards-Version: 3.8.1
 Homepage: http://postgis.refractions.net/
 Vcs-Browser: http://svn.debian.org/wsvn/pkg-grass/packages/postgis/
 Vcs-Svn: svn://svn.debian.org/pkg-grass/packages/postgis/
 
 Package: postgresql-8.3-postgis
 Architecture: any
-Depends: ${shlibs:Depends}, postgis, postgresql-8.3
+Depends: ${shlibs:Depends}, postgis, postgresql-8.3, ${misc:Depends}
 Conflicts: postgis (<< 1.2.1)
 Description: geographic objects support for PostgreSQL 8.3
  PostGIS adds support for geographic objects to the PostgreSQL object-relational
@@ -24,7 +25,7 @@ Description: geographic objects support for PostgreSQL 8.3
 
 Package: postgis
 Suggests: postgresql-8.3-postgis
-Depends: ${shlibs:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Architecture: any
 Description: geographic objects support for PostgreSQL -- common files
  PostGIS adds support for geographic objects to the PostgreSQL object-relational
@@ -40,7 +41,7 @@ Package: libpostgis-java
 Architecture: all
 Section: science
 Depends: libpg-java
-Suggests: postgresql-8.3-postgis
+Suggests: postgresql-8.3-postgis, ${misc:Depends}
 Conflicts: libpostgis-jdbc, libpostgisjava, postgresql-postgis-java
 Replaces: libpostgis-jdbc, libpostgisjava, postgresql-postgis-java
 Description: geographic objects support for PostgreSQL -- JDBC support
