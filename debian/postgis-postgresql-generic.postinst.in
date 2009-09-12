@@ -4,9 +4,9 @@ set -e
 
 # Creates a link for the shared lib in the postgres area
 if [ "$1" = "configure" ]; then
-	if [ -f /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@ ]; then
-		ln -f /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@ \
-		      /usr/lib/postgresql/@POSTGRES_VERSION@/lib/liblwgeom.so.@SOVERSION@
+	if [ -f /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/postgis-@SOVERSION@.so ]; then
+		ln -f /usr/lib/postgis/@POSTGIS_VERSION@/postgres/@POSTGRES_VERSION@/lib/postgis-@SOVERSION@.so \ 
+		      /usr/lib/postgresql/@POSTGRES_VERSION@/lib/postgis-@SOVERSION@.so
 	fi
 fi
 

@@ -4,7 +4,10 @@ set -e
 
 # Removes all postgis shared libs links
 if [ "$1" = "purge" ]; then
-     find /usr/lib/postgresql/@POSTGRES_VERSION@/lib -type f -name "liblwgeom.so.*" -delete
+	 for version in @POSTGRES_VERSIONS@ 
+	 do 
+	     find /usr/lib/postgresql/$version/lib -type f -name "postgis-@SOVERSION@.so" -delete
+	 done
 fi
 
 #DEBHELPER#

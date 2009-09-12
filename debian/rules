@@ -1,6 +1,5 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
-# Sample debian/rules that uses debhelper.
 #
 # This file was originally written by Joey Hess and Craig Small.
 # As a special exception, when this file is copied by dh-make into a
@@ -25,10 +24,13 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 CFLAGS = -Wall -g
 
-MAJOR_VERSION = $(shell grep REL_MAJOR_VERSION Version.config|cut -d= -f2)
-MINOR_VERSION = $(shell grep REL_MINOR_VERSION Version.config|cut -d= -f2)
-MICRO_VERSION = $(shell grep REL_MICRO_VERSION Version.config|cut -d= -f2)
+MAJOR_VERSION = $(shell grep POSTGIS_MAJOR_VERSION Version.config|cut -d= -f2)
+MINOR_VERSION = $(shell grep POSTGIS_MINOR_VERSION Version.config|cut -d= -f2)
+MICRO_VERSION = $(shell grep POSTGIS_MICRO_VERSION Version.config|cut -d= -f2)
 VERSION = $(MAJOR_VERSION).$(MINOR_VERSION).$(MICRO_VERSION)
+ifeq ($(VERSION),..)
+$(error Cannot detect Postgis version, fix debian/rules)
+endif
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
@@ -52,7 +54,7 @@ clean-patched:
 	dh_testroot
 	rm -f build-arch-stamp build-indep-stamp
 	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
-	[ ! -f Makefile ] || $(MAKE) distclean
+	[ ! -f GNUmakefile ] || $(MAKE) distclean || true
 	[ ! -f java/jdbc/Makefile ] || $(MAKE) -C java/jdbc clean
 	rm -f $(CURDIR)/debian/*.postinst $(CURDIR)/debian/*.postrm
 	dh_clean 
@@ -64,13 +66,13 @@ install-indep:
 	dh_prep -i 
 	dh_installdirs -i
 	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
-		--with-docdir=\$${prefix}/share/doc/postgis \
+		--docdir=\$${prefix}/share/doc/postgis \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info
 	# PostGIS JDBC (with debug support)
 	$(MAKE) -C java/jdbc clean
-	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=jikes-classpath $(MAKE) -C java/jdbc jar
-	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=jikes-classpath $(MAKE) -C java/jdbc install DESTDIR=$(CURDIR)/debian/libpostgis-java/usr/share/java/$(JAVA_PATH)
+	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=java $(MAKE) -C java/jdbc jar
+	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=java $(MAKE) -C java/jdbc install DESTDIR=$(CURDIR)/debian/libpostgis-java/usr/share/java/$(JAVA_PATH)
 	$(MAKE) distclean
 	dh_install -i
 
@@ -81,38 +83,76 @@ install-arch:
 	dh_installdirs -s
 	# Documentation and common files for PostGIS
 	[ ! -f doc/html/postgis.html.prev ] && cp doc/html/postgis.html doc/html/postgis.html.prev || true
+	
 	# PostGIS for PostgreSQL 8.3
 	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
 		--host=$(DEB_HOST_GNU_TYPE) \
 		--build=$(DEB_BUILD_GNU_TYPE) \
 		--prefix=/usr \
-		--with-docdir=$(CURDIR)/debian/postgis/usr/share/doc \
+		--docdir=$(CURDIR)/debian/postgis/usr/share/doc \
 		--exec-prefix=\$${prefix}/lib/postgresql/8.3 \
 		--datadir=\$${prefix}/share/postgresql-8.3-postgis \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
-		--with-pgsql=/usr/lib/postgresql/8.3/bin/pg_config \
-		--with-geos \
-		--with-proj
+		--with-pgconfig=/usr/lib/postgresql/8.3/bin/pg_config
 	$(MAKE)
 	$(MAKE) -C doc
-	$(MAKE) install prefix=$(CURDIR)/debian/postgresql-8.3-postgis/usr
-	$(MAKE) -C doc install prefix=$(CURDIR)/debian/postgis/usr
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-8.3-postgis
+	$(MAKE) -C doc install \
+			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
+			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
+			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/8.3
 	install -o root -g root -d $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib
-	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/lib/liblwgeom.so.$(MAJOR_VERSION).$(MINOR_VERSION) \
-	   $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib
-	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/bin $(CURDIR)/debian/postgis/usr
+	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
+	   $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib/.
+	rm -rf $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/bin 
 	$(MAKE) distclean
-	sed -e 's/@POSTGIS_VERSION@/1.3.5/' \
+	
+	# PostGIS for PostgreSQL 8.4
+	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
+		--host=$(DEB_HOST_GNU_TYPE) \
+		--build=$(DEB_BUILD_GNU_TYPE) \
+		--prefix=/usr \
+		--with-docdir=$(CURDIR)/debian/postgis/usr/share/doc \
+		--exec-prefix=\$${prefix}/lib/postgresql/8.4 \
+		--datadir=\$${prefix}/share/postgresql-8.4-postgis \
+		--mandir=\$${prefix}/share/man \
+		--infodir=\$${prefix}/share/info \
+		--with-pgconfig=/usr/lib/postgresql/8.4/bin/pg_config
+	$(MAKE)
+	$(MAKE) -C doc
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-8.4-postgis
+	ls -lR $(CURDIR)/debian/postgresql-8.4-postgis
+	$(MAKE) -C doc install \
+			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
+			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
+			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/8.4
+	install -o root -g root -d $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib
+	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
+	   $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib/.
+	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/bin $(CURDIR)/debian/postgis/usr
+	$(MAKE) distclean
+	
+	sed -e 's/@POSTGIS_VERSION@/1.4.0/' \
 	    -e 's/@POSTGRES_VERSION@/8.3/' \
-	    -e 's/@SOVERSION@/1.3/' \
+	    -e 's/@SOVERSION@/1.4/' \
 	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.3-postgis.postinst
-	sed -e 's/@POSTGRES_VERSION@/8.3/' \
+	
+	sed -e 's/@POSTGIS_VERSION@/1.4.0/' \
+	    -e 's/@POSTGRES_VERSION@/8.4/' \
+	    -e 's/@SOVERSION@/1.4/' \
+	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.4-postgis.postinst
+	
+	sed -e 's/@POSTGRES_VERSIONS@/8.3 8.4/' \
+	    -e 's/@SOVERSION@/1.4/' \
 	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgis.postrm
+	
 	dh_install -s
 	# copy utils
 	mkdir -p $(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql-8.3-postgis/utils
 	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql-8.3-postgis/utils
+	mkdir -p $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
+	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
 
 # Must not depend on anything. This is to be called by
 # binary-arch/binary-indep
