@@ -71,8 +71,8 @@ install-indep:
 		--infodir=\$${prefix}/share/info
 	# PostGIS JDBC (with debug support)
 	$(MAKE) -C java/jdbc clean
-	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=java $(MAKE) -C java/jdbc jar
-	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=java $(MAKE) -C java/jdbc install DESTDIR=$(CURDIR)/debian/libpostgis-java/usr/share/java/$(JAVA_PATH)
+	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=javac $(MAKE) -C java/jdbc jar
+	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=javac $(MAKE) -C java/jdbc install DESTDIR=$(CURDIR)/debian/libpostgis-java/usr/share/java/$(JAVA_PATH)
 	$(MAKE) distclean
 	dh_install -i
 
