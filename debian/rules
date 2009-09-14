@@ -38,21 +38,20 @@ else
 	CFLAGS += -O2
 endif
 
-build: patch build-arch build-indep
+build: build-arch build-indep
 
-build-arch: build-arch-stamp
+build-arch: patch-stamp build-arch-stamp
 build-arch-stamp:
-	touch build-arch-stamp
+	touch $@
 
-build-indep: build-indep-stamp
+build-indep: patch-stamp build-indep-stamp
 build-indep-stamp:
-	touch build-indep-stamp
+	touch $@
 
 clean: clean-patched unpatch
 clean-patched:
 	dh_testdir
 	dh_testroot
-	rm -f build-arch-stamp build-indep-stamp
 	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
 	[ ! -f GNUmakefile ] || $(MAKE) distclean || true
 	[ ! -f java/jdbc/Makefile ] || $(MAKE) -C java/jdbc clean
@@ -60,7 +59,7 @@ clean-patched:
 	dh_clean 
 
 install: install-indep install-arch
-install-indep:
+install-indep: build-indep
 	dh_testdir
 	dh_testroot
 	dh_prep -i 
@@ -77,7 +76,7 @@ install-indep:
 	$(MAKE) SHELL=/bin/bash distclean
 	dh_install -i
 
-install-arch:
+install-arch: build-arch
 	dh_testdir
 	dh_testroot
 	dh_prep -s 
@@ -149,6 +148,7 @@ install-arch:
 	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgis.postrm
 	
 	dh_install -s
+	
 	# copy utils
 	mkdir -p $(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql-8.3-postgis/utils
 	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql-8.3-postgis/utils
@@ -176,11 +176,11 @@ binary-common:
 	dh_builddeb
 
 # Build architecture independant packages using the common target.
-binary-indep: build-indep install-indep
+binary-indep: install-indep
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
 # Build architecture dependant packages using the common target.
-binary-arch: build-arch install-arch
+binary-arch: install-arch
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 
 binary: binary-arch binary-indep
