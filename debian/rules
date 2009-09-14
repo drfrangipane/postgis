@@ -73,7 +73,8 @@ install-indep:
 	$(MAKE) -C java/jdbc clean
 	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=javac $(MAKE) -C java/jdbc jar
 	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=javac $(MAKE) -C java/jdbc install DESTDIR=$(CURDIR)/debian/libpostgis-java/usr/share/java/$(JAVA_PATH)
-	$(MAKE) distclean
+	# regress target uses pushd/popd
+	$(MAKE) SHELL=/bin/bash distclean
 	dh_install -i
 
 install-arch:
