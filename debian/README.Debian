@@ -4,7 +4,7 @@ Debian README for Postgis
 These are the PostGIS packages for Debian. PostGIS is split into three
 Debian packages:
 
-postgresql-8.3-postgis
+postgresql-8.4-postgis
   This is the PostGIS module for the PostgreSQL server itself.  It contains
   the library which is loaded by the server (liblwgeom.so.1.1), the SQL script
   for creating the SQL functions in a given database (lwpostgis.sql), and an 
@@ -21,7 +21,7 @@ postgresql-8.3-postgis
   so it is recommended that the spatial_ref_sys.sql also be run in each
   database you have PostGIS installed in.
 
-  These scripts can be found in the /usr/share/postgresql-8.3/postgis
+  These scripts can be found in the /usr/share/postgresql-8.4/postgis
   directory.
 
 postgis
@@ -34,7 +34,11 @@ libpostgis-java
   This package contains the Java library for using JDBC with a PostGIS-
   enabled PostgreSQL server.
 
-
+[
+ Note that the Postgis extension could be provided also for another
+ version of PostgreSQL (e.g. 8.3). All information are also valid
+ in that case.
+]
 
 How to create a Postgis-enabled database
 ========================================
@@ -59,8 +63,8 @@ Type as root:
   createlang plpgsql -d <databasename>
 
   # Finally, load the functions and reference system tables
-  psql <databasename> -f /usr/share/postgresql-8.3-postgis/lwpostgis.sql
-  psql <databasename> -f /usr/share/postgresql-8.3-postgis/spatial_ref_sys.sql
+  psql <databasename> -f /usr/share/postgresql-8.4-postgis/lwpostgis.sql
+  psql <databasename> -f /usr/share/postgresql-8.4-postgis/spatial_ref_sys.sql
 
   # login in new database (still as superuser postgres)
   psql <databasename>
@@ -104,8 +108,8 @@ geodatabase, type as root:
   createlang plpgsql -d template_gis
 
   # Finally, load the functions and reference system tables
-  psql template_gis -f /usr/share/postgresql-8.3-postgis/lwpostgis.sql
-  psql template_gis -f /usr/share/postgresql-8.3-postgis/spatial_ref_sys.sql
+  psql template_gis -f /usr/share/postgresql-8.4-postgis/lwpostgis.sql
+  psql template_gis -f /usr/share/postgresql-8.4-postgis/spatial_ref_sys.sql
 
   # login in new database (still as superuser postgres)
   psql template_gis
