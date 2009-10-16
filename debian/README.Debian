@@ -6,12 +6,15 @@ Debian packages:
 
 postgresql-8.4-postgis
   This is the PostGIS module for the PostgreSQL server itself.  It contains
-  the library which is loaded by the server (liblwgeom.so.1.1), the SQL script
-  for creating the SQL functions in a given database (lwpostgis.sql), and an 
+  the library which is loaded by the server (postgis.so), the SQL script
+  for creating the SQL functions in a given database (postgis.sql), and an 
   SQL script which contains the OpenGIS Spatial References 
   (spatial_ref_sys.sql).
 
-  NOTE: To install PostGIS you must run the lwpostgis.sql script in each
+  	psql -d [yourdatabase] -f postgis.sql
+  	psql -d [yourdatabase] -f spatial_ref_sys.sql
+
+  NOTE: To install PostGIS you must run the postgis.sql script in each
   PostgreSQL database you want PostGIS in as the PostgreSQL superuser
   (generally the 'postgres' user)!  The Debian utilities do not do
   this automatically as they can't be sure what state your database is in,
@@ -20,6 +23,12 @@ postgresql-8.4-postgis
   that a PostGIS user would also want the Spatial References installed and
   so it is recommended that the spatial_ref_sys.sql also be run in each
   database you have PostGIS installed in.
+
+  If you wish to add comments to the PostGIS functions, the final step is 
+  to load the postgis_comments.sql into your spatial database. The comments 
+  can be viewed by simply typing \dd [function_name] from a psql terminal window.
+
+  	psql -d [yourdatabase] -f postgis_comments.sql 
 
   These scripts can be found in the /usr/share/postgresql-8.4/postgis
   directory.

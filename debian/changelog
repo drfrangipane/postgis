@@ -2,8 +2,9 @@ postgis (1.4.0-2) experimental; urgency=low
 
   * Better parameterized debian/rules against postgis $(VERSION).
   * Added dblatex and libcunit1-dev among build-deps.
+  * Added postgis_comments.sql to contrib/ SQL templates.
 
- -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 15 Oct 2009 10:23:07 +0200
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Fri, 16 Oct 2009 00:04:34 +0200
 
 postgis (1.4.0-1) experimental; urgency=low
 

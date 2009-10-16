@@ -102,6 +102,8 @@ install-arch: build-arch
 			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
 			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
 			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/8.3
+	install -o root -g root doc/postgis_comments.sql \
+		$(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql/8.3/contrib/.
 	install -o root -g root -d $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib
 	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
 	   $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib/.
@@ -122,16 +124,18 @@ install-arch: build-arch
 	$(MAKE)
 	$(MAKE) -C doc
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-8.4-postgis
-	ls -lR $(CURDIR)/debian/postgresql-8.4-postgis
 	$(MAKE) -C doc install \
 			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
 			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
 			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/8.4
+	install -o root -g root doc/postgis_comments.sql \
+		$(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql/8.4/contrib/.
 	install -o root -g root -d $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib
 	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
 	   $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib/.
 	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/bin $(CURDIR)/debian/postgis/usr
-	$(MAKE) distclean
+	
+	# Create custom maint scripts
 	
 	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
 	    -e 's/@POSTGRES_VERSION@/8.3/' \
@@ -154,6 +158,9 @@ install-arch: build-arch
 	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql-8.3-postgis/utils
 	mkdir -p $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
 	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
+
+check: install-arch
+	$(MAKE) check
 
 # Must not depend on anything. This is to be called by
 # binary-arch/binary-indep
@@ -184,4 +191,4 @@ binary-arch: install-arch
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 
 binary: binary-arch binary-indep
-.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch 
+.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch check
