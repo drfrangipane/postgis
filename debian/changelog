@@ -1,10 +1,13 @@
-postgis (1.4.0-2) experimental; urgency=low
+postgis (1.4.0-2) unstable; urgency=low
 
+  * Upload to unstable.
   * Better parameterized debian/rules against postgis $(VERSION).
   * Added dblatex and libcunit1-dev among build-deps.
   * Added postgis_comments.sql to contrib/ SQL templates.
+  * Dropping 8.3 support, no more supported for squeeze.
+    (closes: #559587)
 
- -- Francesco Paolo Lovergine <frankie@debian.org>  Fri, 16 Oct 2009 00:04:34 +0200
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 10 Dec 2009 18:07:13 +0100
 
 postgis (1.4.0-1) experimental; urgency=low
 

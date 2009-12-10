@@ -84,6 +84,32 @@ install-arch: build-arch
 	# Documentation and common files for PostGIS
 	[ ! -f doc/html/postgis.html.prev ] && cp doc/html/postgis.html doc/html/postgis.html.prev || true
 	
+	# PostGIS for PostgreSQL 8.3
+	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
+		--host=$(DEB_HOST_GNU_TYPE) \
+		--build=$(DEB_BUILD_GNU_TYPE) \
+		--prefix=/usr \
+		--docdir=$(CURDIR)/debian/postgis/usr/share/doc \
+		--exec-prefix=\$${prefix}/lib/postgresql/8.3 \
+		--datadir=\$${prefix}/share/postgresql-8.3-postgis \
+		--mandir=\$${prefix}/share/man \
+		--infodir=\$${prefix}/share/info \
+		--with-pgconfig=/usr/lib/postgresql/8.3/bin/pg_config
+	$(MAKE)
+	$(MAKE) -C doc
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-8.3-postgis
+	$(MAKE) -C doc install \
+			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
+			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
+			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/8.3
+	install -o root -g root doc/postgis_comments.sql \
+		$(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql/8.3/contrib/.
+	install -o root -g root -d $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib
+	mv $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
+	   $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgis/$(VERSION)/postgres/8.3/lib/.
+	rm -rf $(CURDIR)/debian/postgresql-8.3-postgis/usr/lib/postgresql/8.3/bin 
+	$(MAKE) distclean
+	
 	# PostGIS for PostgreSQL 8.4
 	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
 		--host=$(DEB_HOST_GNU_TYPE) \
@@ -112,17 +138,24 @@ install-arch: build-arch
 	# Create custom maint scripts
 	
 	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
+	    -e 's/@POSTGRES_VERSION@/8.3/' \
+	    -e 's/@SOVERSION@/1.4/' \
+	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.3-postgis.postinst
+	
+	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
 	    -e 's/@POSTGRES_VERSION@/8.4/' \
 	    -e 's/@SOVERSION@/1.4/' \
 	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.4-postgis.postinst
 	
-	sed -e 's/@POSTGRES_VERSIONS@/8.4/' \
+	sed -e 's/@POSTGRES_VERSIONS@/8.3 8.4/' \
 	    -e 's/@SOVERSION@/1.4/' \
 	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgis.postrm
 	
 	dh_install -s
 	
 	# copy utils
+	mkdir -p $(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql-8.3-postgis/utils
+	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.3-postgis/usr/share/postgresql-8.3-postgis/utils
 	mkdir -p $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
 	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
 
