@@ -6,8 +6,10 @@ postgis (1.4.0-2) unstable; urgency=low
   * Added postgis_comments.sql to contrib/ SQL templates.
   * Dropping 8.3 support, no more supported for squeeze.
     (closes: #559587)
+  * Do not stop on error in postrm if the target dir does not exist.
+    (closes: #560409)
 
- -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 10 Dec 2009 18:07:13 +0100
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Fri, 11 Dec 2009 13:10:34 +0100
 
 postgis (1.4.0-1) experimental; urgency=low
 
