@@ -1,3 +1,11 @@
+postgis (1.5.0-1) unstable; urgency=low
+
+  * New upstream major release, with many enhancements.
+  * Policy bumped to 3.8.4, no changes.
+  * Added libxml2-dev as new build-dep. 
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Wed, 10 Mar 2010 09:32:20 +0100
+
 postgis (1.4.0-2) unstable; urgency=low
 
   * Upload to unstable.
