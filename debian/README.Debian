@@ -72,7 +72,7 @@ Type as root:
   createlang plpgsql -d <databasename>
 
   # Finally, load the functions and reference system tables
-  psql <databasename> -f /usr/share/postgresql-8.4-postgis/lwpostgis.sql
+  psql <databasename> -f /usr/share/postgresql-8.4-postgis/postgis.sql
   psql <databasename> -f /usr/share/postgresql-8.4-postgis/spatial_ref_sys.sql
 
   # login in new database (still as superuser postgres)
@@ -117,7 +117,7 @@ geodatabase, type as root:
   createlang plpgsql -d template_gis
 
   # Finally, load the functions and reference system tables
-  psql template_gis -f /usr/share/postgresql-8.4-postgis/lwpostgis.sql
+  psql template_gis -f /usr/share/postgresql-8.4-postgis/postgis.sql
   psql template_gis -f /usr/share/postgresql-8.4-postgis/spatial_ref_sys.sql
 
   # login in new database (still as superuser postgres)
@@ -190,10 +190,10 @@ releases, and an HARD UPGRADE procedure for major releases.
 
 --- SOFT UPGRADE ---
 
-Soft upgrade consists of sourcing the lwpostgis_upgrade.sql
+Soft upgrade consists of sourcing the postgis_upgrade.sql
 script in your spatial database:
 
-  psql -f lwpostgis_upgrade.sql -d your_spatial_database
+  psql -f postgis_upgrade.sql -d your_spatial_database
 
 If a soft upgrade is not possible the script will abort and 
 you will be warned about HARD UPGRADE being required,
@@ -220,11 +220,11 @@ in "custom" format. The hard upgrade procedure is as follows:
 	# a new database. 
         # Note: The new database does NOT have to exist.
 	# Let's call it "newdb"
-	$ sh utils/postgis_restore.pl lwpostgis.sql newdb olddb.dump > restore.log
+	$ sh utils/postgis_restore.pl postgis.sql newdb olddb.dump > restore.log
 
 	# Check that all restored dump objects really had to be 
-        # restored from dump and do not conflict with the 
-        # ones defined in lwpostgis.sql
+    # restored from dump and do not conflict with the 
+    # ones defined in postgis.sql
 	$ grep ^KEEPING restore.log | less
 
 	# If upgrading from PostgreSQL < 8.0 to >= 8.0 you will want to 
