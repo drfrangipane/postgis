@@ -1,3 +1,9 @@
+postgis (1.5.1-1) unstable; urgency=low
+
+  * New upstream release, with a few bug fixes.
+
+ -- Alan Boudreault <aboudreault@mapgears.com>  Sun, 16 May 2010 14:42:21 -0400
+
 postgis (1.5.0-1) unstable; urgency=low
 
   * New upstream major release, with many enhancements.
