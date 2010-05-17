@@ -1,3 +1,10 @@
+postgis (1.5.1-2) unstable; urgency=low
+
+  * Added generator.dpatch to avoid a buffer overflow on alpha due to 
+    a too narrow buffer apparently.
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Mon, 17 May 2010 14:21:37 +0200
+
 postgis (1.5.1-1) unstable; urgency=low
 
   * New upstream release, with a few bug fixes.
