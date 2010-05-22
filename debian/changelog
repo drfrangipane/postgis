@@ -1,3 +1,10 @@
+postgis (1.5.1-4) unstable; urgency=high
+
+  * [PATCH] getopt.dpatch added to avoid var collisions among Postgis getopt
+    and glibc one. That solves a FTBS on mips/mipsel.
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Sat, 22 May 2010 19:03:39 +0200
+
 postgis (1.5.1-3) unstable; urgency=medium
 
   * Removed custom CFLAGS which probably caused FTBS on mips/mipsel archs.
