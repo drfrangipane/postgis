@@ -1,3 +1,9 @@
+postgis (1.5.1-3) unstable; urgency=medium
+
+  * Removed custom CFLAGS which probably caused FTBS on mips/mipsel archs.
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Sat, 22 May 2010 11:20:44 +0200
+
 postgis (1.5.1-2) unstable; urgency=low
 
   * Added generator.dpatch to avoid a buffer overflow on alpha due to 

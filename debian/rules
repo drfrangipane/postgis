@@ -64,7 +64,8 @@ install-indep: build-indep
 	dh_testroot
 	dh_prep -i 
 	dh_installdirs -i
-	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
+#	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure 
+	./configure \
 		--docdir=\$${prefix}/share/doc/postgis \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info
@@ -85,7 +86,8 @@ install-arch: build-arch
 	[ ! -f doc/html/postgis.html.prev ] && cp doc/html/postgis.html doc/html/postgis.html.prev || true
 	
 	# PostGIS for PostgreSQL 8.4
-	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure \
+#	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure 
+	./configure \
 		--host=$(DEB_HOST_GNU_TYPE) \
 		--build=$(DEB_BUILD_GNU_TYPE) \
 		--prefix=/usr \
