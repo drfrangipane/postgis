@@ -7,7 +7,7 @@
 @DPATCH@
 diff -urNad '--exclude=CVS' '--exclude=.svn' '--exclude=.git' '--exclude=.arch' '--exclude=.hg' '--exclude=_darcs' '--exclude=.bzr' postgis-1.5.1~/loader/getopt.c postgis-1.5.1/loader/getopt.c
 --- postgis-1.5.1~/loader/getopt.c	2010-02-01 18:35:55.000000000 +0100
-+++ postgis-1.5.1/loader/getopt.c	2010-05-22 19:02:45.000000000 +0200
++++ postgis-1.5.1/loader/getopt.c	2010-05-22 19:10:55.000000000 +0200
 @@ -31,7 +31,7 @@
   */
  
@@ -101,7 +101,7 @@ diff -urNad '--exclude=CVS' '--exclude=.svn' '--exclude=.git' '--exclude=.arch' 
  }
 diff -urNad '--exclude=CVS' '--exclude=.svn' '--exclude=.git' '--exclude=.arch' '--exclude=.hg' '--exclude=_darcs' '--exclude=.bzr' postgis-1.5.1~/loader/getopt.h postgis-1.5.1/loader/getopt.h
 --- postgis-1.5.1~/loader/getopt.h	2009-12-19 04:56:06.000000000 +0100
-+++ postgis-1.5.1/loader/getopt.h	2010-05-22 19:03:08.000000000 +0200
++++ postgis-1.5.1/loader/getopt.h	2010-05-22 19:10:55.000000000 +0200
 @@ -1,9 +1,9 @@
  /* declarations for getopt and envargs */
  
@@ -116,3 +116,173 @@ diff -urNad '--exclude=CVS' '--exclude=.svn' '--exclude=.git' '--exclude=.arch' 
  
  extern int pgis_getopt(int argc, char **argv, char *opts);
  extern void envargs(int *pargc, char ***pargv, char *envstr);
+diff -urNad '--exclude=CVS' '--exclude=.svn' '--exclude=.git' '--exclude=.arch' '--exclude=.hg' '--exclude=_darcs' '--exclude=.bzr' postgis-1.5.1~/loader/pgsql2shp.c postgis-1.5.1/loader/pgsql2shp.c
+--- postgis-1.5.1~/loader/pgsql2shp.c	2010-02-01 18:35:55.000000000 +0100
++++ postgis-1.5.1/loader/pgsql2shp.c	2010-05-22 19:12:46.000000000 +0200
+@@ -1307,10 +1307,10 @@
+ 			binary = 1;
+ 			break;
+ 		case 'f':
+-			shp_file = optarg;
++			shp_file = pgis_optarg;
+ 			break;
+ 		case 'h':
+-			snprintf(buf + strlen(buf), 255, "host=%s ", optarg);
++			snprintf(buf + strlen(buf), 255, "host=%s ", pgis_optarg);
+ 			break;
+ 		case 'd':
+ 			dswitchprovided = 1;
+@@ -1321,16 +1321,16 @@
+ 			unescapedattrs = 1;
+ 			break;
+ 		case 'u':
+-			snprintf(buf + strlen(buf), 255, "user=%s ", optarg);
++			snprintf(buf + strlen(buf), 255, "user=%s ", pgis_optarg);
+ 			break;
+ 		case 'p':
+-			snprintf(buf + strlen(buf), 255, "port=%s ", optarg);
++			snprintf(buf + strlen(buf), 255, "port=%s ", pgis_optarg);
+ 			break;
+ 		case 'P':
+-			snprintf(buf + strlen(buf), 255, "password=%s ", optarg);
++			snprintf(buf + strlen(buf), 255, "password=%s ", pgis_optarg);
+ 			break;
+ 		case 'g':
+-			geo_col_name = optarg;
++			geo_col_name = pgis_optarg;
+ 			break;
+ 		case 'k':
+ 			keep_fieldname_case = 1;
+@@ -1343,15 +1343,15 @@
+ 	}
+ 
+ 	curindex=0;
+-	for (; optind<ARGC; optind++)
++	for (; pgis_optind<ARGC; pgis_optind++)
+ 	{
+ 		if (curindex == 0)
+ 		{
+-			snprintf(buf + strlen(buf), 255, "dbname=%s", ARGV[optind]);
++			snprintf(buf + strlen(buf), 255, "dbname=%s", ARGV[pgis_optind]);
+ 		}
+ 		else if (curindex == 1)
+ 		{
+-			parse_table(ARGV[optind]);
++			parse_table(ARGV[pgis_optind]);
+ 
+ 		}
+ 		curindex++;
+diff -urNad '--exclude=CVS' '--exclude=.svn' '--exclude=.git' '--exclude=.arch' '--exclude=.hg' '--exclude=_darcs' '--exclude=.bzr' postgis-1.5.1~/loader/shp2pgsql-cli.c postgis-1.5.1/loader/shp2pgsql-cli.c
+--- postgis-1.5.1~/loader/shp2pgsql-cli.c	2010-02-03 22:42:20.000000000 +0100
++++ postgis-1.5.1/loader/shp2pgsql-cli.c	2010-05-22 19:14:00.000000000 +0200
+@@ -92,9 +92,9 @@
+ 			break;
+ 
+ 		case 's':
+-			if (optarg)
++			if (pgis_optarg)
+ 			{
+-				sscanf(optarg, "%d", &(config->sr_id));
++				sscanf(pgis_optarg, "%d", &(config->sr_id));
+ 			}
+ 			else
+ 			{
+@@ -105,7 +105,7 @@
+ 			break;
+ 
+ 		case 'g':
+-			config->geom = optarg;
++			config->geom = pgis_optarg;
+ 			break;
+ 
+ 		case 'k':
+@@ -129,11 +129,11 @@
+ 			break;
+ 
+ 		case 'W':
+-			config->encoding = optarg;
++			config->encoding = pgis_optarg;
+ 			break;
+ 
+ 		case 'N':
+-			switch (optarg[0])
++			switch (pgis_optarg[0])
+ 			{
+ 			case 'a':
+ 				config->null_policy = POLICY_NULL_ABORT;
+@@ -161,10 +161,10 @@
+ 	}
+ 
+ 	/* Determine the shapefile name from the next argument, if no shape file, exit. */
+-	if (optind < argc)
++	if (pgis_optind < argc)
+ 	{
+-		config->shp_file = argv[optind];
+-		optind++;
++		config->shp_file = argv[pgis_optind];
++		pgis_optind++;
+ 	}
+ 	else
+ 	{
+@@ -173,25 +173,25 @@
+ 	}
+ 
+ 	/* Determine the table and schema names from the next argument */
+-	if (optind < argc)
++	if (pgis_optind < argc)
+ 	{
+ 		char *ptr;
+ 
+-		ptr = strchr(argv[optind], '.');
++		ptr = strchr(argv[pgis_optind], '.');
+ 
+ 		/* Schema qualified table name */
+ 		if (ptr)
+ 		{
+-			config->schema = malloc(strlen(argv[optind]) + 1);
+-			snprintf(config->schema, ptr - argv[optind] + 1, "%s", argv[optind]);
++			config->schema = malloc(strlen(argv[pgis_optind]) + 1);
++			snprintf(config->schema, ptr - argv[pgis_optind] + 1, "%s", argv[pgis_optind]);
+ 
+-			config->table = malloc(strlen(argv[optind]));
+-			snprintf(config->table, strlen(argv[optind]) - strlen(config->schema), "%s", ptr + 1);
++			config->table = malloc(strlen(argv[pgis_optind]));
++			snprintf(config->table, strlen(argv[pgis_optind]) - strlen(config->schema), "%s", ptr + 1);
+ 		}
+ 		else
+ 		{
+-			config->table = malloc(strlen(argv[optind]) + 1);
+-			strcpy(config->table, argv[optind]);
++			config->table = malloc(strlen(argv[pgis_optind]) + 1);
++			strcpy(config->table, argv[pgis_optind]);
+ 		}
+ 	}
+ 
+diff -urNad '--exclude=CVS' '--exclude=.svn' '--exclude=.git' '--exclude=.arch' '--exclude=.hg' '--exclude=_darcs' '--exclude=.bzr' postgis-1.5.1~/loader/shp2pgsql-gui.c postgis-1.5.1/loader/shp2pgsql-gui.c
+--- postgis-1.5.1~/loader/shp2pgsql-gui.c	2010-02-01 18:35:55.000000000 +0100
++++ postgis-1.5.1/loader/shp2pgsql-gui.c	2010-05-22 19:15:14.000000000 +0200
+@@ -1212,19 +1212,19 @@
+ 		switch (c)
+ 		{
+ 		case 'U':
+-			conn->username = optarg;
++			conn->username = pgis_optarg;
+ 			break;
+ 		case 'p':
+-			conn->port = optarg;
++			conn->port = pgis_optarg;
+ 			break;
+ 		case 'W':
+-			conn->password = optarg;
++			conn->password = pgis_optarg;
+ 			break;
+ 		case 'd':
+-			conn->database = optarg;
++			conn->database = pgis_optarg;
+ 			break;
+ 		case 'h':
+-			conn->host = optarg;
++			conn->host = pgis_optarg;
+ 			break;
+ 		default:
+ 			usage();
