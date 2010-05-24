@@ -1,3 +1,13 @@
+postgis (1.5.1-5) unstable; urgency=high
+
+  * This version requires geos >= 3.1.1, debian/control updated.
+    (closes: #580462)
+  * Moved libpostgis-java to java section.
+  * README.Debian has been fixed for old lwpostgis.sql since ages. Just ack.
+    (closes: #575622)
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Mon, 24 May 2010 09:40:32 +0200
+
 postgis (1.5.1-4) unstable; urgency=high
 
   * [PATCH] getopt.dpatch added to avoid var collisions among Postgis getopt
