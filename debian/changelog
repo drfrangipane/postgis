@@ -1,3 +1,11 @@
+postgis (1.5.2-1) unstable; urgency=low
+
+  * New upstream release, with a few bug fixes.
+  * Added shp2pgsql-gui binary.
+  * Removed patches, applied upstream: getopt.	
+
+ -- Alan Boudreault <aboudreault@mapgears.com>  Wed, 29 Sep 2010 09:16:10 -0400
+
 postgis (1.5.1-5) unstable; urgency=high
 
   * This version requires geos >= 3.1.1, debian/control updated.

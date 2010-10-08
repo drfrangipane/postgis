@@ -68,7 +68,8 @@ install-indep: build-indep
 	./configure \
 		--docdir=\$${prefix}/share/doc/postgis \
 		--mandir=\$${prefix}/share/man \
-		--infodir=\$${prefix}/share/info
+		--infodir=\$${prefix}/share/info \
+		--with-pgconfig=/usr/lib/postgresql/8.4/bin/pg_config
 	# PostGIS JDBC (with debug support)
 	$(MAKE) -C java/jdbc clean
 	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=javac $(MAKE) -C java/jdbc jar
@@ -96,7 +97,8 @@ install-arch: build-arch
 		--datadir=\$${prefix}/share/postgresql-8.4-postgis \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
-		--with-pgconfig=/usr/lib/postgresql/8.4/bin/pg_config
+		--with-pgconfig=/usr/lib/postgresql/8.4/bin/pg_config \
+		--with-gui
 	$(MAKE)
 	$(MAKE) -C doc
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-8.4-postgis
