@@ -1,11 +1,18 @@
 postgis (1.5.2-2) unstable; urgency=low
 
   * Repository moved to git and changed Vcs-* fields in debian/control.
-  * Removed obsolete debian/control_lenny.
+  * Removed obsolete debian/*_lenny.
   * Policy bumped to 3.9.1. No changes.
   * Moved to source format 3.0 with quilt support.
+  * Dehelper compatibility level set to 8.
+  * Updated README to reflect current location of template SQL files.
+    (closes: #575622)
+  * Postrm was assigned to the wrong package (postgis), which caused 
+    unexpected behavior on purging. Now each purge of postgresql-*-postgis will
+    cause extension removal.
+    (closes: #596663)
 
- -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 24 Mar 2011 17:30:48 +0100
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 24 Mar 2011 18:05:46 +0100
 
 postgis (1.5.2-1) unstable; urgency=low
 

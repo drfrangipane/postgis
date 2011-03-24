@@ -118,11 +118,11 @@ install-arch: build-arch
 	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
 	    -e 's/@POSTGRES_VERSION@/8.4/' \
 	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
-	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.4-postgis.postinst
+	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/.postinst
 	
 	sed -e 's/@POSTGRES_VERSIONS@/8.4/' \
 	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
-	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgis.postrm
+	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgresql-8.4-postgis.postrm
 	
 	dh_install -s
 	

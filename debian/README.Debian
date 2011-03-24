@@ -11,8 +11,9 @@ postgresql-8.4-postgis
   SQL script which contains the OpenGIS Spatial References 
   (spatial_ref_sys.sql).
 
-  	psql -d [yourdatabase] -f postgis.sql
-  	psql -d [yourdatabase] -f spatial_ref_sys.sql
+    DIR=/usr/share/postgresql/*/contrib/postgis*
+  	psql -d [yourdatabase] -f $DIR/postgis.sql
+  	psql -d [yourdatabase] -f $DIR/spatial_ref_sys.sql
 
   NOTE: To install PostGIS you must run the postgis.sql script in each
   PostgreSQL database you want PostGIS in as the PostgreSQL superuser
@@ -30,7 +31,7 @@ postgresql-8.4-postgis
 
   	psql -d [yourdatabase] -f postgis_comments.sql 
 
-  These scripts can be found in the /usr/share/postgresql-8.4/postgis
+  These scripts can be found in the /usr/share/postgresql/8.4/contrib/postgisX.Y
   directory.
 
 postgis
@@ -72,8 +73,8 @@ Type as root:
   createlang plpgsql -d <databasename>
 
   # Finally, load the functions and reference system tables
-  psql <databasename> -f /usr/share/postgresql-8.4-postgis/postgis.sql
-  psql <databasename> -f /usr/share/postgresql-8.4-postgis/spatial_ref_sys.sql
+  psql <databasename> -f /usr/share/postgresql/*/contrib/postgis*/postgis.sql
+  psql <databasename> -f /usr/share/postgresql/*/contrib/postgis*/spatial_ref_sys.sql
 
   # login in new database (still as superuser postgres)
   psql <databasename>
@@ -117,8 +118,8 @@ geodatabase, type as root:
   createlang plpgsql -d template_gis
 
   # Finally, load the functions and reference system tables
-  psql template_gis -f /usr/share/postgresql-8.4-postgis/postgis.sql
-  psql template_gis -f /usr/share/postgresql-8.4-postgis/spatial_ref_sys.sql
+  psql template_gis -f /usr/share/postgresql/*/contrib/postgis*/postgis.sql
+  psql template_gis -f /usr/share/postgresql/*/contrib/postgis*/spatial_ref_sys.sql
 
   # login in new database (still as superuser postgres)
   psql template_gis
