@@ -5,18 +5,18 @@ Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
 Uploaders: Stephen Frost <sfrost@debian.org>, Francesco Paolo Lovergine <frankie@debian.org>
 Build-Depends: debhelper (>= 7), autotools-dev, flex, bison, postgresql-server-dev-8.4,
  libgeos-dev (>= 3.1.1), libproj-dev (>= 4.5.0), libssl-dev, xsltproc, docbook, docbook-xsl, libpg-java, 
- default-jdk, fastjar, libjts-java (>= 1.7), dpatch, imagemagick, libcunit1-dev, dblatex, libxml2-dev,
+ default-jdk, fastjar, libjts-java (>= 1.7), imagemagick, libcunit1-dev, dblatex, libxml2-dev,
  libgtk2.0-dev
-Standards-Version: 3.8.4
+Standards-Version: 3.9.1
 Homepage: http://postgis.refractions.net/
-Vcs-Browser: http://svn.debian.org/wsvn/pkg-grass/packages/postgis/
-Vcs-Svn: svn://svn.debian.org/pkg-grass/packages/postgis/
+Vcs-Browser: http://git.debian.org/?p=pkg-grass/postgis.git
+Vcs-Git: git://git.debian.org/git/pkg-grass/postgis.git
 
 Package: postgresql-8.4-postgis
 Architecture: any
 Depends: ${shlibs:Depends}, postgis, postgresql-8.4, ${misc:Depends}
 Conflicts: postgis (<< 1.2.1)
-Description: geographic objects support for PostgreSQL 8.4
+Description: Geographic objects support for PostgreSQL 8.4
  PostGIS adds support for geographic objects to the PostgreSQL object-relational
  database. In effect, PostGIS "spatially enables" the PostgreSQL server, 
  allowing it to be used as a backend spatial database for geographic information
@@ -29,7 +29,7 @@ Package: postgis
 Suggests: postgresql-8.4-postgis
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Architecture: any
-Description: geographic objects support for PostgreSQL -- common files
+Description: Geographic objects support for PostgreSQL -- common files
  PostGIS adds support for geographic objects to the PostgreSQL object-relational
  database. In effect, PostGIS "spatially enables" the PostgreSQL server, 
  allowing it to be used as a backend spatial database for geographic information
@@ -46,7 +46,7 @@ Depends: libpg-java
 Suggests: postgresql-8.4-postgis, ${misc:Depends}
 Conflicts: libpostgis-jdbc, libpostgisjava, postgresql-postgis-java
 Replaces: libpostgis-jdbc, libpostgisjava, postgresql-postgis-java
-Description: geographic objects support for PostgreSQL -- JDBC support
+Description: Geographic objects support for PostgreSQL -- JDBC support
  PostGIS adds support for geographic objects to the PostgreSQL object-relational
  database. In effect, PostGIS "spatially enables" the PostgreSQL server, 
  allowing it to be used as a backend spatial database for geographic information
