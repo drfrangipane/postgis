@@ -4,7 +4,7 @@ Debian README for Postgis
 These are the PostGIS packages for Debian. PostGIS is split into three
 Debian packages:
 
-postgresql-8.4-postgis
+postgresql-N.M-postgis
   This is the PostGIS module for the PostgreSQL server itself.  It contains
   the library which is loaded by the server (postgis.so), the SQL script
   for creating the SQL functions in a given database (postgis.sql), and an 
@@ -31,7 +31,7 @@ postgresql-8.4-postgis
 
   	psql -d [yourdatabase] -f postgis_comments.sql 
 
-  These scripts can be found in the /usr/share/postgresql/8.4/contrib/postgisX.Y
+  These scripts can be found in the /usr/share/postgresql/N.M/contrib/postgisX.Y
   directory.
 
 postgis

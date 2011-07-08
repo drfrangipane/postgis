@@ -12,8 +12,6 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-include /usr/share/dpatch/dpatch.make
-
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
@@ -40,16 +38,15 @@ endif
 
 build: build-arch build-indep
 
-build-arch: patch-stamp build-arch-stamp
+build-arch: build-arch-stamp
 build-arch-stamp:
 	touch $@
 
-build-indep: patch-stamp build-indep-stamp
+build-indep: build-indep-stamp
 build-indep-stamp:
 	touch $@
 
-clean: clean-patched unpatch
-clean-patched:
+clean: 
 	dh_testdir
 	dh_testroot
 	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
@@ -112,23 +109,65 @@ install-arch: build-arch
 	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
 	   $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib/.
 	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/bin $(CURDIR)/debian/postgis/usr
+	$(MAKE) distclean
 	
-	# Create custom maint scripts
+	# PostGIS for PostgreSQL 9.0
+	./configure \
+		--host=$(DEB_HOST_GNU_TYPE) \
+		--build=$(DEB_BUILD_GNU_TYPE) \
+		--prefix=/usr \
+		--with-docdir=$(CURDIR)/debian/postgis/usr/share/doc \
+		--exec-prefix=\$${prefix}/lib/postgresql/9.0 \
+		--datadir=\$${prefix}/share/postgresql-9.0-postgis \
+		--mandir=\$${prefix}/share/man \
+		--infodir=\$${prefix}/share/info \
+		--with-pgconfig=/usr/lib/postgresql/9.0/bin/pg_config \
+		--with-gui
+	$(MAKE)
+	$(MAKE) -C doc
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-9.0-postgis
+	$(MAKE) -C doc install \
+			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
+			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
+			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/9.0
+	install -o root -g root doc/postgis_comments.sql \
+		$(CURDIR)/debian/postgresql-9.0-postgis/usr/share/postgresql/9.0/contrib/.
+	install -o root -g root -d $(CURDIR)/debian/postgresql-9.0-postgis/usr/lib/postgis/$(VERSION)/postgres/9.0/lib
+	mv $(CURDIR)/debian/postgresql-9.0-postgis/usr/lib/postgresql/9.0/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
+	   $(CURDIR)/debian/postgresql-9.0-postgis/usr/lib/postgis/$(VERSION)/postgres/9.0/lib/.
+	mv $(CURDIR)/debian/postgresql-9.0-postgis/usr/lib/postgresql/9.0/bin $(CURDIR)/debian/postgis/usr
+	
+	# Create custom maint scripts: 8.4
 	
 	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
 	    -e 's/@POSTGRES_VERSION@/8.4/' \
 	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
-	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/.postinst
+	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.4-postgis.postinst
 	
 	sed -e 's/@POSTGRES_VERSIONS@/8.4/' \
 	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
 	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgresql-8.4-postgis.postrm
 	
+	# Create custom maint scripts: 9.0
+	#
+	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
+	    -e 's/@POSTGRES_VERSION@/9.0/' \
+	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
+	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-9.0-postgis.postinst
+	
+	sed -e 's/@POSTGRES_VERSIONS@/9.0/' \
+	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
+	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgresql-9.0-postgis.postrm
+	
 	dh_install -s
 	
-	# copy utils
+	# copy utils for 8.4
 	mkdir -p $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
 	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
+	
+	# copy utils for 9.0
+	mkdir -p $(CURDIR)/debian/postgresql-9.0-postgis/usr/share/postgresql-9.0-postgis/utils
+	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-9.0-postgis/usr/share/postgresql-9.0-postgis/utils
 
 check: install-arch
 	$(MAKE) check
