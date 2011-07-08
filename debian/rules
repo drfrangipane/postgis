@@ -109,6 +109,7 @@ install-arch: build-arch
 	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
 	   $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib/.
 	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/bin $(CURDIR)/debian/postgis/usr
+	rm -rf $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/bin 
 	$(MAKE) distclean
 	
 	# PostGIS for PostgreSQL 9.0
