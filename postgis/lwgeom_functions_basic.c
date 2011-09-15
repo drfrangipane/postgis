@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_functions_basic.c 5181 2010-02-01 17:35:55Z pramsey $
+ * $Id: lwgeom_functions_basic.c 7092 2011-05-04 22:13:01Z chodgson $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -2227,19 +2227,20 @@ Datum LWGEOM_collect_garray(PG_FUNCTION_ARGS)
 				outtype = COLLECTIONTYPE;
 			}
 
-			/* Advance NULL bitmap */
-			if (bitmap)
-			{
-				bitmask <<= 1;
-				if (bitmask == 0x100)
-				{
-					bitmap++;
-					bitmask = 1;
-				}
-			}
-
 			count++;
 		}
+
+		/* Advance NULL bitmap */
+		if (bitmap)
+		{
+			bitmask <<= 1;
+			if (bitmask == 0x100)
+			{
+				bitmap++;
+				bitmask = 1;
+			}
+		}
+		
 	}
 
 	POSTGIS_DEBUGF(3, "LWGEOM_collect_garray: outtype = %d", outtype);
@@ -3617,11 +3618,17 @@ Datum ST_CollectionExtract(PG_FUNCTION_ARGS)
 	/* Mirror non-collections right back */
 	if ( ! lwgeom_is_collection(lwgeom_type) )
 	{
-		output = palloc(VARSIZE(input));
-		memcpy(VARDATA(output), VARDATA(input), VARSIZE(input) - VARHDRSZ);
-		SET_VARSIZE(output, VARSIZE(input));
-		lwgeom_free(lwgeom);
-		PG_RETURN_POINTER(output);
+		if( lwgeom_type == type )
+		{
+			lwgeom_free(lwgeom);
+			PG_RETURN_POINTER(input);
+		}
+		else
+		{
+			lwgeom_free(lwgeom);
+			PG_RETURN_NULL();
+		}
+		
 	}
 
 	lwcol = lwcollection_extract((LWCOLLECTION*)lwgeom, type);

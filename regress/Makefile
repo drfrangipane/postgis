@@ -1,15 +1,15 @@
 TMPDIR?=/tmp
 
-POSTGIS_PGSQL_VERSION=83
-POSTGIS_GEOS_VERSION=33
-POSTGIS_PROJ_VERSION=46
+POSTGIS_PGSQL_VERSION=912
+POSTGIS_GEOS_VERSION=32
+POSTGIS_PROJ_VERSION=47
 HAVE_LIBXML2=@HAVE_LIBXML2@
 
 # MingW hack: rather than use PGSQL_BINDIR directly, we change
 # to the directory and then use "pwd" to return the path. This
 # ensures that the returned path is in MSYS format, otherwise
 # colons in drive letters will break PATH.
-PGSQL_BINDIR=$(shell pushd "/usr/local/pgsql/8.3/bin" > /dev/null && pwd && popd > /dev/null)
+PGSQL_BINDIR=$(shell pushd "/usr/local/pgsql/9.1/bin" > /dev/null && pwd && popd > /dev/null)
 
 # Where we put our regression installation 
 srcdir=$(shell pwd)

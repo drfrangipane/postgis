@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: geography_inout.c 5719 2010-07-02 01:43:48Z pramsey $
+ * $Id: geography_inout.c 7247 2011-05-25 18:42:02Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * Copyright 2009 Paul Ramsey <pramsey@cleverelephant.ca>
@@ -406,7 +406,7 @@ Datum geography_typmod_out(PG_FUNCTION_ARGS)
 	POSTGIS_DEBUGF(3, "Got typmod(srid = %d, type = %d, hasz = %d, hasm = %d)", srid, type, hasz, hasm);
 
 	/* No SRID or type or dimensionality? Then no typmod at all. Return empty string. */
-	if ( ! srid && ! type && ! hasz && ! hasz )
+	if ( ! ( srid || type || hasz || hasz ) )
 	{
 		*str = '\0';
 		PG_RETURN_CSTRING(str);
@@ -416,12 +416,10 @@ Datum geography_typmod_out(PG_FUNCTION_ARGS)
 	str += sprintf(str, "(");
 
 	/* Has type? */
-	if ( type )
+	if ( type ) 
 		str += sprintf(str, "%s", lwgeom_typename(type));
-
-	/* Need dummy type to append Z/M to? */
-	if ( !type & (hasz || hasz) )
-		str += sprintf(str, "Geometry");
+  else if ( (!type) &&  ( srid || hasz || hasm ) )
+    str += sprintf(str, "Geometry");
 
 	/* Has Z? */
 	if ( hasz )
@@ -432,7 +430,7 @@ Datum geography_typmod_out(PG_FUNCTION_ARGS)
 		str += sprintf(str, "%s", "M");
 
 	/* Comma? */
-	if ( srid && ( type || hasz || hasm ) )
+	if ( srid )
 		str += sprintf(str, ",");
 
 	/* Has SRID? */
@@ -761,22 +759,19 @@ Datum geography_as_geojson(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(geography_from_text);
 Datum geography_from_text(PG_FUNCTION_ARGS)
 {
+	Datum r = 0;
 	text *wkt_text = PG_GETARG_TEXT_P(0);
 	size_t size = VARSIZE(wkt_text) - VARHDRSZ;
 	/* Extract the cstring from the varlena */
-	char *wkt = palloc(size + 1);
+	char *wkt = palloc(size+1);
 	memcpy(wkt, VARDATA(wkt_text), size);
 	/* Null terminate it */
 	wkt[size] = '\0';
-
-	if ( size < 10 )
-	{
-		lwerror("Invalid OGC WKT (too short)");
-		PG_RETURN_NULL();
-	}
-
 	/* Pass the cstring to the input parser, and magic occurs! */
-	PG_RETURN_DATUM(DirectFunctionCall3(geography_in, PointerGetDatum(wkt), Int32GetDatum(0), Int32GetDatum(-1)));
+	r = DirectFunctionCall3(geography_in, PointerGetDatum(wkt), Int32GetDatum(0), Int32GetDatum(-1));
+	/* Clean up and return */
+	pfree(wkt);
+	PG_RETURN_DATUM(r);
 }
 
 /*

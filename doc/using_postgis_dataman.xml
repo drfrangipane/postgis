@@ -576,7 +576,7 @@ The GEOMETRY type calculates a meaningless cartesian distance between Reykjavik 
 	  </variablelist>
 	</sect2>
 
-	<sect2>
+	<sect2 id="geometry_columns">
 	  <title>The GEOMETRY_COLUMNS Table</title>
 
 	  <para>The <varname>GEOMETRY_COLUMNS</varname> table definition is as
@@ -585,7 +585,7 @@ The GEOMETRY type calculates a meaningless cartesian distance between Reykjavik 
 	  <programlisting>CREATE TABLE geometry_columns (
   f_table_catalog    VARRCHAR(256) NOT NULL,
   f_table_schema     VARCHAR(256) NOT NULL,
-  f_table_nam        VARCHAR(256) NOT NULL,
+  f_table_name        VARCHAR(256) NOT NULL,
   f_geometry_column  VARCHAR(256) NOT NULL,
   coord_dimension    INTEGER NOT NULL,
   srid               INTEGER NOT NULL,
@@ -1566,6 +1566,9 @@ AND ST_Relate(a.geom, b.geom, '102101FF2');</programlisting>
             <listitem>
               <para><ulink url="http://gis.hsr.ch/wiki/images/3/3d/9dem_springer.pdf">Dimensionally 
               Extended Nine-Intersection Model (DE-9IM) by Christian Strobl</ulink></para>
+            </listitem>
+            <listitem>
+                <para><ulink url="http://docs.codehaus.org/display/GEOTDOC/Point+Set+Theory+and+the+DE-9IM+Matrix#PointSetTheoryandtheDE-9IMMatrix-9IntersectionMatrix">GeoTools: Dimensionally Extended Nine-Intersection Matrix</ulink></para>
             </listitem>
 
             <listitem>

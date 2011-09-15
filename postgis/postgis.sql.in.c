@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 --
--- $Id: postgis.sql.in.c 5876 2010-08-31 18:00:26Z nicklas $
+-- $Id: postgis.sql.in.c 7360 2011-06-10 16:55:53Z robe $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net
@@ -2012,7 +2012,7 @@ $$ LANGUAGE plpgsql;
 -- Availability: 1.5.0
 CREATE OR REPLACE FUNCTION ST_DumpPoints(geometry) RETURNS SETOF geometry_dump AS $$
   SELECT * FROM _ST_DumpPoints($1, NULL);
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL  STRICT;
 
 
 ------------------------------------------------------------------------
@@ -2460,9 +2460,9 @@ BEGIN
 	RAISE DEBUG 'Processing table %.%.%', gcs.nspname, gcs.relname, gcs.attname;
 
 	DELETE FROM geometry_columns
-	  WHERE f_table_schema = quote_ident(gcs.nspname)
-	  AND f_table_name = quote_ident(gcs.relname)
-	  AND f_geometry_column = quote_ident(gcs.attname);
+	  WHERE f_table_schema = gcs.nspname
+	  AND f_table_name = gcs.relname
+	  AND f_geometry_column = gcs.attname;
 
 	gc_is_valid := true;
 
@@ -2605,6 +2605,11 @@ BEGIN
 	LOOP
 		RAISE DEBUG 'Processing view %.%.%', gcs.nspname, gcs.relname, gcs.attname;
 
+	DELETE FROM geometry_columns
+	  WHERE f_table_schema = gcs.nspname
+	  AND f_table_name = gcs.relname
+	  AND f_geometry_column = gcs.attname;
+	  
 		EXECUTE 'SELECT ndims(' || quote_ident(gcs.attname) || ')
 				 FROM ' || quote_ident(gcs.nspname) || '.' || quote_ident(gcs.relname) || '
 				 WHERE ' || quote_ident(gcs.attname) || ' IS NOT NULL LIMIT 1'

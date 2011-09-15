@@ -11,7 +11,7 @@
 
 POSTGIS_MAJOR_VERSION=1
 POSTGIS_MINOR_VERSION=5
-POSTGIS_MICRO_VERSION=2
+POSTGIS_MICRO_VERSION=3
 
 XSLTPROC=/opt/local/bin/xsltproc
 XSLBASE=/opt/local/share/xsl/docbook-xsl
@@ -35,15 +35,15 @@ HTML_DOCBOOK_XSL=$(XSLBASE)/html/docbook.xsl
 CHUNK_HTML_DOCBOOK_XSL=$(XSLBASE)/html/chunk.xsl
 
 # DBLatex's dblatex script for PDF generation from DocBook
-DBLATEX=
+DBLATEX=/opt/local/bin/dblatex
 
 # Imagemagick's convert utility program for generated images used in the documentation
 IMAGEMAGICK=/opt/local/bin/convert
 
 # Directories for postgresql subdirectories
-PGSQL_DOCDIR=/usr/local/pgsql/8.3/doc
-PGSQL_MANDIR=/usr/local/pgsql/8.3/man
-PGSQL_SHAREDIR=/usr/local/pgsql/8.3/share
+PGSQL_DOCDIR=/usr/local/pgsql/9.1/share/doc
+PGSQL_MANDIR=/usr/local/pgsql/9.1/share/man
+PGSQL_SHAREDIR=/usr/local/pgsql/9.1/share
 
 # If XSLTPROC or XSLBASE were not found during configure, we cannot
 # build the documentation

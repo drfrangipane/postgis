@@ -268,5 +268,33 @@ LIMIT 10;
 
 DROP FUNCTION utmzone(geometry);
 
+-- #457 --
+SELECT '#457.1', st_astext(st_collectionExtract('POINT(0 0)', 1));
+SELECT '#457.2', st_astext(st_collectionExtract('POINT(0 0)', 2));
+SELECT '#457.3', st_astext(st_collectionExtract('POINT(0 0)', 3));
+SELECT '#457.4', st_astext(st_collectionExtract('LINESTRING(0 0, 1 1)', 1));
+SELECT '#457.5', st_astext(st_collectionExtract('LINESTRING(0 0, 1 1)', 2));
+SELECT '#457.6', st_astext(st_collectionExtract('LINESTRING(0 0, 1 1)', 3));
+SELECT '#457.7', st_astext(st_collectionExtract('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))', 1));
+SELECT '#457.8', st_astext(st_collectionExtract('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))', 2));
+SELECT '#457.9', st_astext(st_collectionExtract('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))', 3));
+
+-- #650 --
+SELECT '#650', ST_AsText(ST_Collect(ARRAY[ST_MakePoint(0,0), ST_MakePoint(1,1), null, ST_MakePoint(2,2)]));
+
+-- #845
+SELECT '#845', ST_Intersects('POINT(169.69960846592 -46.5061209281002)'::geometry, 'POLYGON((169.699607857174 -46.5061218662,169.699607857174 -46.5061195965597,169.699608806526 -46.5061195965597,169.699608806526 -46.5061218662,169.699607857174 -46.5061218662))'::geometry);
+
+-- #884 --
+CREATE TABLE foo (id integer, the_geom geometry);
+INSERT INTO foo VALUES (1, st_geomfromtext('MULTIPOLYGON(((-113.6 35.4,-113.6 35.8,-113.2 35.8,-113.2 35.4,-113.6 35.4),(-113.5 35.5,-113.3 35.5,-113.3 35.7,-113.5 35.7,-113.5 35.5)))', -1));
+INSERT INTO foo VALUES (2, st_geomfromtext('MULTIPOLYGON(((-113.7 35.3,-113.7 35.9,-113.1 35.9,-113.1 35.3,-113.7 35.3),(-113.6 35.4,-113.2 35.4,-113.2 35.8,-113.6 35.8,-113.6 35.4)),((-113.5 35.5,-113.5 35.7,-113.3 35.7,-113.3 35.5,-113.5 35.5)))', -1));
+
+select '#884', id, ST_Within(
+ST_GeomFromText('POINT (-113.4 35.6)', -1), the_geom
+) from foo;
+
+DROP TABLE foo;
+
 -- Clean up
 DELETE FROM spatial_ref_sys;
