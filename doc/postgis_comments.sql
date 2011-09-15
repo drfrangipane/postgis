@@ -323,17 +323,17 @@ COMMENT ON FUNCTION ST_AsGeoJSON(geometry , integer , integer ) IS 'args: g1, ma
 			
 COMMENT ON FUNCTION ST_AsGeoJSON(geography , integer , integer ) IS 'args: g1, max_decimal_digits, options - Return the geometry as a GeoJSON element.';
 			
-COMMENT ON FUNCTION ST_AsGeoJSON(integer , geometry ) IS 'args: version, g1 - Return the geometry as a GeoJSON element.';
+COMMENT ON FUNCTION ST_AsGeoJSON(integer , geometry ) IS 'args: gj_version, g1 - Return the geometry as a GeoJSON element.';
 			
-COMMENT ON FUNCTION ST_AsGeoJSON(integer , geography ) IS 'args: version, g1 - Return the geometry as a GeoJSON element.';
+COMMENT ON FUNCTION ST_AsGeoJSON(integer , geography ) IS 'args: gj_version, g1 - Return the geometry as a GeoJSON element.';
 			
-COMMENT ON FUNCTION ST_AsGeoJSON(integer , geometry , integer ) IS 'args: version, g1, max_decimal_digits - Return the geometry as a GeoJSON element.';
+COMMENT ON FUNCTION ST_AsGeoJSON(integer , geometry , integer ) IS 'args: gj_version, g1, max_decimal_digits - Return the geometry as a GeoJSON element.';
 			
-COMMENT ON FUNCTION ST_AsGeoJSON(integer , geography , integer ) IS 'args: version, g1, max_decimal_digits - Return the geometry as a GeoJSON element.';
+COMMENT ON FUNCTION ST_AsGeoJSON(integer , geography , integer ) IS 'args: gj_version, g1, max_decimal_digits - Return the geometry as a GeoJSON element.';
 			
-COMMENT ON FUNCTION ST_AsGeoJSON(integer , geometry , integer , integer ) IS 'args: version, g1, max_decimal_digits, options - Return the geometry as a GeoJSON element.';
+COMMENT ON FUNCTION ST_AsGeoJSON(integer , geometry , integer , integer ) IS 'args: gj_version, g1, max_decimal_digits, options - Return the geometry as a GeoJSON element.';
 			
-COMMENT ON FUNCTION ST_AsGeoJSON(integer , geography , integer , integer ) IS 'args: version, g1, max_decimal_digits, options - Return the geometry as a GeoJSON element.';
+COMMENT ON FUNCTION ST_AsGeoJSON(integer , geography , integer , integer ) IS 'args: gj_version, g1, max_decimal_digits, options - Return the geometry as a GeoJSON element.';
 			
 COMMENT ON FUNCTION ST_AsGML(geometry ) IS 'args: g1 - Return the geometry as a GML version 2 or 3 element.';
 			
@@ -545,9 +545,9 @@ COMMENT ON FUNCTION ST_Polygonize(geometry[]) IS 'args: geom_array - Aggregate. 
 			
 COMMENT ON FUNCTION ST_Shift_Longitude(geometry ) IS 'args: geomA - Reads every point/vertex in every component of every feature in a geometry, and if the longitude coordinate is <0, adds 360 to it. The result would be a 0-360 version of the data to be plotted in a 180 centric map';
 			
-COMMENT ON FUNCTION ST_Simplify(geometry, float) IS 'args: geomA, tolerance - Returns a "simplified" version of the given geometry using the Douglas-Peuker algorithm.';
+COMMENT ON FUNCTION ST_Simplify(geometry, float) IS 'args: geomA, tolerance - Returns a "simplified" version of the given geometry using the Douglas-Peucker algorithm.';
 			
-COMMENT ON FUNCTION ST_SimplifyPreserveTopology(geometry, float) IS 'args: geomA, tolerance - Returns a "simplified" version of the given geometry using the Douglas-Peuker algorithm. Will avoid creating derived geometries (polygons in particular) that are invalid.';
+COMMENT ON FUNCTION ST_SimplifyPreserveTopology(geometry, float) IS 'args: geomA, tolerance - Returns a "simplified" version of the given geometry using the Douglas-Peucker algorithm. Will avoid creating derived geometries (polygons in particular) that are invalid.';
 			
 COMMENT ON FUNCTION ST_SymDifference(geometry , geometry ) IS 'args: geomA, geomB - Returns a geometry that represents the portions of A and B that do not intersect. It is called a symmetric difference because ST_SymDifference(A,B) = ST_SymDifference(B,A).';
 			

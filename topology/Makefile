@@ -12,8 +12,8 @@ SQL_OBJS=topology.sql.in
 EXTRA_CLEAN=$(SQL_OBJS)
 
 # PGXS information
-PG_CONFIG = /usr/local/pgsql/8.3/bin/pg_config 
-PGXS := /usr/local/pgsql/8.3/lib/pgxs/src/makefiles/pgxs.mk
+PG_CONFIG = /usr/local/pgsql/9.1/bin/pg_config 
+PGXS := /usr/local/pgsql/9.1/lib/pgxs/src/makefiles/pgxs.mk
 include $(PGXS)
 
 

@@ -75,8 +75,8 @@ SHLIB_LINK+= -L/usr/local/lib  -lgeos_c -lproj -L/opt/local/lib -lxml2 -lz -lpth
 EXTRA_CLEAN=$(SQL_OBJS)
 
 # PGXS information
-PG_CONFIG = /usr/local/pgsql/8.3/bin/pg_config 
-PGXS := /usr/local/pgsql/8.3/lib/pgxs/src/makefiles/pgxs.mk
+PG_CONFIG = /usr/local/pgsql/9.1/bin/pg_config 
+PGXS := /usr/local/pgsql/9.1/lib/pgxs/src/makefiles/pgxs.mk
 include $(PGXS)
 
 # PGXS override feature. The ability to allow PostGIS to install itself
@@ -86,7 +86,7 @@ include $(PGXS)
 #
 # Once PostgreSQL 8.5 becomes the minimum supported version, this entire
 # section and its associated Makefile.pgxs should be removed.
-PGXSOVERRIDE = 1
+PGXSOVERRIDE = 0
 ifeq ($(PGXSOVERRIDE),1)
 	include Makefile.pgxs
 endif

@@ -1,6 +1,6 @@
 
 /**********************************************************************
- * $Id: measures.c 5181 2010-02-01 17:35:55Z pramsey $
+ * $Id: measures.c 6031 2010-09-29 20:43:00Z nicklas $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -954,8 +954,10 @@ lw_dist2d_fast_ptarray_ptarray(POINTARRAY *l1, POINTARRAY *l2,DISTPTS *dl, BOX2D
 	int t;
 	int n1 = l1->npoints;
 	int n2 = l2->npoints;
-	LISTSTRUCT list1[n1]; /* This could be a problem, var-size array not legal in C90 */
-	LISTSTRUCT list2[n2]; /* This could be a problem, var-size array not legal in C90 */
+	
+	LISTSTRUCT *list1, *list2;
+	list1 = (LISTSTRUCT*)lwalloc(sizeof(LISTSTRUCT)*n1); 
+	list2 = (LISTSTRUCT*)lwalloc(sizeof(LISTSTRUCT)*n2);
 
 	LWDEBUG(2, "lw_dist2d_fast_ptarray_ptarray is called");
 
@@ -1035,13 +1037,25 @@ lw_dist2d_fast_ptarray_ptarray(POINTARRAY *l1, POINTARRAY *l2,DISTPTS *dl, BOX2D
 
 	if (c1m < c2m)
 	{
-		if (!lw_dist2d_pre_seg_seg(l1,l2,list1,list2,k,dl)) return LW_FALSE;
+		if (!lw_dist2d_pre_seg_seg(l1,l2,list1,list2,k,dl)) 
+		{
+			lwfree(list1);
+			lwfree(list2);
+			return LW_FALSE;
+		}
 	}
 	else
 	{
 		dl->twisted= ((dl->twisted) * (-1));
-		if (!lw_dist2d_pre_seg_seg(l2,l1,list2,list1,k,dl)) return LW_FALSE;
+		if (!lw_dist2d_pre_seg_seg(l2,l1,list2,list1,k,dl)) 
+		{
+			lwfree(list1);
+			lwfree(list2);
+			return LW_FALSE;
+		}
 	}
+	lwfree(list1);
+	lwfree(list2);	
 	return LW_TRUE;
 }
 
