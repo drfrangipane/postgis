@@ -1,2 +1,4 @@
 install
 generator
+lwgeom_accum
+lwgeom_accum.c
