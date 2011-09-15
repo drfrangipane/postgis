@@ -1,3 +1,9 @@
+postgis (1.5.2-3) unstable; urgency=low
+
+  * 
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 15 Sep 2011 12:24:35 +0200
+
 postgis (1.5.2-2) unstable; urgency=low
 
   * Repository moved to git and changed Vcs-* fields in debian/control.
@@ -11,8 +17,8 @@ postgis (1.5.2-2) unstable; urgency=low
     unexpected behavior on purging. Now each purge of postgresql-*-postgis will
     cause extension removal.
     (closes: #596663)
-  * Added PostgreSQL 9.0 support.
-    (closes: #633111)
+  * Added PostgreSQL 9.1 support.
+    (closes: #633111, #639474)
 
  -- Francesco Paolo Lovergine <frankie@debian.org>  Fri, 08 Jul 2011 17:16:12 +0200
 
