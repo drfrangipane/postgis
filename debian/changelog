@@ -13,9 +13,13 @@ postgis (1.5.2-2) unstable; urgency=low
     (closes: #596663)
   * Added PostgreSQL 9.1 support. New patch lwgeom_accum added 
     for supporting 9.1.
-    (closes: #633111, #639474)
+    (closes: #633111)
+  * Dropped PostgreSQL 8.4 support, as required for wheezy.
+    (closes: #639474)
+  * Fixed (again) README.Debian for paths.
+    (closes: #575622)
 
- -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 15 Sep 2011 13:01:50 +0200
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Thu, 15 Sep 2011 13:19:40 +0200
 
 postgis (1.5.2-1) unstable; urgency=low
 

@@ -66,7 +66,7 @@ install-indep: build-indep
 		--docdir=\$${prefix}/share/doc/postgis \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
-		--with-pgconfig=/usr/lib/postgresql/8.4/bin/pg_config
+		--with-pgconfig=/usr/lib/postgresql/9.1/bin/pg_config
 	# PostGIS JDBC (with debug support)
 	$(MAKE) -C java/jdbc clean
 	DEBUGJAR=postgis_debug.fastjar JAR=fastjar JAVAC=javac $(MAKE) -C java/jdbc jar
@@ -82,34 +82,6 @@ install-arch: build-arch
 	dh_installdirs -s
 	# Documentation and common files for PostGIS
 	[ ! -f doc/html/postgis.html.prev ] && cp doc/html/postgis.html doc/html/postgis.html.prev || true
-	
-	# PostGIS for PostgreSQL 8.4
-#	CFLAGS="$(CFLAGS) -Wl,-z,defs" ./configure 
-	./configure \
-		--host=$(DEB_HOST_GNU_TYPE) \
-		--build=$(DEB_BUILD_GNU_TYPE) \
-		--prefix=/usr \
-		--with-docdir=$(CURDIR)/debian/postgis/usr/share/doc \
-		--exec-prefix=\$${prefix}/lib/postgresql/8.4 \
-		--datadir=\$${prefix}/share/postgresql-8.4-postgis \
-		--mandir=\$${prefix}/share/man \
-		--infodir=\$${prefix}/share/info \
-		--with-pgconfig=/usr/lib/postgresql/8.4/bin/pg_config \
-		--with-gui
-	$(MAKE)
-	$(MAKE) -C doc
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-8.4-postgis
-	$(MAKE) -C doc install \
-			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
-			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
-			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/8.4
-	install -o root -g root doc/postgis_comments.sql \
-		$(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql/8.4/contrib/.
-	install -o root -g root -d $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib
-	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
-	   $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgis/$(VERSION)/postgres/8.4/lib/.
-	mv $(CURDIR)/debian/postgresql-8.4-postgis/usr/lib/postgresql/8.4/bin $(CURDIR)/debian/postgis/usr
-	$(MAKE) distclean
 	
 	# PostGIS for PostgreSQL 9.1
 	./configure \
@@ -137,19 +109,8 @@ install-arch: build-arch
 	   $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib/.
 	#mv $(CURDIR)/debian/postgresql-9.0-postgis/usr/lib/postgresql/9.0/bin $(CURDIR)/debian/postgis/usr
 	
-	# Create custom maint scripts: 8.4
-	
-	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
-	    -e 's/@POSTGRES_VERSION@/8.4/' \
-	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
-	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-8.4-postgis.postinst
-	
-	sed -e 's/@POSTGRES_VERSIONS@/8.4/' \
-	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
-	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgresql-8.4-postgis.postrm
-	
 	# Create custom maint scripts: 9.1
-	#
+	
 	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
 	    -e 's/@POSTGRES_VERSION@/9.1/' \
 	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
@@ -160,10 +121,6 @@ install-arch: build-arch
 	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgresql-9.1-postgis.postrm
 	
 	dh_install -s
-	
-	# copy utils for 8.4
-	mkdir -p $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
-	cp utils/*.pl utils/README $(CURDIR)/debian/postgresql-8.4-postgis/usr/share/postgresql-8.4-postgis/utils
 	
 	# copy utils for 9.1
 	mkdir -p $(CURDIR)/debian/postgresql-9.1-postgis/usr/share/postgresql-9.1-postgis/utils
