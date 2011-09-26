@@ -15,7 +15,7 @@ postgis (1.5.3-1) unstable; urgency=low
   * Added PostgreSQL 9.1 support. 
     (closes: #633111)
   * Dropped PostgreSQL 8.4 support, as required for wheezy.
-    (closes: #639474)
+    (closes: #639474,#642356)
   * Fixed (again) README.Debian for paths.
     (closes: #575622)
 
