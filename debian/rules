@@ -107,7 +107,7 @@ install-arch: build-arch
 	install -o root -g root -d $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib
 	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
 	   $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib/.
-	#mv $(CURDIR)/debian/postgresql-9.0-postgis/usr/lib/postgresql/9.0/bin $(CURDIR)/debian/postgis/usr
+	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/bin $(CURDIR)/debian/postgis/usr
 	
 	# Create custom maint scripts: 9.1
 	

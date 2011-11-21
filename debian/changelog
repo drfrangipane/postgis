@@ -1,3 +1,13 @@
+postgis (1.5.3-2) unstable; urgency=low
+
+  * Moved pgsql2shp/shp2pgsql under conventional /usr/bin path.
+    (closes: #648176)
+  * New patch html_doc_resourcesi added: now installing HTML documentation. 
+    Thanks Andrew Harvey.
+    (closes: #649352)
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Mon, 21 Nov 2011 15:43:23 +0100
+
 postgis (1.5.3-1) unstable; urgency=low
 
   * New upstream minor release, with fix for PostgreSQL 9.1.
