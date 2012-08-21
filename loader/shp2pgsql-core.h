@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: shp2pgsql-core.h 5983 2010-09-19 11:27:05Z mcayland $
+ * $Id: shp2pgsql-core.h 9548 2012-03-26 16:23:58Z mcayland $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -12,6 +12,7 @@
  *
  **********************************************************************/
 
+/* Standard headers */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -23,34 +24,38 @@
 #include <iconv.h>
 
 #include "shapefil.h"
+#include "shpcommon.h"
 #include "getopt.h"
 
-#include "../liblwgeom/liblwgeom.h"
+#include "../liblwgeom/stringbuffer.h"
 
-#include "stringbuffer.h"
-
-#define RCSID "$Id: shp2pgsql-core.h 5983 2010-09-19 11:27:05Z mcayland $"
+#define S2P_RCSID "$Id: shp2pgsql-core.h 9548 2012-03-26 16:23:58Z mcayland $"
 
 
-/*
- * Loader policy constants
- */
+/* Number of digits of precision in WKT produced. */
+#define WKT_PRECISION 15
 
+/* Loader policy constants */
 #define POLICY_NULL_ABORT 	0x0
 #define POLICY_NULL_INSERT 	0x1
 #define POLICY_NULL_SKIP	0x2
 
+/* Forced dimensionality constants */
+#define FORCE_OUTPUT_DISABLE	0x0
+#define FORCE_OUTPUT_2D		0x1
+#define FORCE_OUTPUT_3DZ	0x2
+#define FORCE_OUTPUT_3DM	0x3
+#define FORCE_OUTPUT_4D		0x4
 
-/*
- * Error message handling
- */
-
+/* Error message handling */
 #define SHPLOADERMSGLEN		1024
 
+/* Error status codes */
 #define SHPLOADEROK		-1
 #define SHPLOADERERR		0
 #define SHPLOADERWARN		1
 
+/* Record status codes */
 #define SHPLOADERRECDELETED	2
 #define SHPLOADERRECISNULL	3
 
@@ -64,7 +69,7 @@
 /*
  * Default geometry column name
  */
-#define GEOMETRY_DEFAULT "the_geom"
+#define GEOMETRY_DEFAULT "geom"
 #define GEOGRAPHY_DEFAULT "geog"
 
 /*
@@ -75,7 +80,6 @@
 /*
  * Structure to hold the loader configuration options 
  */
-
 typedef struct shp_loader_config
 {
 	/* load mode: c = create, d = delete, a = append, p = prepare */
@@ -87,8 +91,8 @@ typedef struct shp_loader_config
 	/* schema to load into */
 	char *schema;
 
-	/* geometry column name to use */
-	char *geom; 
+	/* geometry/geography column name specified by the user, may be null. */
+	char *geo_col; 
 
 	/* the shape file (without the .shp extension) */
 	char *shp_file;
@@ -114,8 +118,17 @@ typedef struct shp_loader_config
 	/* 0 = load DBF file only, 1 = load everything */
 	int readshape;
 
+	/* Override the output geometry type (a FORCE_OUTPUT_* constant) */
+	int force_output;
+
 	/* iconv encoding name */
 	char *encoding;
+
+	/* tablespace name for the table */
+	char *tablespace;
+
+	/* tablespace name for the indexes */
+	char *idxtablespace;
 
 	/* how to handle nulls */
 	int null_policy;
@@ -123,8 +136,14 @@ typedef struct shp_loader_config
 	/* SRID specified */
 	int sr_id;
 
-	/* 0 = new style (PostGIS 1.x) geometries, 1 = old style (PostGIS 0.9.x) geometries */
-	int hwgeom;
+	/* SRID of the shape file */
+	int shp_sr_id;
+
+	/* 0 = WKB (more precise), 1 = WKT (may have coordinate drift). */
+	int use_wkt;
+
+	/* whether to do a single transaction or run each statement on its own */
+	int usetransaction;
 
 } SHPLOADERCONFIG;
 
@@ -132,7 +151,6 @@ typedef struct shp_loader_config
 /*
  * Structure to holder the current loader state 
  */
-
 typedef struct shp_loader_state
 {
 	/* Configuration for this state */
@@ -166,51 +184,44 @@ typedef struct shp_loader_state
 	int *widths;
 	int *precisions;
 
+	/* Pointer to an array of PostgreSQL field types */
+	char **pgfieldtypes;
+	
 	/* String containing colume name list in the form "(col1, col2, col3 ... , colN)" */
 	char *col_names;
 
 	/* String containing the PostGIS geometry type, e.g. POINT, POLYGON etc. */
 	char *pgtype;
 
-	/* PostGIS geometry type (numeric version) */
-	unsigned int wkbtype;
+	/* Flag for whether the output geometry has Z coordinates or not. */
+	int has_z;
+
+	/* Flag for whether the output geometry has M coordinates or not. */
+	int has_m;
 
 	/* Number of dimensions to output */
 	int pgdims;
 
-	/* 0 = simple geometry, 1 = multi geometry */
-	int istypeM;
-
 	/* Last (error) message */
 	char message[SHPLOADERMSGLEN];
+
+	/* SRID of the shape file.  If not reprojecting, will be the same as to_srid. */
+	int from_srid;
+
+	/* SRID of the table.  If not reprojecting, will be the same as from_srid. */
+	int to_srid;
+
+	/* geometry/geography column name to use.  Will be set to the default if the config did
+	   not specify a column name. */
+	char *geo_col; 
 
 } SHPLOADERSTATE;
 
 
-typedef struct shp_connection_state
-{
-	/* PgSQL username to log in with */
-	char *username;
-
-	/* PgSQL password to log in with */
-	char *password;
-
-	/* PgSQL database to connect to */
-	char *database;
-
-	/* PgSQL port to connect to */
-	char *port;
-
-	/* PgSQL server to connect to */
-	char *host;
-
-} SHPCONNECTIONCONFIG;
-
 /* Externally accessible functions */
 void strtolower(char *s);
 void vasbappend(stringbuffer_t *sb, char *fmt, ... );
-char *escape_connection_string(char *str);
-void set_config_defaults(SHPLOADERCONFIG *config);
+void set_loader_config_defaults(SHPLOADERCONFIG *config);
 
 SHPLOADERSTATE *ShpLoaderCreate(SHPLOADERCONFIG *config);
 int ShpLoaderOpenShape(SHPLOADERSTATE *state);

@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: long_xact.sql.in.c 4894 2009-11-25 19:15:57Z pramsey $
+-- $Id: long_xact.sql.in.c 9735 2012-05-16 08:29:14Z robe $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net
@@ -187,7 +187,7 @@ CREATE OR REPLACE FUNCTION CheckAuth(text, text)
 	RETURNS INT
 	AS
 	$$ SELECT CheckAuth('', $1, $2) $$
-	LANGUAGE 'SQL';
+	LANGUAGE 'sql';
 
 CREATE OR REPLACE FUNCTION CheckAuthTrigger()
 	RETURNS trigger AS 

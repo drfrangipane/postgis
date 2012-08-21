@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: autogen.sh 4556 2009-09-30 14:10:25Z strk $
+# $Id: autogen.sh 9324 2012-02-27 22:08:12Z pramsey $
 #
 # PostGIS Bootstrapping Script
 #

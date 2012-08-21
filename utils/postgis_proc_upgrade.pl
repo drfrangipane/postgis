@@ -1,6 +1,17 @@
 #!/usr/bin/perl
 
 #
+# PostGIS - Spatial Types for PostgreSQL
+# http://postgis.refractions.net
+#
+# Copyright (C) 2009-2010 Paul Ramsey <pramsey@opengeo.org>
+# Copyright (C) 2005 Refractions Research Inc.
+#
+# This is free software; you can redistribute and/or modify it under
+# the terms of the GNU General Public Licence. See the COPYING file.
+#
+
+#
 # This script produces an .sql file containing
 # CREATE OR REPLACE calls for each function
 # in postgis.sql
@@ -19,6 +30,7 @@ eval "exec perl -w $0 $@"
 	if (0);
 
 use strict;
+use warnings;
 
 #
 # Conditionally upgraded types and operators. Only include these
@@ -157,7 +169,7 @@ while(<INPUT>)
 		while(<INPUT>)
 		{
 			print $_;
-			$endfunc = 1 if /^\s*LANGUAGE /;
+			$endfunc = 1 if /^\s*(\$\$\s*)?LANGUAGE /;
 			last if ( $endfunc && /\;/ );
 		}
 	}
@@ -234,25 +246,25 @@ while(<INPUT>)
 		}
 	}
 
-	# This code handles view by creating them if we are doing a major upgrade
+	# Always output create ore replace view (see ticket #1097)
 	if ( /^create or replace view\s+(\S+)\s*/i )
 	{
-		my $viewname = $1;
-		my $def = $_;
+		print;
 		while(<INPUT>)
 		{
-			$def .= $_;
+			print;
 			last if /\;\s*$/;
 		}
-		my $ver = $version_from_num + 1;
-		while( $version_from_num < $version_to_num && $ver <= $version_to_num )
+	}
+
+	# Always output create ore replace rule 
+	if ( /^create or replace rule\s+(\S+)\s*/i )
+	{
+		print;
+		while(<INPUT>)
 		{
-			if( $objs->{$ver}->{"views"}->{$viewname} )
-			{
-				print $def;
-				last;
-			}
-			$ver++;
+			print;
+			last if /\;\s*$/;
 		}
 	}
 

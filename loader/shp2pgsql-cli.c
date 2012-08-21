@@ -1,8 +1,8 @@
 /**********************************************************************
- * $Id: shp2pgsql-cli.c 6373 2010-12-14 04:57:59Z pramsey $
+ * $Id: shp2pgsql-cli.c 9866 2012-06-08 12:44:00Z mcayland $
  *
  * PostGIS - Spatial Types for PostgreSQL
- * http://postgis.refractions.net
+ * http://www.postgis.org
  * Copyright 2008 OpenGeo.org
  * Copyright 2009 Mark Cave-Ayland <mark.cave-ayland@siriusit.co.uk>
  *
@@ -13,38 +13,52 @@
  *
  **********************************************************************/
 
-#include "shp2pgsql-core.h"
+#include "../postgis_config.h"
 
+#include "shp2pgsql-core.h"
+#include "../liblwgeom/liblwgeom.h" /* for SRID_UNKNOWN */
 
 static void
 usage()
 {
-	printf("RCSID: %s RELEASE: %s\n", RCSID, POSTGIS_VERSION);
-	printf("USAGE: shp2pgsql [<options>] <shapefile> [<schema>.]<table>\n");
-	printf("OPTIONS:\n");
-	printf("  -s <srid>  Set the SRID field. Defaults to -1.\n");
-	printf("  (-d|a|c|p) These are mutually exclusive options:\n");
-	printf("      -d  Drops the table, then recreates it and populates\n");
-	printf("          it with current shape file data.\n");
-	printf("      -a  Appends shape file into current table, must be\n");
-	printf("          exactly the same table schema.\n");
-	printf("      -c  Creates a new table and populates it, this is the\n");
-	printf("          default if you do not specify any options.\n");
-	printf("      -p  Prepare mode, only creates the table.\n");
-	printf("  -g <geocolumn> Specify the name of the geometry/geography column.\n");
-	printf("      (mostly useful in append mode).\n");
-	printf("  -D  Use postgresql dump format (defaults to SQL insert statments).\n");
-	printf("  -G  Use geography type (requires lon/lat data).\n");
-	printf("  -k  Keep postgresql identifiers case.\n");
-	printf("  -i  Use int4 type for all integer dbf fields.\n");
-	printf("  -I  Create a spatial index on the geocolumn.\n");
-	printf("  -S  Generate simple geometries instead of MULTI geometries.\n");
-	printf("  -w  Output WKT format (drops M and introduces coordinate drifts).\n");
-	printf("  -W <encoding> Specify the character encoding of Shape's\n");
-	printf("      attribute column. (default : \"WINDOWS-1252\").\n");
-	printf("  -N <policy> NULL geometries handling policy (insert*,skip,abort).\n");
-	printf("  -n  Only import DBF file.\n");
-	printf("  -?  Display this help screen.\n");
+	printf(_( "RELEASE: %s (r%d)\n" ), POSTGIS_LIB_VERSION, POSTGIS_SVN_REVISION);
+	printf(_( "USAGE: shp2pgsql [<options>] <shapefile> [[<schema>.]<table>]\n"
+	          "OPTIONS:\n" ));
+	printf(_( "  -s [<from>:]<srid> Set the SRID field. Defaults to %d.\n"
+	          "      Optionally reprojects from given SRID (cannot be used with -D).\n"),
+	          SRID_UNKNOWN);
+	printf(_( " (-d|a|c|p) These are mutually exclusive options:\n"
+	          "     -d  Drops the table, then recreates it and populates\n"
+	          "         it with current shape file data.\n"
+	          "     -a  Appends shape file into current table, must be\n"
+	          "         exactly the same table schema.\n"
+	          "     -c  Creates a new table and populates it, this is the\n"
+	          "         default if you do not specify any options.\n"
+	          "     -p  Prepare mode, only creates the table.\n" ));
+	printf(_( "  -g <geocolumn> Specify the name of the geometry/geography column\n"
+	          "      (mostly useful in append mode).\n" ));
+	printf(_( "  -D  Use postgresql dump format (defaults to SQL insert statements).\n" ));
+	printf(_( "  -e  Execute each statement individually, do not use a transaction.\n"
+	          "      Not compatible with -D.\n" ));
+	printf(_( "  -G  Use geography type (requires lon/lat data or -r to reproject).\n" ));
+	printf(_( "  -k  Keep postgresql identifiers case.\n" ));
+	printf(_( "  -i  Use int4 type for all integer dbf fields.\n" ));
+	printf(_( "  -I  Create a spatial index on the geocolumn.\n" ));
+	printf(_( "  -S  Generate simple geometries instead of MULTI geometries.\n" ));
+	printf(_( "  -t <dimensionality> Force geometry to be one of '2D', '3DZ', '3DM', or '4D'\n" ));
+	printf(_( "  -w  Output WKT instead of WKB.  Note that this can result in\n"
+	          "      coordinate drift.\n" ));
+	printf(_( "  -W <encoding> Specify the character encoding of Shape's\n"
+	          "      attribute column. (default: \"UTF-8\")\n" ));
+	printf(_( "  -N <policy> NULL geometries handling policy (insert*,skip,abort).\n" ));
+	printf(_( "  -n  Only import DBF file.\n" ));
+	printf(_( "  -T <tablespace> Specify the tablespace for the new table.\n" 
+                  "      Note that indexes will still use the default tablespace unless the\n"
+                  "      -X flag is also used.\n"));
+	printf(_( "  -X <tablespace> Specify the tablespace for the table's indexes.\n"
+                  "      This applies to the primary key, and the spatial index if\n"
+                  "      the -I flag is used.\n" ));
+	printf(_( "  -?  Display this help screen.\n" ));
 }
 
 
@@ -54,9 +68,14 @@ main (int argc, char **argv)
 	SHPLOADERCONFIG *config;
 	SHPLOADERSTATE *state;
 	char *header, *footer, *record;
-	char c;
+	int c;
 	int ret, i;
 
+#ifdef ENABLE_NLS
+	setlocale (LC_ALL, "");
+	bindtextdomain (PACKAGE, PGSQL_LOCALEDIR);
+	textdomain (PACKAGE);
+#endif
 
 	/* If no options are specified, display usage */
 	if (argc == 1)
@@ -67,9 +86,10 @@ main (int argc, char **argv)
 
 	/* Parse command line options and set configuration */
 	config = malloc(sizeof(SHPLOADERCONFIG));
-	set_config_defaults(config);
+	set_loader_config_defaults(config);
 
-	while ((c = pgis_getopt(argc, argv, "kcdapGDs:Sg:iW:wIN:n")) != EOF)
+	/* Keep the flag list alphabetic so it's easy to see what's left. */
+	while ((c = pgis_getopt(argc, argv, "acdeg:iknps:t:wDGIN:ST:W:X:")) != EOF)
 	{
 		switch (c)
 		{
@@ -95,18 +115,28 @@ main (int argc, char **argv)
 		case 's':
 			if (pgis_optarg)
 			{
-				sscanf(pgis_optarg, "%d", &(config->sr_id));
+				char *ptr = strchr(pgis_optarg, ':');
+				if (ptr)
+				{
+					*ptr++ = '\0';
+					sscanf(pgis_optarg, "%d", &config->shp_sr_id);
+					sscanf(ptr, "%d", &config->sr_id);
+				}
+				else
+				{
+					/* Only TO_SRID specified */
+					sscanf(pgis_optarg, "%d", &config->sr_id);
+				}
 			}
 			else
 			{
-				/* With -s, user must specify SRID */
-				usage();
-				exit(0);
+				/* With -s, user must specify TO_SRID or FROM_SRID:TO_SRID */
+				fprintf(stderr, "The -s parameter must be specified in the form [FROM_SRID:]TO_SRID\n");
+				exit(1);
 			}
 			break;
-
 		case 'g':
-			config->geom = pgis_optarg;
+			config->geo_col = pgis_optarg;
 			break;
 
 		case 'k':
@@ -122,7 +152,7 @@ main (int argc, char **argv)
 			break;
 
 		case 'w':
-			config->hwgeom = 1;
+			config->use_wkt = 1;
 			break;
 
 		case 'n':
@@ -151,6 +181,42 @@ main (int argc, char **argv)
 			}
 			break;
 
+		case 't':
+			if (strcasecmp(pgis_optarg, "2D") == 0)
+			{
+				config->force_output = FORCE_OUTPUT_2D;
+			}
+			else if (strcasecmp(pgis_optarg, "3DZ") == 0 )
+			{
+				config->force_output = FORCE_OUTPUT_3DZ;
+			}
+			else if (strcasecmp(pgis_optarg, "3DM") == 0 )
+			{
+				config->force_output = FORCE_OUTPUT_3DM;
+			}
+			else if (strcasecmp(pgis_optarg, "4D") == 0 )
+			{
+				config->force_output = FORCE_OUTPUT_4D;
+			}
+			else
+			{
+				fprintf(stderr, "Unsupported output type: %s\nValid output types are 2D, 3DZ, 3DM and 4D\n", pgis_optarg);
+				exit(1);
+			}
+			break;
+
+		case 'T':
+			config->tablespace = pgis_optarg;
+			break;
+
+		case 'X':
+			config->idxtablespace = pgis_optarg;
+			break;
+
+		case 'e':
+			config->usetransaction = 0;
+			break;
+
 		case '?':
 			usage();
 			exit(0);
@@ -159,6 +225,19 @@ main (int argc, char **argv)
 			usage();
 			exit(0);
 		}
+	}
+
+	/* Once we have parsed the arguments, make sure certain combinations are valid */
+	if (config->dump_format && !config->usetransaction)
+	{
+		fprintf(stderr, "Invalid argument combination - cannot use both -D and -e\n");
+		exit(1);
+	}
+
+	if (config->dump_format && config->shp_sr_id != SRID_UNKNOWN)
+	{
+		fprintf(stderr, "Invalid argument combination - cannot use -D with -s FROM_SRID:TO_SRID\n");
+		exit(1);
 	}
 
 	/* Determine the shapefile name from the next argument, if no shape file, exit. */
@@ -176,23 +255,27 @@ main (int argc, char **argv)
 	/* Determine the table and schema names from the next argument */
 	if (pgis_optind < argc)
 	{
-		char *ptr;
+		char *strptr = argv[pgis_optind];
+		char *chrptr = strchr(strptr, '.');
 
-		ptr = strchr(argv[pgis_optind], '.');
-
-		/* Schema qualified table name */
-		if (ptr)
+		/* OK, this is a schema-qualified table name... */
+		if (chrptr)
 		{
-			config->schema = malloc(strlen(argv[pgis_optind]) + 1);
-			snprintf(config->schema, ptr - argv[pgis_optind] + 1, "%s", argv[pgis_optind]);
-
-			config->table = malloc(strlen(argv[pgis_optind]));
-			snprintf(config->table, strlen(argv[pgis_optind]) - strlen(config->schema), "%s", ptr + 1);
+			if ( chrptr == strptr ) 
+			{
+				/* ".something" ??? */
+				usage();
+				exit(0);
+			}
+			/* Null terminate at the '.' */
+			*chrptr = '\0';
+			/* Copy in the parts */
+			config->schema = strdup(strptr);
+			config->table = strdup(chrptr+1);
 		}
 		else
 		{
-			config->table = malloc(strlen(argv[pgis_optind]) + 1);
-			strcpy(config->table, argv[pgis_optind]);
+			config->table = strdup(strptr);
 		}
 	}
 
@@ -227,14 +310,6 @@ main (int argc, char **argv)
 		if ( config->schema )
 			strtolower(config->schema);
 	}
-
-	/* Make the geocolumn name consistent with the load type (geometry or geography) */
-	if ( config->geography )
-	{
-		if (config->geom) free(config->geom);
-		config->geom = strdup(GEOGRAPHY_DEFAULT);
-	}
-
 
 	/* Create the shapefile state object */
 	state = ShpLoaderCreate(config);

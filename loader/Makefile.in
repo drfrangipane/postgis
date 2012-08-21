@@ -1,5 +1,4 @@
 # **********************************************************************
-# * $Id: Makefile.in
 # *
 # * PostGIS - Spatial Types for PostgreSQL
 # * http://postgis.refractions.net
@@ -13,7 +12,7 @@
 # PGXS information
 #
 # Note that PGXS currently doesn't handle building FE executables, but we need
-# the INSTALL and DESTDIR variables so we can get the correct install paths. 
+# the DESTDIR variable so we can get the correct install paths. 
 # Hence we include the PGXS Makefile here, but ensure that we override the
 # 'all' and 'install' targets with the ones we really want to use below.
 PG_CONFIG = @PGCONFIG@
@@ -23,10 +22,14 @@ include $(PGXS)
 # Set CFLAGS afer PGXS, otherwise it will get overwritten with the PGXS
 # version which is not what we want. 
 CC=@CC@
-CFLAGS=@CFLAGS@ @PICFLAGS@ @WARNFLAGS@
+CFLAGS=@CFLAGS@ @PICFLAGS@ @WARNFLAGS@ @PROJ_CPPFLAGS@
+top_builddir = @top_builddir@
+SHELL = @SHELL@
+INSTALL = $(SHELL) ../install-sh
+LIBTOOL = @LIBTOOL@
 
 # Filenames with extension as determined by the OS
-PGSQL2SHP=pgsql2shp@EXESUFFIX@
+PGSQL2SHP-CLI=pgsql2shp@EXESUFFIX@
 SHP2PGSQL-CLI=shp2pgsql@EXESUFFIX@
 SHP2PGSQL-GUI=shp2pgsql-gui@EXESUFFIX@
 
@@ -39,13 +42,21 @@ ICONV_LDFLAGS=@ICONV_LDFLAGS@
 ICONV_CFLAGS=@ICONV_CFLAGS@
 
 # liblwgeom
-LIBLWGEOM=../liblwgeom/liblwgeom.a
+LIBLWGEOM=../liblwgeom/liblwgeom.la
 
 # GTK includes and libraries
 GTK_CFLAGS = @GTK_CFLAGS@ @IGE_MAC_CFLAGS@
 GTK_LIBS = @GTK_LIBS@ @IGE_MAC_LIBS@
 GTK_WIN32_FLAGS = @GTK_WIN32_FLAGS@
 GTK_WIN32_RES = @GTK_WIN32_RES@
+
+# GetText includes and libraries
+GETTEXT_CFLAGS = @GETTEXT_CFLAGS@
+GETTEXT_LDFLAGS = @GETTEXT_LDFLAGS@ @LIBINTL@
+LANGUAGES = fr
+
+# Built out CFLAGS with ICONV and GETTEXT
+CFLAGS += $(GETTEXT_CFLAGS) $(ICONV_CFLAGS)
 
 # If REGRESS=1 passed as a parameter, change the default install paths
 # so that no prefix is included. This allows us to relocate to a temporary
@@ -59,8 +70,11 @@ endif
 # We test this variable later to see if we're building the GUI
 gtk_build = @GTK_BUILD@
 
+# Common object files
+SHPLIB_OBJS = shpopen.o dbfopen.o getopt.o shpcommon.o safileio.o
+
 # The real parts of the Makefile
-all: $(SHP2PGSQL-CLI) $(PGSQL2SHP) @GTK_BUILD@
+all: $(SHP2PGSQL-CLI) $(PGSQL2SHP-CLI) @GTK_BUILD@
 
 gui: $(SHP2PGSQL-GUI) $(SHP2PGSQL-CLI) @GTK_WIN32_RES@
 
@@ -72,38 +86,77 @@ shp2pgsql-gui.res: shp2pgsql-gui.rc shp2pgsql-gui.ico
 $(LIBLWGEOM):
 	make -C ../liblwgeom
 
-shp2pgsql-core.o: shp2pgsql-core.c
-	$(CC) $(CFLAGS) $(ICONV_CFLAGS) -c $<
+shp2pgsql-core.o: shp2pgsql-core.c shp2pgsql-core.h shpcommon.h
+	$(CC) $(CFLAGS) -c $<
 
-pgsql2shp.o: pgsql2shp.c
-	$(CC) $(CFLAGS) $(ICONV_CFLAGS) $(PGSQL_FE_CPPFLAGS) -c $<
+pgsql2shp-core.o: pgsql2shp-core.c pgsql2shp-core.h shpcommon.h
+	$(CC) $(CFLAGS) $(PGSQL_FE_CPPFLAGS) -c $<
 
-$(PGSQL2SHP): shpopen.o dbfopen.o safileio.o getopt.o pgsql2shp.o $(LIBLWGEOM) 
-	$(CC) $(CFLAGS) $^ $(ICONV_LDFLAGS) $(PGSQL_FE_LDFLAGS) -lm -o $@ 
+pgsql2shp-cli.o: pgsql2shp-cli.c pgsql2shp-core.h shpcommon.h
+	$(CC) $(CFLAGS) $(PGSQL_FE_CPPFLAGS) -c $<
 
-$(SHP2PGSQL-CLI): stringbuffer.o shpopen.o dbfopen.o safileio.o getopt.o shp2pgsql-core.o shp2pgsql-cli.o $(LIBLWGEOM) 
-	$(CC) $(CFLAGS) $^ -o $@ $(ICONV_LDFLAGS) -lm 
+$(PGSQL2SHP-CLI): $(SHPLIB_OBJS) pgsql2shp-core.o pgsql2shp-cli.o $(LIBLWGEOM) 
+	$(LIBTOOL) --mode=link \
+	  $(CC) $(CFLAGS) $^ $(ICONV_LDFLAGS) $(PGSQL_FE_LDFLAGS) $(GETTEXT_LDFLAGS) -o $@ 
 
-shp2pgsql-gui.o: shp2pgsql-gui.c
-	$(CC) $(CFLAGS) $(PGSQL_FE_CPPFLAGS) $(GTK_CFLAGS) -o $@ -c shp2pgsql-gui.c
+$(SHP2PGSQL-CLI): $(SHPLIB_OBJS) shp2pgsql-core.o shp2pgsql-cli.o $(LIBLWGEOM) 
+	$(LIBTOOL) --mode=link \
+	  $(CC) $(CFLAGS) $^ -o $@ $(GETTEXT_LDFLAGS) $(ICONV_LDFLAGS) 
 
-$(SHP2PGSQL-GUI): stringbuffer.o shpopen.o dbfopen.o safileio.o shp2pgsql-core.o shp2pgsql-gui.o getopt.o $(LIBLWGEOM) $(GTK_WIN32_RES)
-	$(CC) $(CFLAGS) $(GTK_WIN32_FLAGS) $^ -o $@ $(GTK_LIBS) $(ICONV_LDFLAGS) $(PGSQL_FE_LDFLAGS) -lm 
+shp2pgsql-gui.o: shp2pgsql-gui.c shp2pgsql-core.h shpcommon.h
+	$(CC) $(CFLAGS) $(GTK_CFLAGS) $(PGSQL_FE_CPPFLAGS) -o $@ -c shp2pgsql-gui.c
+
+$(SHP2PGSQL-GUI): $(SHPLIB_OBJS) shp2pgsql-core.o shp2pgsql-gui.o pgsql2shp-core.o $(LIBLWGEOM) $(GTK_WIN32_RES)
+	$(LIBTOOL) --mode=link \
+	  $(CC) $(CFLAGS) $(GTK_WIN32_FLAGS) $^ -o $@ \
+	  $(GTK_LIBS) $(ICONV_LDFLAGS) $(PGSQL_FE_LDFLAGS) $(GETTEXT_LDFLAGS) 
 
 installdir:
 	@mkdir -p $(DESTDIR)$(bindir)
 
 install: installdir 
 ifdef gtk_build
-	$(INSTALL) $(SHP2PGSQL-GUI) $(DESTDIR)$(bindir)
+	$(LIBTOOL) --mode=install $(INSTALL) $(SHP2PGSQL-GUI) "$(DESTDIR)$(bindir)/$(SHP2PGSQL-GUI)"
 endif
-	$(INSTALL) $(PGSQL2SHP) $(DESTDIR)$(bindir)
-	$(INSTALL) $(SHP2PGSQL-CLI) $(DESTDIR)$(bindir)
+	$(LIBTOOL) --mode=install $(INSTALL) $(PGSQL2SHP-CLI) "$(DESTDIR)$(bindir)/$(PGSQL2SHP-CLI)"
+	$(LIBTOOL) --mode=install $(INSTALL) $(SHP2PGSQL-CLI) "$(DESTDIR)$(bindir)/$(SHP2PGSQL-CLI)"
 
 uninstall:
-	@rm -f $(DESTDIR)$(bindir)/$(PGSQL2SHP)
-	@rm -f $(DESTDIR)$(bindir)/$(SHP2PGSQL-CLI)
+	$(LIBTOOL) --mode=uninstall rm -f "$(DESTDIR)$(bindir)/$(PGSQL2SHP-CLI)"
+	$(LIBTOOL) --mode=uninstall rm -f "$(DESTDIR)$(bindir)/$(SHP2PGSQL-CLI)"
+	$(LIBTOOL) --mode=uninstall rm -f "$(DESTDIR)$(bindir)/$(SHP2PGSQL-GUI)"
+
+check:
+ifdef gtk_build
+	make -C cunit check
+endif
 
 clean:
-	@rm -f *.o $(SHP2PGSQL-CLI) $(PGSQL2SHP) $(GTK_WIN32_RES)
+	rm -rf .libs
+	rm -f *.o $(SHP2PGSQL-CLI) $(PGSQL2SHP-CLI) $(GTK_WIN32_RES) $(SHP2PGSQL-GUI)
+	$(MAKE) -C cunit clean
 
+distclean:
+	$(MAKE) -C cunit distclean
+	rm -f Makefile
+
+
+#
+# Internationalization targets. These are going to need some work and 
+# love to land the files in the right places in all platforms.
+#
+pot: 
+	xgettext -k_ shp2pgsql-core.c shp2pgsql-cli.c shp2pgsql-gui.c -o po/shp2pgsql.pot
+	xgettext -k_ pgsql2shp-core.c pgsql2shp-cli.c -o po/pgsql2shp.pot
+
+mo:
+	for lang in $(LANGUAGES); do \
+	  msgfmt -o po/shp2pgsql_$$lang.mo po/shp2pgsql_$$lang.po ; \
+	done
+
+install-mo:
+ifneq (,$(LANGUAGES))
+	for lang in $(LANGUAGES); do \
+      $(INSTALL_DATA) po/shp2pgsql_$$lang.mo '$(localedir)'/$$lang/LC_MESSAGES/shp2pgsql.mo || exit 1; \
+    done
+endif

@@ -118,10 +118,10 @@
 		  <refsection>
 			<title>Description</title>
 			<para>Returns a geography object from the  well-known text or extended well-known representation.  SRID 4326 is assumed. This
-				is an alias for ST_GeographyFromText</para>
+				is an alias for ST_GeographyFromText.  Points are always expressed in long lat form.</para>
 		  </refsection>
 		  
-		  <refsection>
+		 <refsection>
 		 	<title>Examples</title>
 			<programlisting>
 --- converting lon lat coords to geography
@@ -129,10 +129,9 @@ ALTER TABLE sometable ADD COLUMN geog geography(POINT,4326);
 UPDATE sometable SET geog = ST_GeogFromText('SRID=4326;POINT(' || lon || ' ' || lat || ')');		
 			</programlisting>
 		 </refsection>
-		 
 		  <refsection>
 			<title>See Also</title>
-			<para><xref linkend="ST_AsText" />,<xref linkend="ST_GeographyFromText" /></para>
+			<para><xref linkend="ST_AsText" />, <xref linkend="ST_GeographyFromText" /></para>
 		  </refsection>
 	</refentry>
 
@@ -156,7 +155,7 @@ UPDATE sometable SET geog = ST_GeogFromText('SRID=4326;POINT(' || lon || ' ' || 
 		  </refsection>
 		  <refsection>
 			<title>See Also</title>
-			<para><xref linkend="ST_AsText" /></para>
+			<para><xref linkend="ST_GeogFromText" />, <xref linkend="ST_AsText" /></para>
 		  </refsection>
 	</refentry>
 	
@@ -296,20 +295,31 @@ ST_GeogFromWKB(E'\\001\\002\\000\\000\\000\\002\\000\\000\\000\\037\\205\\353Q\\
 			<para>The EWKB format is not an OGC standard, but a PostGIS specific format that includes the spatial reference system (SRID)
 			identifier</para>
 		</note>
+		<para>Enhanced: 2.0.0 support for Polyhedral surfaces and TIN was introduced.</para>
 		<para>&Z_support;</para>
 		<para>&curve_support;</para>
+		<para>&P_support;</para>
+		<para>&T_support;</para>
 	  </refsection>
 
 	  <refsection>
 		<title>Examples</title>
 		<para>line string binary rep 0f
 		LINESTRING(-71.160281 42.258729,-71.160837 42.259113,-71.161144 42.25932) in NAD 83 long lat (4269).</para>
-		<note><para>NOTE: Even though byte arrays are delimited with \ and may have ', we need to escape both out with \ and ''.  So it does not
+		<note><para>NOTE: Even though byte arrays are delimited with \ and may have ', we need to escape both out with \ and '' if standard_conforming_strings is off.  So it does not
 			look exactly like its AsEWKB representation.</para></note>
 	<programlisting>SELECT ST_GeomFromEWKB(E'\\001\\002\\000\\000 \\255\\020\\000\\000\\003\\000\\000\\000\\344J=
 \\013B\\312Q\\300n\\303(\\010\\036!E@''\\277E''K
 \\312Q\\300\\366{b\\235*!E@\\225|\\354.P\\312Q
 \\300p\\231\\323e1!E@');</programlisting>
+
+		<note><para>In PostgreSQL 9.1+ - standard_conforming_strings is set to on by default, where as in past versions it was set to on.  You can change defaults as needed
+		    for a single query or at the database or server level.  Below is how you would do it with standard_conforming_strings = on.  In this case we escape the ' with standard ansi ',
+		    but slashes are not escaped</para></note>
+	<programlisting>
+	    set standard_conforming_strings = on;
+SELECT ST_GeomFromEWKB('\001\002\000\000 \255\020\000\000\003\000\000\000\344J=\012\013B
+    \312Q\300n\303(\010\036!E@''\277E''K\012\312Q\300\366{b\235*!E@\225|\354.P\312Q\012\300p\231\323e1')</programlisting>
 	  </refsection>
 	  <refsection>
 		<title>See Also</title>
@@ -339,8 +349,11 @@ ST_GeogFromWKB(E'\\001\\002\\000\\000\\000\\002\\000\\000\\000\\037\\205\\353Q\\
 			<para>The EWKT format is not an OGC standard, but an PostGIS specific format that includes the spatial reference system (SRID)
 			identifier</para>
 		</note>
+		<para>Enhanced: 2.0.0 support for Polyhedral surfaces and TIN was introduced.</para>
 		<para>&Z_support;</para>
 		<para>&curve_support;</para>
+		<para>&P_support;</para>
+		<para>&T_support;</para>
 	  </refsection>
 
 	  <refsection>
@@ -376,10 +389,22 @@ SELECT ST_GeomFromEWKT('SRID=4269;MULTIPOLYGON(((-71.1031880899493 42.3152774590
 -71.1031880899493 42.3152774590236)),
 ((-71.1043632495873 42.315113108546,-71.1043583974082 42.3151211109857,
 -71.1043443253471 42.3150676015829,-71.1043850704575 42.3150793250568,-71.1043632495873 42.315113108546)))');
-
+</programlisting>
+<programlisting>
 --3d circular string
 SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 150406 3)');
-	</programlisting>
+</programlisting>
+<programlisting>
+--Polyhedral Surface example
+SELECT ST_GeomFromEWKT('POLYHEDRALSURFACE( 
+	((0 0 0, 0 0 1, 0 1 1, 0 1 0, 0 0 0)),  
+	((0 0 0, 0 1 0, 1 1 0, 1 0 0, 0 0 0)), 
+	((0 0 0, 1 0 0, 1 0 1, 0 0 1, 0 0 0)), 
+	((1 1 0, 1 1 1, 1 0 1, 1 0 0, 1 1 0)),  
+	((0 1 0, 0 1 1, 1 1 1, 1 1 0, 0 1 0)),  
+	((0 0 1, 1 0 1, 1 1 1, 0 1 1, 0 0 1)) 
+)');
+</programlisting>
 	  </refsection>
 	  <refsection>
 		<title>See Also</title>
@@ -427,6 +452,11 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 			<funcdef>geometry <function>ST_GeomFromGML</function></funcdef>
 			<paramdef><type>text </type> <parameter>geomgml</parameter></paramdef>
 		  </funcprototype>
+		  <funcprototype>
+			<funcdef>geometry <function>ST_GeomFromGML</function></funcdef>
+			<paramdef><type>text </type> <parameter>geomgml</parameter></paramdef>
+			<paramdef><type>integer </type> <parameter>srid</parameter></paramdef>
+		  </funcprototype>
 		</funcsynopsis>
 	  </refsynopsisdiv>
 
@@ -450,8 +480,12 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 			OGC GML standards, cf: <ulink url="http://www.opengeospatial.org/standards/gml">http://www.opengeospatial.org/standards/gml</ulink>:
 		</para>
 
-		<para>Availability: 1.5</para>
+		<para>Availability: 1.5, requires libxml2 1.6+</para>
+		<para>Enhanced: 2.0.0 support for Polyhedral surfaces and TIN was introduced.</para>
+		<para>Enhanced: 2.0.0 default srid optional parameter added.</para>
 		<para>&Z_support;</para>
+		<para>&P_support;</para>
+		<para>&T_support;</para>
 		<para>GML allow mixed dimensions (2D and 3D inside the same MultiGeometry for instance). As PostGIS geometries don't, ST_GeomFromGML convert the whole geometry to 2D if a missing Z dimension is found once.</para>
 		
 		<para>GML support mixed SRS inside the same MultiGeometry. As PostGIS geometries don't, ST_GeomFromGML, in this case, reproject all subgeometries to the SRS root node. If no srsName attribute available for the GML root node, the function throw an error.</para>
@@ -476,7 +510,7 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 
 	  <refsection>
 		<title>Examples - XLink usage</title>
-		<programlisting><![CDATA[ST_GeomFromGML('
+		<programlisting>SELECT <![CDATA[ST_GeomFromGML('
 		<gml:LineString xmlns:gml="http://www.opengis.net/gml" 
 				xmlns:xlink="http://www.w3.org/1999/xlink"
 				srsName="urn:ogc:def:crs:EPSG::4269">
@@ -490,11 +524,108 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 		</gml:LineString>');]]>);
 		</programlisting>
 	  </refsection>
+	  
+	 <refsection>
+		<title>Examples - Polyhedral Surface</title>
+		<programlisting>SELECT ST_AsEWKT(<![CDATA[ST_GeomFromGML('
+<gml:PolyhedralSurface>
+<gml:polygonPatches>
+  <gml:PolygonPatch>
+    <gml:exterior>
+      <gml:LinearRing><gml:posList srsDimension="3">0 0 0 0 0 1 0 1 1 0 1 0 0 0 0</gml:posList></gml:LinearRing>
+    </gml:exterior>
+  </gml:PolygonPatch>
+  <gml:PolygonPatch>
+    <gml:exterior>
+    	<gml:LinearRing><gml:posList srsDimension="3">0 0 0 0 1 0 1 1 0 1 0 0 0 0 0</gml:posList></gml:LinearRing>
+    </gml:exterior>
+  </gml:PolygonPatch>
+  <gml:PolygonPatch>
+    <gml:exterior>
+    	<gml:LinearRing><gml:posList srsDimension="3">0 0 0 1 0 0 1 0 1 0 0 1 0 0 0</gml:posList></gml:LinearRing>
+    </gml:exterior>
+  </gml:PolygonPatch>
+  <gml:PolygonPatch>
+    <gml:exterior>
+    	<gml:LinearRing><gml:posList srsDimension="3">1 1 0 1 1 1 1 0 1 1 0 0 1 1 0</gml:posList></gml:LinearRing>
+    </gml:exterior>
+  </gml:PolygonPatch>
+  <gml:PolygonPatch>
+    <gml:exterior>
+    	<gml:LinearRing><gml:posList srsDimension="3">0 1 0 0 1 1 1 1 1 1 1 0 0 1 0</gml:posList></gml:LinearRing>
+    </gml:exterior>
+  </gml:PolygonPatch>
+  <gml:PolygonPatch>
+    <gml:exterior>
+    	<gml:LinearRing><gml:posList srsDimension="3">0 0 1 1 0 1 1 1 1 0 1 1 0 0 1</gml:posList></gml:LinearRing>
+    </gml:exterior>
+  </gml:PolygonPatch>
+</gml:polygonPatches>
+</gml:PolyhedralSurface>']]>));
+
+-- result --
+ POLYHEDRALSURFACE(((0 0 0,0 0 1,0 1 1,0 1 0,0 0 0)),
+ ((0 0 0,0 1 0,1 1 0,1 0 0,0 0 0)),
+ ((0 0 0,1 0 0,1 0 1,0 0 1,0 0 0)),
+ ((1 1 0,1 1 1,1 0 1,1 0 0,1 1 0)),
+ ((0 1 0,0 1 1,1 1 1,1 1 0,0 1 0)),
+ ((0 0 1,1 0 1,1 1 1,0 1 1,0 0 1)))
+		</programlisting>
+	  </refsection>
+
 
 	  <refsection>
 		<title>See Also</title>
-		<para><xref linkend="ST_AsGML" /></para>
-		<para><xref linkend="ST_GMLToSQL" /></para>
+		<para><xref linkend="installation_configuration" />, <xref linkend="ST_AsGML" />, <xref linkend="ST_GMLToSQL" /></para>
+	  </refsection>
+	</refentry>
+	
+	<refentry id="ST_GeomFromGeoJSON">
+	  <refnamediv>
+		<refname>ST_GeomFromGeoJSON</refname>
+		<refpurpose>Takes as input a geojson representation of a geometry and outputs a PostGIS geometry object</refpurpose>
+	  </refnamediv>
+
+	  <refsynopsisdiv>
+		<funcsynopsis>
+		  <funcprototype>
+			<funcdef>geometry <function>ST_GeomFromGeoJSON</function></funcdef>
+			<paramdef><type>text </type> <parameter>geomjson</parameter></paramdef>
+		  </funcprototype>
+		</funcsynopsis>
+	  </refsynopsisdiv>
+
+	  <refsection>
+		<title>Description</title>
+		<para>Constructs a PostGIS geometry object from the GeoJSON representation.</para>
+		<para>ST_GeomFromGeoJSON works only for JSON Geometry fragments. It throws an error if you try to use it on a whole JSON document.</para>
+		
+		<para>Availability: 2.0.0 requires - JSON-C &gt;= 0.9</para>
+		<note><para>If you do not have JSON-C enabled, support you will get an error notice instead of seeing an output.
+			To enable JSON-C, run configure --with-jsondir=/path/to/json-c.  See <xref linkend="installation_configuration" /> for details.</para></note>
+		<para>&Z_support;</para>
+	  </refsection>
+ 
+	 <refsection>
+		<title>Examples</title>
+		<programlisting>SELECT ST_AsText(ST_GeomFromGeoJSON('{"type":"Point","coordinates":[-48.23456,20.12345]}')) As wkt;
+wkt
+------
+POINT(-48.23456 20.12345)
+</programlisting>
+<programlisting>-- a 3D linestring
+SELECT ST_AsText(ST_GeomFromGeoJSON('{"type":"LineString","coordinates":[[1,2,3],[4,5,6],[7,8,9]]}')) As wkt;
+
+wkt
+-------------------
+LINESTRING(1 2,4 5,7 8)
+</programlisting> 
+	  </refsection>
+
+
+	  <refsection>
+		<title>See Also</title>
+		<para><xref linkend="ST_AsText" />, <xref linkend="ST_AsGeoJSON" />, <xref linkend="installation_configuration" /></para>
 	  </refsection>
 	</refentry>
 	
@@ -527,7 +658,7 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 			OGC KML standards, cf: <ulink url="http://www.opengeospatial.org/standards/kml">http://www.opengeospatial.org/standards/kml</ulink>:
 		</para>
 
-		<para>Availability: 1.5</para>
+		<para>Availability: 1.5,libxml2 2.6+</para>
 		<para>&Z_support;</para>
 		<note>
 			<para>ST_GeomFromKML function not support SQL/MM curves geometries.</para>
@@ -547,7 +678,7 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 
 	  <refsection>
 		<title>See Also</title>
-		<para><xref linkend="ST_AsKML" /></para>
+		<para><xref linkend="installation_configuration" />, <xref linkend="ST_AsKML" /></para>
 	  </refsection>
 	</refentry>
 
@@ -562,17 +693,23 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 				<funcdef>geometry <function>ST_GMLToSQL</function></funcdef>
 				<paramdef><type>text </type> <parameter>geomgml</parameter></paramdef>
 		  	</funcprototype>
+		  	<funcprototype>
+				<funcdef>geometry <function>ST_GMLToSQL</function></funcdef>
+				<paramdef><type>text </type> <parameter>geomgml</parameter></paramdef>
+				<paramdef><type>integer </type> <parameter>srid</parameter></paramdef>
+		  	</funcprototype>
 			</funcsynopsis>
 	  	</refsynopsisdiv>
 		  <refsection>
 			<title>Description</title>
 			<para>&sqlmm_compliant; SQL-MM 3: 5.1.50 (except for curves support).</para>
-			<para>Availability: 1.5</para>
+			<para>Availability: 1.5, requires libxml2 1.6+</para>
+		        <para>Enhanced: 2.0.0 support for Polyhedral surfaces and TIN was introduced.</para>
+		        <para>Enhanced: 2.0.0 default srid optional parameter added.</para>
 		  </refsection>
 		  <refsection>
 			<title>See Also</title>
-			<para><xref linkend="ST_GeomFromGML" /></para>
-			<para><xref linkend="ST_AsGML" /></para>
+			<para><xref linkend="installation_configuration" />, <xref linkend="ST_GeomFromGML" />, <xref linkend="ST_AsGML" /></para>
 		  </refsection>
 	</refentry>
 
@@ -611,6 +748,8 @@ SELECT ST_GeomFromEWKT('CIRCULARSTRING(220268 150415 1,220227 150505 2,220227 15
 			<para>&sfs_compliant; s3.2.6.2 - option SRID is from the conformance suite.</para>
 			<para>&sqlmm_compliant; SQL-MM 3: 5.1.40</para>
 			<para>&curve_support;</para>
+			<warning><para>Changed: 2.0.0 In prior versions of PostGIS ST_GeomFromText('GEOMETRYCOLLECTION(EMPTY)') was allowed.  This is now illegal in PostGIS 2.0.0 to better conform with SQL/MM standards. This should now be
+			    written as ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')</para></warning>
 
 		  </refsection>
 
@@ -691,19 +830,17 @@ SELECT ST_GeomFromText('CIRCULARSTRING(220268 150415,220227 150505,220227 150406
 		SQL. This is an alternate name for ST_WKBToSQL.</para>
 
 		<para>If SRID is not specified, it defaults to -1 (Unknown).</para>
-
 		<para>&sfs_compliant; s3.2.7.2 - the optional SRID is from the conformance suite</para>
-
 		<para>&sqlmm_compliant; SQL-MM 3: 5.1.41</para>
 		<para>&curve_support;</para>
-
 	  </refsection>
 
 
 	  <refsection>
 		<title>Examples</title>
 
-		<programlisting>--Although bytea rep contains single \, these need to be escaped when inserting into a table
+		<programlisting>--Although bytea rep contains single \, these need to be escaped when inserting into a table 
+		-- unless standard_conforming_strings is set to on.
 SELECT ST_AsEWKT(
 ST_GeomFromWKB(E'\\001\\002\\000\\000\\000\\002\\000\\000\\000\\037\\205\\353Q\\270~\\\\\\300\\323Mb\\020X\\231C@\\020X9\\264\\310~\\\\\\300)\\\\\\217\\302\\365\\230C@',4326)
 );
@@ -771,7 +908,7 @@ LINESTRING(1 2 3,4 5 6,7 8 9)
 	  <refsection>
 		<title>See Also</title>
 
-		<para><xref linkend="ST_AsEWKT" />, <xref linkend="ST_Collect" />,<xref linkend="ST_MakeLine" /></para>
+		<para><xref linkend="ST_AsEWKT" />, <xref linkend="ST_Collect" />, <xref linkend="ST_MakeLine" /></para>
 	  </refsection>
 	</refentry>
 
@@ -1031,18 +1168,17 @@ WHERE the_geom &amp;&amp; ST_SetSRID(ST_MakeBox2D(ST_Point(-989502.1875, 528439.
 	  </refsection>
 	</refentry>
 
-	<refentry id="ST_MakeBox3D">
+	<refentry id="ST_3DMakeBox">
 	  <refnamediv>
-		<refname>ST_MakeBox3D</refname>
+		<refname>ST_3DMakeBox</refname>
 
 		<refpurpose>Creates a BOX3D defined by the given 3d point
 			geometries.</refpurpose>
 	  </refnamediv>
-
 	  <refsynopsisdiv>
 		<funcsynopsis>
 		  <funcprototype>
-			<funcdef>box3d <function>ST_MakeBox3D</function></funcdef>
+			<funcdef>box3d <function>ST_3DMakeBox</function></funcdef>
 			<paramdef><type>geometry </type> <parameter>point3DLowLeftBottom</parameter></paramdef>
 			<paramdef><type>geometry </type> <parameter>point3DUpRightTop</parameter></paramdef>
 		  </funcprototype>
@@ -1061,6 +1197,7 @@ WHERE the_geom &amp;&amp; ST_SetSRID(ST_MakeBox2D(ST_Point(-989502.1875, 528439.
 			  <imagedata fileref="images/check.png" />
 			</imageobject>
 		  </inlinemediaobject> This function supports 3d and will not drop the z-index.</para>
+		 <para>Changed: 2.0.0 In prior versions this used to be called ST_MakeBox3D</para>
 	  </refsection>
 
 
@@ -1068,7 +1205,7 @@ WHERE the_geom &amp;&amp; ST_SetSRID(ST_MakeBox2D(ST_Point(-989502.1875, 528439.
 		<title>Examples</title>
 
 		<programlisting>
-SELECT ST_MakeBox3D(ST_MakePoint(-989502.1875, 528439.5625, 10),
+SELECT ST_3DMakeBox(ST_MakePoint(-989502.1875, 528439.5625, 10),
 	ST_MakePoint(-987121.375 ,529933.1875, 10)) As abb3d
 
 --bb3d--
@@ -1089,25 +1226,25 @@ BOX3D(-989502.1875 528439.5625 10,-987121.375 529933.1875 10)
 		<refnamediv>
 		<refname>ST_MakeLine</refname>
 
-		<refpurpose>Creates a Linestring from point geometries.</refpurpose>
+		<refpurpose>Creates a Linestring from point or line geometries.</refpurpose>
 		</refnamediv>
 
 		<refsynopsisdiv>
 		<funcsynopsis>
 			<funcprototype>
 				<funcdef>geometry <function>ST_MakeLine</function></funcdef>
-				<paramdef><type>geometry set</type> <parameter>pointfield</parameter></paramdef>
+				<paramdef><type>geometry set</type> <parameter>geoms</parameter></paramdef>
 			</funcprototype>
 
 			<funcprototype>
 				<funcdef>geometry <function>ST_MakeLine</function></funcdef>
-				<paramdef><type>geometry</type> <parameter>point1</parameter></paramdef>
-				<paramdef><type>geometry</type> <parameter>point2</parameter></paramdef>
+				<paramdef><type>geometry</type> <parameter>geom1</parameter></paramdef>
+				<paramdef><type>geometry</type> <parameter>geom2</parameter></paramdef>
 			</funcprototype>
 
 			<funcprototype>
 				<funcdef>geometry <function>ST_MakeLine</function></funcdef>
-				<paramdef><type>geometry[]</type> <parameter>point_array</parameter></paramdef>
+				<paramdef><type>geometry[]</type> <parameter>geoms_array</parameter></paramdef>
 			</funcprototype>
 		</funcsynopsis>
 		</refsynopsisdiv>
@@ -1116,12 +1253,17 @@ BOX3D(-989502.1875 528439.5625 10,-987121.375 529933.1875 10)
 		<title>Description</title>
 
 		<para>ST_MakeLine comes in 3 forms: a spatial aggregate that takes
-			rows of point geometries and returns a line string, a function that takes an array of points, and a regular function that takes two point geometries. You
+			rows of point-or-line geometries and returns a line string, a function that takes an array of point-or-lines, and a regular function that takes two point-or-line geometries. You
 			might want to use a subselect to order points before feeding them
 			to  the aggregate version of this function.</para>
 
+		<para>
+			When adding line components a common node is removed from the output.
+		</para>
+
 		<para>&Z_support;</para>
 		<para>Availability: 1.4.0 -  ST_MakeLine(geomarray) was introduced. ST_MakeLine aggregate functions was enhanced to handle more points faster.</para>
+		<para>Availability: 2.0.0 -  Support for linestring input elements was introduced</para>
 		</refsection>
 
 		<refsection>
@@ -1131,10 +1273,21 @@ BOX3D(-989502.1875 528439.5625 10,-987121.375 529933.1875 10)
 			in the order of the travel.</para>
 
 		<programlisting>
+-- For pre-PostgreSQL 9.0 - this usually works, 
+-- but the planner may on occasion choose not to respect the order of the subquery
 SELECT gps.gps_track, ST_MakeLine(gps.the_geom) As newgeom
 	FROM (SELECT gps_track,gps_time, the_geom
 			FROM gps_points ORDER BY gps_track, gps_time) As gps
-	GROUP BY gps.gps_track</programlisting>
+	GROUP BY gps.gps_track;</programlisting>
+	
+		<programlisting>
+-- If you are using PostgreSQL 9.0+ 
+-- (you can use the new ORDER BY support for aggregates)
+-- this is a guaranteed way to get a correctly ordered linestring
+-- Your order by part can order by more than one column if needed
+SELECT gps.gps_track, ST_MakeLine(gps.the_geom ORDER BY gps_time) As newgeom
+	FROM gps_points As gps
+	GROUP BY gps.gps_track;</programlisting>
 		</refsection>
 		<refsection>
 			<title>Examples: Non-Spatial Aggregate version</title>
@@ -1171,6 +1324,9 @@ SELECT ST_AsEWKT(ST_MakeLine(ARRAY[ST_MakePoint(1,2,3),
 LINESTRING(1 2 3,3 4 5,6 6 6)
 			</programlisting>
 		</refsection>
+
+	<!-- TODO: add an example using lines -->
+
 		<refsection>
 			<title>See Also</title>
 			<para><xref linkend="ST_AsEWKT" />, <xref linkend="ST_AsText" />, <xref linkend="ST_GeomFromText" />, <xref linkend="ST_MakePoint" /></para>
@@ -1194,18 +1350,19 @@ LINESTRING(1 2 3,3 4 5,6 6 6)
 			<paramdef><type>double precision</type> <parameter>ymin</parameter></paramdef>
 			<paramdef><type>double precision</type> <parameter>xmax</parameter></paramdef>
 			<paramdef><type>double precision</type> <parameter>ymax</parameter></paramdef>
-			<paramdef><type>integer </type> <parameter>srid</parameter></paramdef>
+			<paramdef choice='opt'><type>integer </type> <parameter>srid=unknown</parameter></paramdef>
 		  </funcprototype>
-		</funcsynopsis>
+		 </funcsynopsis>
 		</refsynopsisdiv>
 
 		<refsection>
 			<title>Description</title>
 
 			<para>Creates a rectangular Polygon formed from the minima and maxima. by the given shell. Input
-				values must be in SRS specified by the SRID.</para>
+				values must be in SRS specified by the SRID.  If no SRID is specified the unknown spatial reference system is assumed</para>
 				
 			<para>Availability: 1.5</para>
+			<para>Enhanced: 2.0: Ability to specify an envelope without specifying an SRID was introduced.</para>
 
 		</refsection>
 
@@ -1344,7 +1501,14 @@ FROM
 		</refsection>
 		<refsection>
 			<title>See Also</title>
-			<para><xref linkend="ST_Accum" />, <xref linkend="ST_AddPoint" />, <xref linkend="ST_GeometryType" />, <xref linkend="ST_IsClosed" />, <xref linkend="ST_LineMerge" /></para>
+			<para>
+				<xref linkend="ST_Accum" />,
+				<xref linkend="ST_AddPoint" />,
+				<xref linkend="ST_GeometryType" />,
+				<xref linkend="ST_IsClosed" />,
+				<xref linkend="ST_LineMerge" />,
+				<xref linkend="ST_BuildArea" />
+			</para>
 		</refsection>
 	</refentry>
 
@@ -1710,8 +1874,8 @@ SELECT ST_SetSRID(ST_Point(-71.1043443253471, 42.3150676015829),4326)::geography
 
         <programlisting>--If your point coordinates are in a different spatial reference from WGS-84 long lat, then you need to transform before casting
 -- This example we convert a point in Pennsylvania State Plane feet to WGS 84 and then geography
-SELECT ST_Transform(ST_SetSRID(ST_Point(3637510, 3014852),2273),4326)::geography</programlisting>
-	  </refsection>;
+SELECT ST_Transform(ST_SetSRID(ST_Point(3637510, 3014852),2273),4326)::geography;</programlisting>
+	  </refsection>
 
 	  <!-- Optionally add a "See Also" section -->
 	  <refsection>
@@ -1812,12 +1976,10 @@ SELECT ST_PointFromText('POINT(-71.064544 42.28787)', 4326);
 		<para>If an SRID is not specified, it defaults to -1.  <varname>NULL</varname> is
 		returned if the input <varname>bytea</varname> does not represent a
 		<varname>POINT</varname> geometry.</para>
-
 		<para>&sfs_compliant; s3.2.7.2</para>
 		<para>&sqlmm_compliant; SQL-MM 3: 6.1.9</para>
 		<para>&Z_support;</para>
 		<para>&curve_support;</para>
-
 	  </refsection>
 
 	  <refsection>

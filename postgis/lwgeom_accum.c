@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_accum.c 7197 2011-05-19 02:32:27Z pramsey $
+ * $Id: lwgeom_accum.c 9324 2012-02-27 22:08:12Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -16,6 +16,8 @@
 #include "access/tupmacs.h"
 #include "utils/array.h"
 #include "utils/lsyscache.h"
+
+#include "../postgis_config.h"
 
 #include "liblwgeom.h"
 #include "lwgeom_pg.h"
@@ -106,18 +108,21 @@ pgis_geometry_accum_transfn(PG_FUNCTION_ARGS)
 	if (fcinfo->context && IsA(fcinfo->context, AggState))
 		aggcontext = ((AggState *) fcinfo->context)->aggcontext;
 #if POSTGIS_PGSQL_VERSION == 84
+
 	else if (fcinfo->context && IsA(fcinfo->context, WindowAggState))
 		aggcontext = ((WindowAggState *) fcinfo->context)->wincontext;
 #endif
 #if POSTGIS_PGSQL_VERSION > 84
+
 	else if (fcinfo->context && IsA(fcinfo->context, WindowAggState))
 		aggcontext = ((WindowAggState *) fcinfo->context)->aggcontext;
 #endif
+
 	else
 	{
 		/* cannot be called directly because of dummy-type argument */
 		elog(ERROR, "array_agg_transfn called in non-aggregate context");
-		aggcontext = NULL;		/* keep compiler quiet */
+		aggcontext = NULL;  /* keep compiler quiet */
 	}
 
 	if ( PG_ARGISNULL(0) )
@@ -167,10 +172,13 @@ pgis_accum_finalfn(pgis_abs *p, MemoryContext mctx, FunctionCallInfo fcinfo)
 	dims[0] = state->nelems;
 	lbs[0] = 1;
 #if POSTGIS_PGSQL_VERSION < 84
+
 	result = makeMdArrayResult(state, 1, dims, lbs, mctx);
 #else
+
 	result = makeMdArrayResult(state, 1, dims, lbs, mctx, false);
 #endif
+
 	return result;
 }
 
@@ -304,9 +312,10 @@ PGISDirectFunctionCall1(PGFunction func, Datum arg1)
 	Datum           result;
 
 #if POSTGIS_PGSQL_VERSION > 90
-  /* PgSLQ 9.1 requires five arcuments to InitFunctionCallInfoData */
+
 	InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
 #else
+
 	InitFunctionCallInfoData(fcinfo, NULL, 1, NULL, NULL);
 #endif
 

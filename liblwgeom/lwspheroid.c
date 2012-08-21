@@ -1,9 +1,9 @@
 /**********************************************************************
- * $Id: lwspheroid.c 5340 2010-02-25 13:44:04Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
- * Copyright 2009 Paul Ramsey <pramsey@cleverelephant.ca>
- * Copyright 2009 David Skea <David.Skea@gov.bc.ca>
+ *
+ * Copyright (C) 2009 Paul Ramsey <pramsey@cleverelephant.ca>
+ * Copyright (C) 2009 David Skea <David.Skea@gov.bc.ca>
  *
  * This is free software; you can redistribute and/or modify it under
  * the terms of the GNU General Public Licence. See the COPYING file.
@@ -11,6 +11,7 @@
  **********************************************************************/
 
 #include "lwgeodetic.h"
+#include "lwgeom_log.h"
 
 /**
 * Initialize spheroid object based on major and minor axis
@@ -182,7 +183,6 @@ double spheroid_direction(const GEOGRAPHIC_POINT *r, const GEOGRAPHIC_POINT *s, 
 		else
 			alpha = asin(sin_alpha);
 
-		alpha = asin(sin_alpha);
 		cos_alphasq = POW2(cos(alpha));
 		cos2_sigma_m = cos(sigma) - (2.0 * sin_u1 * sin_u2 / cos_alphasq);
 
@@ -280,7 +280,7 @@ int spheroid_project(const GEOGRAPHIC_POINT *r, const SPHEROID *spheroid, double
 	lambda2 = r->lon + omega;
 	g->lat = lat2;
 	g->lon = lambda2;
-	return G_SUCCESS;
+	return LW_SUCCESS;
 }
 
 
@@ -381,7 +381,7 @@ static double ptarray_area_spheroid(const POINTARRAY *pa, const SPHEROID *sphero
 		return 0.0;
 
 	/* Get the raw min/max values for the latitudes */
-	ptarray_calculate_gbox(pa, &gbox2d);
+	ptarray_calculate_gbox_cartesian(pa, &gbox2d);
 
 	if ( signum(gbox2d.ymin) != signum(gbox2d.ymax) )
 		lwerror("ptarray_area_spheroid: cannot handle ptarray that crosses equator");
@@ -446,7 +446,7 @@ static double ptarray_area_spheroid(const POINTARRAY *pa, const SPHEROID *sphero
 			point_shift(&a1, shift);
 			point_shift(&b1, shift);
 			LWDEBUGF(4, "after shift a1(%.8g %.8g) b1(%.8g %.8g)", a1.lat, a1.lon, b1.lat, b1.lon);
-			
+
 		}
 
 
@@ -509,7 +509,7 @@ static double ptarray_area_spheroid(const POINTARRAY *pa, const SPHEROID *sphero
 * required to check relationship to equator an outside point.
 * WARNING: Does NOT WORK for polygons over equator or pole.
 */
-double lwgeom_area_spheroid(const LWGEOM *lwgeom, const GBOX *gbox, const SPHEROID *spheroid)
+double lwgeom_area_spheroid(const LWGEOM *lwgeom, const SPHEROID *spheroid)
 {
 	int type;
 
@@ -520,7 +520,7 @@ double lwgeom_area_spheroid(const LWGEOM *lwgeom, const GBOX *gbox, const SPHERO
 		return 0.0;
 
 	/* Read the geometry type number */
-	type = TYPE_GETTYPE(lwgeom->type);
+	type = lwgeom->type;
 
 	/* Anything but polygons and collections returns zero */
 	if ( ! ( type == POLYGONTYPE || type == MULTIPOLYGONTYPE || type == COLLECTIONTYPE ) )
@@ -557,7 +557,7 @@ double lwgeom_area_spheroid(const LWGEOM *lwgeom, const GBOX *gbox, const SPHERO
 
 		for ( i = 0; i < col->ngeoms; i++ )
 		{
-			area += lwgeom_area_spheroid(col->geoms[i], gbox, spheroid);
+			area += lwgeom_area_spheroid(col->geoms[i], spheroid);
 		}
 		return area;
 	}

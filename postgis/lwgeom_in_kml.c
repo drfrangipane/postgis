@@ -2,7 +2,7 @@
  * $Id:$
  *
  * PostGIS - Spatial Types for PostgreSQL
- * http://postgis.refractions.net
+
  * Copyright 2009 Oslandia
  *
  * This is free software; you can redistribute and/or modify it under
@@ -27,19 +27,20 @@
 **********************************************************************/
 
 
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+
 #include "postgres.h"
+
+#include "../postgis_config.h"
 #include "lwgeom_pg.h"
 #include "liblwgeom.h"
 
-
-#include <libxml/tree.h>
-#include <libxml/parser.h>
 
 
 /*
 TODO:
 	- OGC:LonLat84_5773 explicit support (rather than EPSG:4326)
-	- Don't return a GEOMETRYCOLLECTION if a MULTI one is enough
 	- altitudeModeGroup relativeToGround Z Altitude
 	  computation upon Geoid
 */
@@ -58,14 +59,12 @@ static LWGEOM* parse_kml(xmlNodePtr xnode, bool *hasz);
 PG_FUNCTION_INFO_V1(geom_from_kml);
 Datum geom_from_kml(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *geom, *geom2d;
+	GSERIALIZED *geom;
+	LWGEOM *lwgeom, *hlwgeom;
 	xmlDocPtr xmldoc;
 	text *xml_input;
-	LWGEOM *lwgeom;
 	int xml_size;
-	uchar *srl;
 	char *xml;
-	size_t size=0;
 	bool hasz=true;
 	xmlNodePtr xmlroot=NULL;
 
@@ -73,11 +72,8 @@ Datum geom_from_kml(PG_FUNCTION_ARGS)
 	/* Get the KML stream */
 	if (PG_ARGISNULL(0)) PG_RETURN_NULL();
 	xml_input = PG_GETARG_TEXT_P(0);
-
-	xml_size = VARSIZE(xml_input) - VARHDRSZ; 	/* actual letters */
-	xml = palloc(xml_size + 1); 			/* +1 for null */
-	memcpy(xml, VARDATA(xml_input), xml_size);
-	xml[xml_size] = 0; 				/* null term */
+	xml = text2cstring(xml_input);
+	xml_size = VARSIZE(xml_input) - VARHDRSZ;
 
 	/* Begin to Parse XML doc */
 	xmlInitParser();
@@ -90,12 +86,16 @@ Datum geom_from_kml(PG_FUNCTION_ARGS)
 	}
 
 	lwgeom = parse_kml(xmlroot, &hasz);
-	lwgeom->bbox = lwgeom_compute_box2d(lwgeom);
-	geom = pglwgeom_serialize(lwgeom);
-	lwgeom_release(lwgeom);
 
-	xmlFreeDoc(xmldoc);
-	xmlCleanupParser();
+	/* Homogenize geometry result if needed */
+	if (lwgeom->type == COLLECTIONTYPE)
+	{
+		hlwgeom = lwgeom_homogenize(lwgeom);
+		lwgeom_release(lwgeom);
+		lwgeom = hlwgeom;
+	}
+
+	lwgeom_add_bbox(lwgeom);
 
 	/* KML geometries could be either 2 or 3D
 	 *
@@ -105,13 +105,16 @@ Datum geom_from_kml(PG_FUNCTION_ARGS)
 	 */
 	if (!hasz)
 	{
-		srl = lwalloc(VARSIZE(geom));
-		lwgeom_force2d_recursive(SERIALIZED_FORM(geom), srl, &size);
-		geom2d = PG_LWGEOM_construct(srl, pglwgeom_getSRID(geom),
-		                             lwgeom_hasBBOX(geom->type));
-		lwfree(geom);
-		geom = geom2d;
+		LWGEOM *tmp = lwgeom_force_2d(lwgeom);
+		lwgeom_free(lwgeom);
+		lwgeom = tmp;
 	}
+
+	geom = geometry_serialize(lwgeom);
+	lwgeom_free(lwgeom);
+
+	xmlFreeDoc(xmldoc);
+	xmlCleanupParser();
 
 	PG_RETURN_POINTER(geom);
 }
@@ -256,12 +259,10 @@ static POINTARRAY* parse_kml_coordinates(xmlNodePtr xnode, bool *hasz)
 {
 	xmlChar *kml_coord;
 	bool digit, found;
-	DYNPTARRAY *dpa;
-	POINTARRAY *pa;
+	POINTARRAY *dpa;
 	int kml_dims;
 	char *p, *q;
 	POINT4D pt;
-	uchar dims=0;
 
 	if (xnode == NULL) lwerror("invalid KML representation");
 
@@ -285,8 +286,8 @@ static POINTARRAY* parse_kml_coordinates(xmlNodePtr xnode, bool *hasz)
 	*/
 
 	/* Now we create PointArray from coordinates values */
-	TYPE_SETZM(dims, 1, 0);
-	dpa = dynptarray_create(1, dims);
+	/* HasZ, !HasM, 1pt */
+	dpa = ptarray_construct_empty(1, 0, 1);
 
 	for (q = p, kml_dims=0, digit = false ; *p ; p++)
 	{
@@ -323,7 +324,7 @@ static POINTARRAY* parse_kml_coordinates(xmlNodePtr xnode, bool *hasz)
 				*hasz = false;
 			}
 
-			dynptarray_addPoint4d(dpa, &pt, 0);
+			ptarray_append_point(dpa, &pt, LW_FALSE);
 			digit = false;
 			q = p+1;
 			kml_dims = 0;
@@ -332,10 +333,9 @@ static POINTARRAY* parse_kml_coordinates(xmlNodePtr xnode, bool *hasz)
 	}
 
 	xmlFree(kml_coord);
-	pa = ptarray_clone(dpa->pa);
-	lwfree(dpa);
 
-	return pa;
+	/* TODO: we shouldn't need to clone here */
+	return ptarray_clone_deep(dpa);
 }
 
 
@@ -446,7 +446,7 @@ static LWGEOM* parse_kml_multi(xmlNodePtr xnode, bool *hasz)
 	LWGEOM *geom;
 	xmlNodePtr xa;
 
-	geom = (LWGEOM *)lwcollection_construct_empty(4326, 1, 0);
+	geom = (LWGEOM *)lwcollection_construct_empty(COLLECTIONTYPE, 4326, 1, 0);
 
 	for (xa = xnode->children ; xa != NULL ; xa = xa->next)
 	{
@@ -461,8 +461,7 @@ static LWGEOM* parse_kml_multi(xmlNodePtr xnode, bool *hasz)
 		{
 
 			if (xa->children == NULL) break;
-			geom = lwcollection_add((LWCOLLECTION *)geom, -1,
-			                        parse_kml(xa, hasz));
+			geom = (LWGEOM*)lwcollection_add_lwgeom((LWCOLLECTION*)geom, parse_kml(xa, hasz));
 		}
 	}
 

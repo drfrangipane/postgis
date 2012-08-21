@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsBinaryParser.java 2493 2006-10-02 14:30:47Z mschaber $
+ * $Id: JtsBinaryParser.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 package org.postgis.jts;
 
@@ -102,14 +102,14 @@ public class JtsBinaryParser {
         boolean haveS = (typeword & 0x20000000) != 0;
 
         if (haveS) {
-            int newsrid = data.getInt();
+            int newsrid = org.postgis.Geometry.parseSRID(data.getInt());
             if (inheritSrid && newsrid != srid) {
                 throw new IllegalArgumentException("Inconsistent srids in complex geometry: " + srid + ", " + newsrid);
             } else {
                 srid = newsrid;
             }
         } else if (!inheritSrid) {
-            srid = -1;
+            srid = org.postgis.Geometry.UNKNOWN_SRID;
         }
        
         Geometry result;

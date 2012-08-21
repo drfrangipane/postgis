@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsBinaryWriter.java 2555 2006-12-18 12:58:49Z mschaber $
+ * $Id: JtsBinaryWriter.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 package org.postgis.jts;
 
@@ -297,8 +297,7 @@ public class JtsBinaryWriter {
 
     private boolean checkSrid(Geometry geom) {
         final int srid = geom.getSRID();
-        // SRID is default 0 with jts geometries
-        return (srid != -1) && (srid != 0);
+        return (srid > 0);
     }
 
     private int estimatePoint(Point geom) {

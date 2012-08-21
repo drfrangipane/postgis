@@ -1,9 +1,9 @@
 /**********************************************************************
- * $Id: lwgeom_spheroid.c 5181 2010-02-01 17:35:55Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
- * Copyright 2001-2003 Refractions Research Inc.
+ *
+ * Copyright (C) 2001-2003 Refractions Research Inc.
  *
  * This is free software; you can redistribute and/or modify it under
  * the terms of the GNU General Public Licence. See the COPYING file.
@@ -25,7 +25,8 @@
 #include "fmgr.h"
 #include "utils/elog.h"
 
-#include "libgeom.h"
+#include "../postgis_config.h"
+#include "liblwgeom.h"
 #include "lwgeom_pg.h"
 
 #define SHOW_DIGS_DOUBLE 15
@@ -55,8 +56,6 @@ double deltaLongitude(double azimuth, double sigma, double tsm,SPHEROID *sphere)
 double mu2(double azimuth,SPHEROID *sphere);
 double bigA(double u2);
 double bigB(double u2);
-double lwgeom_pointarray_length2d_ellipse(POINTARRAY *pts, SPHEROID *sphere);
-double lwgeom_pointarray_length_ellipse(POINTARRAY *pts, SPHEROID *sphere);
 
 
 /*
@@ -196,7 +195,7 @@ distance_ellipse(double lat1, double long1,
                  double lat2, double long2, SPHEROID *sphere)
 {
 	double result = 0;
-#if POSTGIS_DEBUG_LEVEL > 0
+#if POSTGIS_DEBUG_LEVEL >= 4
 	double result2 = 0;
 #endif
 
@@ -210,9 +209,9 @@ distance_ellipse(double lat1, double long1,
 #if POSTGIS_DEBUG_LEVEL >= 4
 	result2 =  distance_sphere_method(lat1, long1,lat2,long2, sphere);
 
-	LWDEBUGF(4, "delta = %lf, skae says: %.15lf,2 circle says: %.15lf",
+	POSTGIS_DEBUGF(4, "delta = %lf, skae says: %.15lf,2 circle says: %.15lf",
 	         (result2-result),result,result2);
-	LWDEBUGF(4, "2 circle says: %.15lf",result2);
+	POSTGIS_DEBUGF(4, "2 circle says: %.15lf",result2);
 #endif
 
 	if (result != result)  /* NaN check
@@ -311,67 +310,6 @@ distance_ellipse_calculation(double lat1, double long1,
 	return sphere->b * (A * (sigma - dsigma));
 }
 
-/*
- * Computed 2d/3d length of a POINTARRAY depending on input dimensions.
- * Uses ellipsoidal math to find the distance.
- */
-double lwgeom_pointarray_length_ellipse(POINTARRAY *pts, SPHEROID *sphere)
-{
-	double dist = 0.0;
-	int i;
-
-	LWDEBUG(2, "lwgeom_pointarray_length_ellipse called");
-
-	if ( pts->npoints < 2 ) return 0.0;
-
-	/* compute 2d length if 3d is not available */
-	if ( TYPE_NDIMS(pts->dims) < 3 )
-	{
-		return lwgeom_pointarray_length2d_ellipse(pts, sphere);
-	}
-
-	for (i=0; i<pts->npoints-1; i++)
-	{
-		POINT3DZ frm;
-		POINT3DZ to;
-		double distellips;
-
-		getPoint3dz_p(pts, i, &frm);
-		getPoint3dz_p(pts, i+1, &to);
-
-		distellips = distance_ellipse(
-		                 frm.y*M_PI/180.0, frm.x*M_PI/180.0,
-		                 to.y*M_PI/180.0, to.x*M_PI/180.0, sphere);
-		dist += sqrt(distellips*distellips + (frm.z-to.z)*(frm.z-to.z));
-	}
-	return dist;
-}
-
-/*
- * Computed 2d length of a POINTARRAY regardless of input dimensions
- * Uses ellipsoidal math to find the distance.
- */
-double
-lwgeom_pointarray_length2d_ellipse(POINTARRAY *pts, SPHEROID *sphere)
-{
-	double dist = 0.0;
-	int i;
-	POINT2D frm;
-	POINT2D to;
-
-	LWDEBUG(2, "lwgeom_pointarray_length2d_ellipse called");
-
-	if ( pts->npoints < 2 ) return 0.0;
-	for (i=0; i<pts->npoints-1; i++)
-	{
-		getPoint2d_p(pts, i, &frm);
-		getPoint2d_p(pts, i+1, &to);
-		dist += distance_ellipse(frm.y*M_PI/180.0,
-		                         frm.x*M_PI/180.0, to.y*M_PI/180.0,
-		                         to.x*M_PI/180.0, sphere);
-	}
-	return dist;
-}
 
 /*
  * Find the "length of a geometry"
@@ -385,11 +323,12 @@ lwgeom_pointarray_length2d_ellipse(POINTARRAY *pts, SPHEROID *sphere)
 PG_FUNCTION_INFO_V1(LWGEOM_length2d_ellipsoid);
 Datum LWGEOM_length2d_ellipsoid(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *geom = (PG_LWGEOM *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	GSERIALIZED *geom = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
 	SPHEROID *sphere = (SPHEROID *) PG_GETARG_POINTER(1);
-	LWGEOM *lwgeom = lwgeom_deserialize(SERIALIZED_FORM(geom));
+	LWGEOM *lwgeom = lwgeom_from_gserialized(geom);
 	double dist = lwgeom_length_spheroid(lwgeom, sphere);
-	lwgeom_release(lwgeom);
+	lwgeom_free(lwgeom);
+	PG_FREE_IF_COPY(geom, 0);
 	PG_RETURN_FLOAT8(dist);
 }
 
@@ -407,29 +346,31 @@ Datum LWGEOM_length2d_ellipsoid(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(LWGEOM_length_ellipsoid_linestring);
 Datum LWGEOM_length_ellipsoid_linestring(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *geom = (PG_LWGEOM *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	GSERIALIZED *geom = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	LWGEOM *lwgeom = lwgeom_from_gserialized(geom);
 	SPHEROID *sphere = (SPHEROID *) PG_GETARG_POINTER(1);
-	LWGEOM_INSPECTED *inspected = lwgeom_inspect(SERIALIZED_FORM(geom));
-	LWLINE *line;
-	double dist = 0.0;
-	int i;
+	double length = 0.0;
 
-	POSTGIS_DEBUG(2, "in LWGEOM_length_ellipsoid_linestring");
-
-	for (i=0; i<inspected->ngeometries; i++)
+	/* EMPTY things have no length */
+	if ( lwgeom_is_empty(lwgeom) )
 	{
-		line = lwgeom_getline_inspected(inspected, i);
-		if ( line == NULL ) continue;
-		dist += lwgeom_pointarray_length_ellipse(line->points,
-		        sphere);
-
-		POSTGIS_DEBUGF(3, " LWGEOM_length_ellipsoid_linestring found a line (%f)",
-		               dist);
+		lwgeom_free(lwgeom);
+		PG_RETURN_FLOAT8(0.0);
 	}
 
-	lwinspected_release(inspected);
+	length = lwgeom_length_spheroid(lwgeom, sphere);
+	lwgeom_free(lwgeom);
+	PG_FREE_IF_COPY(geom, 0);
 
-	PG_RETURN_FLOAT8(dist);
+	/* Something went wrong... */
+	if ( length < 0.0 )
+	{
+		elog(ERROR, "lwgeom_length_spheroid returned length < 0.0");
+		PG_RETURN_NULL();
+	}
+
+	/* Clean up */
+	PG_RETURN_FLOAT8(length);
 }
 
 /*
@@ -528,14 +469,13 @@ double distance_sphere_method(double lat1, double long1,double lat2,double long2
 PG_FUNCTION_INFO_V1(geometry_distance_spheroid);
 Datum geometry_distance_spheroid(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *geom1 = (PG_LWGEOM *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	PG_LWGEOM *geom2 = (PG_LWGEOM *)PG_DETOAST_DATUM(PG_GETARG_DATUM(1));
+	GSERIALIZED *geom1 = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	GSERIALIZED *geom2 = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(1));
 	SPHEROID *sphere = (SPHEROID *)PG_GETARG_POINTER(2);
-	int type1 = TYPE_GETTYPE(geom1->type);
-	int type2 = TYPE_GETTYPE(geom2->type);
+	int type1 = gserialized_get_type(geom1);
+	int type2 = gserialized_get_type(geom2);
 	bool use_spheroid = PG_GETARG_BOOL(3);
 	LWGEOM *lwgeom1, *lwgeom2;
-	GBOX gbox1, gbox2;
 	double distance;
 
 	/* Calculate some other parameters on the spheroid */
@@ -546,9 +486,6 @@ Datum geometry_distance_spheroid(PG_FUNCTION_ARGS)
 	{
 		sphere->a = sphere->b = sphere->radius;
 	}
-
-	gbox1.flags = gflags(0, 0, 1);
-	gbox2.flags = gflags(0, 0, 1);
 
 	if ( ! ( type1 == POINTTYPE || type1 == LINETYPE || type1 == POLYGONTYPE ||
 	         type1 == MULTIPOINTTYPE || type1 == MULTILINETYPE || type1 == MULTIPOLYGONTYPE ))
@@ -565,28 +502,21 @@ Datum geometry_distance_spheroid(PG_FUNCTION_ARGS)
 	}
 
 
-	if (pglwgeom_getSRID(geom1) != pglwgeom_getSRID(geom2))
+	if (gserialized_get_srid(geom1) != gserialized_get_srid(geom2))
 	{
 		elog(ERROR, "geometry_distance_spheroid: Operation on two GEOMETRIES with different SRIDs\n");
 		PG_RETURN_NULL();
 	}
 
-	lwgeom1 = lwgeom_deserialize(SERIALIZED_FORM(geom1));
-	lwgeom2 = lwgeom_deserialize(SERIALIZED_FORM(geom2));
+	/* Get #LWGEOM structures */
+	lwgeom1 = lwgeom_from_gserialized(geom1);
+	lwgeom2 = lwgeom_from_gserialized(geom2);
+	
+	/* We are going to be calculating geodetic distances */
+	lwgeom_set_geodetic(lwgeom1, LW_TRUE);
+	lwgeom_set_geodetic(lwgeom2, LW_TRUE);
 
-	if ( lwgeom_calculate_gbox_geodetic(lwgeom1, &gbox1) != G_SUCCESS )
-	{
-		elog(ERROR, "geometry_distance_spheroid: unable to calculate gbox1\n");
-		PG_RETURN_NULL();
-	};
-
-	if ( lwgeom_calculate_gbox_geodetic(lwgeom2, &gbox2) != G_SUCCESS )
-	{
-		elog(ERROR, "geometry_distance_spheroid: unable to calculate gbox2\n");
-		PG_RETURN_NULL();
-	};
-
-	distance = lwgeom_distance_spheroid(lwgeom1, lwgeom2, &gbox1, &gbox2, sphere, 0.0);
+	distance = lwgeom_distance_spheroid(lwgeom1, lwgeom2, sphere, 0.0);
 
 	PG_RETURN_FLOAT8(distance);
 

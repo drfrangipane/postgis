@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: BinaryWriter.java 2497 2006-10-02 23:26:34Z mschaber $
+ * $Id: BinaryWriter.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 package org.postgis.binary;
 
@@ -126,13 +126,13 @@ public class BinaryWriter {
         if (geom.haveMeasure) {
             typeword |= 0x40000000;
         }
-        if (geom.srid != -1) {
+        if (geom.srid != Geometry.UNKNOWN_SRID) {
             typeword |= 0x20000000;
         }
 
         dest.setInt(typeword);
 
-        if (geom.srid != -1) {
+        if (geom.srid != Geometry.UNKNOWN_SRID) {
             dest.setInt(geom.srid);
         }
 
@@ -244,7 +244,7 @@ public class BinaryWriter {
         // write typeword
         result += 4;
 
-        if (geom.srid != -1) {
+        if (geom.srid != Geometry.UNKNOWN_SRID) {
             result += 4;
         }
 

@@ -47,34 +47,21 @@
 47|GEOMETRYCOLLECTION(MULTIPOLYGON(((0 0 0,10 0 0,10 10 0,0 10 0,0 0 0)),((0 0 0,10 0 0,10 10 0,0 10 0,0 0 0),(5 5 0,7 5 0,7 7 0,5 7 0,5 5 0)),((0 0 1,10 0 1,10 10 1,0 10 1,0 0 1),(5 5 1,7 5 1,7 7 1,5 7 1,5 5 1),(1 1 1,2 1 1,2 2 1,1 2 1,1 1 1))),MULTILINESTRING((0 0 0,1 1 0,2 2 0,3 3 0,4 4 0),(0 0 0,1 1 0,2 2 0,3 3 0,4 4 0),(1 2 3,4 5 6,7 8 9,10 11 12,13 14 15)),MULTIPOINT(1 2 3,5 6 7,8 9 10,11 12 13))
 48|MULTIPOINT(-1 -2 -3,5.4 6.6 7.77,-5.4 -6.6 -7.77,1000000 1e-6 -1000000,-1.3e-6 -1.4e-5 0)
 49|GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(1 1)))
-ERROR:  parse error - invalid geometry
-HINT:  "POINT()" <-- parse error at position 7 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "POINT(1)" <-- parse error at position 8 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "POINT(," <-- parse error at position 7 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "MULTIPOINT(," <-- parse error at position 12 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "POINT(" <-- parse error at position 6 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "MULTIPOINT()" <-- parse error at position 12 within geometry
-ERROR:  geometry contains non-closed rings
-HINT:  "POLYGON( (0 0, 10 0, 10 10, 0 10) )" <-- parse error at position 35 within geometry
-ERROR:  geometry contains non-closed rings
-HINT:  "...0, 0 10, 0 0),(5 5, 7 5, 7 7 , 5 7) )" <-- parse error at position 62 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "...INESTRING((0 0, 1 1),(0 0, 1 1, 2 2,)" <-- parse error at position 43 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "POINT(1 2 3," <-- parse error at position 12 within geometry
-ERROR:  parse error - invalid geometry
-HINT:  "POINT(1 2 3 4 5" <-- parse error at position 15 within geometry
-ERROR:  geometry requires more points
-HINT:  "LINESTRING(1 1)" <-- parse error at position 15 within geometry
+ERROR:  parse error - invalid geometry at character 14
+ERROR:  parse error - invalid geometry at character 14
+ERROR:  parse error - invalid geometry at character 14
+ERROR:  parse error - invalid geometry at character 14
+ERROR:  parse error - invalid geometry at character 14
+ERROR:  parse error - invalid geometry at character 14
+ERROR:  geometry contains non-closed rings at character 24
+ERROR:  geometry contains non-closed rings at character 24
+ERROR:  parse error - invalid geometry at character 24
+ERROR:  geometry has too many points at character 23
+ERROR:  parse error - invalid geometry at character 23
+ERROR:  geometry requires more points at character 23
 62|POINT(inf 0)
 63|POINT(-inf 0)
-ERROR:  parse error - invalid geometry
-HINT:  "MULTIPOINT(1 1, 2 2" <-- parse error at position 19 within geometry
+ERROR:  parse error - invalid geometry at character 23
 65|t
 65a|t
 66|t
@@ -129,20 +116,13 @@ HINT:  "MULTIPOINT(1 1, 2 2" <-- parse error at position 19 within geometry
 104|t
 105|f
 106|BOX3D(0 0 0,7 7 0)
-106_|BOX3D(0 0 0,7 7 0)
 107|POLYGON((0 0,0 7,7 7,7 0,0 0))
 108|2
-108_|2
 109|4
-109_|4
 110|6
-110_|6
-111|528
-111_|528
+111|552
 112|3
-112_|3
 121|BOX3D(1.19894826 1.20265412 0,999.932129 999.692932 0)|BOX3D(1.40486765 1.3484304 0,999.857666 999.936401 0)
-121_|BOX3D(1.19894826 1.20265412 0,999.932129 999.692932 0)|BOX3D(1.40486765 1.3484304 0,999.857666 999.936401 0)
 122|f
 123|f
 124|f
@@ -150,59 +130,60 @@ HINT:  "MULTIPOINT(1 1, 2 2" <-- parse error at position 19 within geometry
 126|f
 127|f
 128|f
-129|34009|34009
+129|48016|48016
 131|1
-131_|1
 132|2
-132_|2
 133|
-133_|
 133a|3
-133a_|3
 133b|
-133b_|
 133c|
-133c_|
 133d|4
-133d_|4
 133e|
-133e_|
 137|
-137_|
 138|BOX3D(0 0 0,0 0 0)
-138_|BOX3D(0 0 0,0 0 0)
 139|SRID=2;GEOMETRYCOLLECTION(GEOMETRYCOLLECTION EMPTY,POINT(0 0))
-139_|SRID=2;GEOMETRYCOLLECTION(GEOMETRYCOLLECTION EMPTY,POINT(0 0))
 140|SRID=3;MULTIPOINT(2 2)
-140_|SRID=3;MULTIPOINT(2 2)
 141|SRID=4;MULTILINESTRING((2 2,3 3))
-141_|SRID=4;MULTILINESTRING((2 2,3 3))
 142|SRID=5;MULTILINESTRING((2 2,3 3))
-142_|SRID=5;MULTILINESTRING((2 2,3 3))
 143|SRID=6;MULTIPOLYGON(((0 0,1 0,1 1,0 1,0 0)))
-143_|SRID=6;MULTIPOLYGON(((0 0,1 0,1 1,0 1,0 0)))
 143c1|MULTICURVE(CIRCULARSTRING(0 0,1 1,2 2))
 144|POINTM(1 2 0)
-144_|POINTM(1 2 0)
 145|POINT(1 2 0)
-145_|POINT(1 2 0)
 146|POINT(1 2 0 3)
-146_|POINT(1 2 0 3)
 147|POINT(1 2 3 0)
-147_|POINT(1 2 3 0)
 148|LINESTRING(0 0,5 0,10 0)
-148_|LINESTRING(0 0,5 0,10 0)
 149|GEOMETRYCOLLECTION EMPTY
 150|SRID=6;GEOMETRYCOLLECTION(POLYGON((0 0,1 0,1 1,0 1,0 0)))
-150_|SRID=6;GEOMETRYCOLLECTION(POLYGON((0 0,1 0,1 1,0 1,0 0)))
 151|0103000020E61000000100000005000000000000000000000000000000000000000000000000000000000000000000F03F000000000000F03F000000000000F03F000000000000F03F000000000000000000000000000000000000000000000000
 152|4326
+152.1|t
+152.2|4326
 153|MULTIPOINT(0 0)
 154|MULTIPOINT(0 0)
 155|MULTIPOINT(0 0,1 1)
 156|MULTIPOINT(1 1)
 157|MULTILINESTRING((0 0,1 1))
 158|MULTILINESTRING((0 0,1 1),(2 2,3 3))
-159|GEOMETRYCOLLECTION EMPTY
+159|MULTIPOLYGON EMPTY
 160|MULTIPOINT(1 1)
 161|MULTILINESTRING((0 0,1 1),(2 2,3 3))
+162|010200000003000000F771D98DE33826C00000000000004440F771D98DE33826C000000000008051400000000000805140F771D98DE33826C0
+163|POLYGON((0 0 0,1 0 0,1 1 0,0 1 0,0 0 0))
+164|POLYGON((0 0 0,1 0 0,1 1 0,0 1 0,0 0 1))
+ERROR:  geometry contains non-closed rings
+166|POINT EMPTY
+167|LINESTRING EMPTY
+168|POLYGON EMPTY
+169|CIRCULARSTRING EMPTY
+170|COMPOUNDCURVE EMPTY
+171|CURVEPOLYGON EMPTY
+172|MULTIPOINT EMPTY
+173|MULTILINESTRING EMPTY
+174|MULTIPOLYGON EMPTY
+175|TRIANGLE EMPTY
+176|TIN EMPTY
+177|POLYHEDRALSURFACE EMPTY
+178|MULTISURFACE EMPTY
+179|MULTICURVE EMPTY
+180|GEOMETRYCOLLECTION EMPTY
+181|GEOMETRYCOLLECTION(TRIANGLE EMPTY,TIN EMPTY)

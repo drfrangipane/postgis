@@ -3,10 +3,10 @@
 #include <stdarg.h>
 #include <string.h>
 
-
 /* Global variables */
 #include "../postgis_config.h"
-#include "liblwgeom.h"
+#include "liblwgeom_internal.h"
+#include "lwgeom_log.h"
 
 void *init_allocator(size_t size);
 void init_freeor(void *mem);
@@ -31,15 +31,14 @@ static char *lwgeomTypeName[] =
 	"MultiPolygon",
 	"GeometryCollection",
 	"CircularString",
-	"CompoundString",
-	"Invalid Type",  /* POINTTYPEI */
-	"Invalid Type",  /* LINETYPEI */
-	"Invalid Type",  /* POLYTYPEI */
+	"CompoundCurve",
 	"CurvePolygon",
 	"MultiCurve",
-	"MultiSurface"
+	"MultiSurface",
+	"PolyhedralSurface",
+	"Triangle",
+	"Tin"
 };
-
 
 /*
  * lwnotice/lwerror handlers
@@ -207,15 +206,15 @@ void lwgeom_install_default_allocators(void)
 }
 
 
-const char* lwgeom_typename(int type)
+const char* 
+lwtype_name(uint8_t type)
 {
-	/* something went wrong somewhere */
-	if ( type < 0 || type > 15 )
+	if ( type > 15 )
 	{
 		/* assert(0); */
 		return "Invalid type";
 	}
-	return lwgeomTypeName[type];
+	return lwgeomTypeName[(int ) type];
 }
 
 void *
@@ -356,16 +355,37 @@ getMachineEndian(void)
 	static int endian_check_int = 1; /* dont modify this!!! */
 
 	return *((char *) &endian_check_int); /* 0 = big endian | xdr,
-						       * 1 = little endian | ndr
-		                                       */
+	                                       * 1 = little endian | ndr
+	                                       */
 }
 
 
 void
-errorIfSRIDMismatch(int srid1, int srid2)
+error_if_srid_mismatch(int srid1, int srid2)
 {
 	if ( srid1 != srid2 )
 	{
 		lwerror("Operation on mixed SRID geometries");
 	}
+}
+
+int
+clamp_srid(int srid)
+{
+	int newsrid = srid;
+
+	if ( newsrid <= 0 ) {
+		if ( newsrid != SRID_UNKNOWN ) {
+			newsrid = SRID_UNKNOWN;
+			lwnotice("SRID value %d converted to the officially unknown SRID value %d", srid, newsrid);
+		}
+	} else if ( srid > SRID_MAXIMUM ) {
+    newsrid = SRID_USER_MAXIMUM + 1 +
+      /* -1 is to reduce likelyhood of clashes */
+      /* NOTE: must match implementation in postgis_restore.pl */
+      ( srid % ( SRID_MAXIMUM - SRID_USER_MAXIMUM - 1 ) );
+		lwnotice("SRID value %d > SRID_MAXIMUM converted to %d", srid, newsrid);
+	}
+	
+	return newsrid;
 }

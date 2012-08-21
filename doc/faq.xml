@@ -1,8 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <chapter id="PostGIS_FAQ">
-  <title>Frequently Asked Questions</title>
+  <title>PostGIS Frequently Asked Questions</title>
 
   <qandaset>
+     <qandaentry id="legacy_faq">
+      <question>
+        <para>My applications and desktop tools worked with PostGIS 1.5,but they don't work with PostGIS 2.0.  How do I fix this?</para>
+      </question>
+
+      <answer>
+        <para>A lot of deprecated functions were removed from the PostGIS code base in PostGIS 2.0.  This has affected applications in addition to third-party tools such as
+            Geoserver, MapServer, QuantumGIS, and OpenJump to name a few.  There are a couple of ways to resolve this. For the third-party apps, you can try to upgrade to the latest versions
+                of these which have many of these issues fixed.  For your own code, you can change your code to not use the functions removed.  Most of these functions are non ST_ aliases of ST_Union, ST_Length etc.
+               and as a last resort, install the whole of <varname>legacy.sql</varname> or just the 
+                portions of <varname>legacy.sql</varname> you need.</para>
+        
+         <para>The <varname>legacy.sql</varname> file is located in the same folder as postgis.sql.  You can install this file after you have installed postgis.sql and spatial_ref_sys.sql
+            to get back all the 200 some-odd old functions we removed.</para>
+      </answer>
+    </qandaentry>
     <qandaentry>
       <question>
         <para>I'm running PostgreSQL 9.0 and I can no longer read/view geometries in OpenJump, Safe FME, and some other tools?</para>
@@ -31,7 +47,7 @@
       </question>
 
       <answer>
-        <para>PgAdmin doesn't show anything for large geometries.  The best ways to verify you do have day in your geometry columns are?</para>
+        <para>PgAdmin doesn't show anything for large geometries.  The best ways to verify you do have data in your geometry columns are?</para>
         
         
         <programlisting>-- this should return no records if all your geom fields are filled in        
@@ -50,11 +66,13 @@ SELECT MAX(ST_NPoints(geom)) FROM sometable;</programlisting>
 
       <answer>
         <para>You can store point, line, polygon, multipoint, multiline,
-        multipolygon, and geometrycollections. These are specified in the Open
-        GIS Well Known Text Format (with XYZ,XYM,XYZM extensions).  There are two data types currently supported.
-		The standard OGC geometry data type which uses a planar coordinate system for measurement and the 
-		geography data type which uses a geodetic coordinate system.  Only WGS 84 long lat (SRID:4326) is supported
-		by the geography data type.</para>
+        multipolygon, and geometrycollections. In PostGIS 2.0 and above you can also store TINS and Polyhedral Surfaces in the basic geometry type.
+        These are specified in the Open
+        GIS Well Known Text Format (with XYZ,XYM,XYZM extensions).  There are three data types currently supported.
+		The standard OGC geometry data type which uses a planar coordinate system for measurement, the 
+		geography data type which uses a geodetic coordinate system (not OGC, but you'll find a similar type in Microsoft SQL Server 2008+).  Only WGS 84 long lat (SRID:4326) is supported
+		by the geography data type.  The newest family member of the PostGIS spatial type family is raster for storing and analyzing raster data. Raster has its very own FAQ. Refer to <xref linkend="RT_FAQ"/>
+		and <xref linkend="RT_reference" /> for more details.</para>
       </answer>
     </qandaentry>
 	
@@ -88,7 +106,7 @@ SELECT MAX(ST_NPoints(geom)) FROM sometable;</programlisting>
       </question>
       <answer>
         <para>Your questions are too deep and complex to be adequately answered in this section. Please refer to our
-			<xref linkend="PostGIS_Geography_AdvancedFAQ" /> .</para>
+			<xref linkend="PostGIS_Geography_AdvancedFAQ" />.</para>
       </answer>
     </qandaentry>
 
@@ -341,5 +359,18 @@ WHERE ST_DWithin(geocolumn, 'POINT(1000 1000)', 100.0);</programlisting>
 				it is not showing you.</para>
       </answer>
     </qandaentry>
+
+	<qandaentry>
+      <question>
+        <para>I am releasing software that uses PostGIS, does that mean my software has to be licensed using the GPL like PostGIS? Will I have to publish all my code if I use PostGIS?</para>
+      </question>
+
+      <answer>
+        <para>Almost certainly not. As an example, consider Oracle database running on Linux. Linux is GPL, Oracle is not, does Oracle running on Linux have to be distributed using the GPL? No. So your software can use a PostgreSQL/PostGIS database as much as it wants and be under any license you like.</para>
+				<para>The only exception would be if you made changes to the PostGIS source code, and distributed your changed version of PostGIS. In that case you would have to share the code of your changed PostGIS (but not the code of applications running on top of it). Even in this limited case, you would still only have to distribute source code to people you distributed binaries to. The GPL does not require that you <emphasis>publish</emphasis> your source code, only that you share it with people you give binaries to.</para>
+      </answer>
+    </qandaentry>
+
   </qandaset>
+
 </chapter>

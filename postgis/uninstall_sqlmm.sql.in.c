@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: uninstall_sqlmm.sql.in.c 4494 2009-09-14 10:54:33Z mcayland $
+-- $Id: uninstall_sqlmm.sql.in.c 9324 2012-02-27 22:08:12Z pramsey $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net
@@ -62,6 +62,15 @@ DROP FUNCTION SE_EnvelopesIntersect(geometry,geometry);
 
 DROP FUNCTION SE_LocateAlong(geometry, float8);
 DROP FUNCTION SE_LocateBetween(geometry, float8, float8);
+
+-------------------------------------------------------------------------------
+-- SQL/MM LRS functions
+-------------------------------------------------------------------------------
+
+DROP FUNCTION ST_LocateBetween(geometry, float8, float8);
+DROP FUNCTION ST_LocateAlong(geometry, float8);
+DROP FUNCTION ST_LocateBetween(geometry, float8, float8, float8);
+DROP FUNCTION ST_LocateAlong(geometry, float8, float8);
 
 -------------------------------------------------------------------------------
 -- END

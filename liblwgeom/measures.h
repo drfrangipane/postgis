@@ -4,16 +4,14 @@
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
- * Copyright 2001-2006 Refractions Research Inc.
- * Copyright 2007-2008 Mark Cave-Ayland
- * Copyright 2008 Paul Ramsey <pramsey@cleverelephant.ca>
+ * Copyright 2010 Nicklas Avén
  *
  * This is free software; you can redistribute and/or modify it under
  * the terms of the GNU General Public Licence. See the COPYING file.
  *
  **********************************************************************/
 
-#include "liblwgeom.h"
+#include "liblwgeom_internal.h"
 
 
 /**
@@ -40,9 +38,9 @@ typedef struct
 /*
 Preprocessing functions
 */
-int lw_dist2d_comp(uchar *lw1, uchar *lw2, DISTPTS *dl);
+int lw_dist2d_comp(LWGEOM *lw1, LWGEOM *lw2, DISTPTS *dl);
 int lw_dist2d_distribute_bruteforce(LWGEOM *lwg1, LWGEOM *lwg2, DISTPTS *dl);
-int lw_dist2d_recursive(const LWCOLLECTION * lwg1,const LWCOLLECTION * lwg2, DISTPTS *dl);
+int lw_dist2d_recursive(const LWGEOM *lwg1, const LWGEOM *lwg2, DISTPTS *dl);
 int lw_dist2d_check_overlap(LWGEOM *lwg1,LWGEOM *lwg2);
 int lw_dist2d_distribute_fast(LWGEOM *lwg1, LWGEOM *lwg2, DISTPTS *dl);
 /*
@@ -66,7 +64,7 @@ New faster distance calculations
 int lw_dist2d_pre_seg_seg(POINTARRAY *l1, POINTARRAY *l2,LISTSTRUCT *list1, LISTSTRUCT *list2,double k, DISTPTS *dl);
 int lw_dist2d_selected_seg_seg(POINT2D *A, POINT2D *B, POINT2D *C, POINT2D *D, DISTPTS *dl);
 int struct_cmp_by_measure(const void *a, const void *b);
-int lw_dist2d_fast_ptarray_ptarray(POINTARRAY *l1,POINTARRAY *l2, DISTPTS *dl, BOX2DFLOAT4 *box1, BOX2DFLOAT4 *box2);
+int lw_dist2d_fast_ptarray_ptarray(POINTARRAY *l1,POINTARRAY *l2, DISTPTS *dl,  GBOX *box1, GBOX *box2);
 /*
 Functions in common for Brute force and new calculation
 */

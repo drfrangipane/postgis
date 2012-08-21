@@ -1,8 +1,8 @@
 /**********************************************************************
- * $Id: geography_inout.c 7247 2011-05-25 18:42:02Z pramsey $
+ * $Id: geography_inout.c 9614 2012-04-05 18:22:40Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
- * Copyright 2009 Paul Ramsey <pramsey@cleverelephant.ca>
+ * Copyright 2009-2011 Paul Ramsey <pramsey@cleverelephant.ca>
  *
  * This is free software; you can redistribute and/or modify it under
  * the terms of the GNU General Public Licence. See the COPYING file.
@@ -25,59 +25,38 @@
 #include "lib/stringinfo.h"  /* For binary input */
 #include "catalog/pg_type.h" /* for CSTRINGOID */
 
-#include "libgeom.h"         /* For standard geometry types. */
+#include "liblwgeom.h"         /* For standard geometry types. */
 #include "lwgeom_pg.h"       /* For debugging macros. */
 #include "geography.h"	     /* For utility functions. */
-#include "lwgeom_export.h"   /* For exports functions. */
+#include "lwgeom_export.h"   /* For export functions. */
+#include "lwgeom_transform.h"
 
 Datum geography_in(PG_FUNCTION_ARGS);
 Datum geography_out(PG_FUNCTION_ARGS);
-Datum geography_typmod_in(PG_FUNCTION_ARGS);
-Datum geography_typmod_out(PG_FUNCTION_ARGS);
-Datum geography_typmod_dims(PG_FUNCTION_ARGS);
-Datum geography_typmod_srid(PG_FUNCTION_ARGS);
-Datum geography_typmod_type(PG_FUNCTION_ARGS);
 
-Datum geography_enforce_typmod(PG_FUNCTION_ARGS);
 Datum geography_as_text(PG_FUNCTION_ARGS);
 Datum geography_from_text(PG_FUNCTION_ARGS);
 Datum geography_as_geojson(PG_FUNCTION_ARGS);
 Datum geography_as_gml(PG_FUNCTION_ARGS);
 Datum geography_as_kml(PG_FUNCTION_ARGS);
 Datum geography_as_svg(PG_FUNCTION_ARGS);
-Datum geography_as_binary(PG_FUNCTION_ARGS);
 Datum geography_from_binary(PG_FUNCTION_ARGS);
 Datum geography_from_geometry(PG_FUNCTION_ARGS);
 Datum geometry_from_geography(PG_FUNCTION_ARGS);
+Datum geography_send(PG_FUNCTION_ARGS);
+Datum geography_recv(PG_FUNCTION_ARGS);
 
 /* Datum geography_gist_selectivity(PG_FUNCTION_ARGS); TBD */
 /* Datum geography_gist_join_selectivity(PG_FUNCTION_ARGS); TBD */
-/* Datum geography_send(PG_FUNCTION_ARGS); TBD */
-/* Datum geography_recv(PG_FUNCTION_ARGS); TBD */
 
-
-/**
-* Utility method to call the libgeom serialization and then set the
-* PgSQL varsize header appropriately with the serialized size.
-*/
-GSERIALIZED* geography_serialize(LWGEOM *lwgeom)
-{
-	static int is_geodetic = 1;
-	size_t ret_size = 0;
-	GSERIALIZED *g = NULL;
-
-	g = gserialized_from_lwgeom(lwgeom, is_geodetic, &ret_size);
-	if ( ! g ) lwerror("Unable to serialize lwgeom.");
-	SET_VARSIZE(g, ret_size);
-	return g;
-}
+GSERIALIZED* gserialized_geography_from_lwgeom(LWGEOM *lwgeom, int32 geog_typmod);
 
 /**
 * The geography type only support POINT, LINESTRING, POLYGON, MULTI* variants
 * of same, and GEOMETRYCOLLECTION. If the input type is not one of those, shut
 * down the query.
 */
-void geography_valid_type(uchar type)
+void geography_valid_type(uint8_t type)
 {
 	if ( ! (
 	            type == POINTTYPE ||
@@ -91,129 +70,46 @@ void geography_valid_type(uchar type)
 	{
 		ereport(ERROR, (
 		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Geography type does not support %s", lwgeom_typename(type) )));
+		            errmsg("Geography type does not support %s", lwtype_name(type) )));
 
 	}
 }
 
-/**
-* Check the consistency of the metadata we want to enforce in the typmod:
-* srid, type and dimensionality. If things are inconsistent, shut down the query.
-*/
-void geography_valid_typmod(LWGEOM *lwgeom, int32 typmod)
+GSERIALIZED* gserialized_geography_from_lwgeom(LWGEOM *lwgeom, int32 geog_typmod)
 {
-	int32 lwgeom_srid;
-	int32 lwgeom_type;
-	int32 lwgeom_z;
-	int32 lwgeom_m;
-	int32 typmod_srid = TYPMOD_GET_SRID(typmod);
-	int32 typmod_type = TYPMOD_GET_TYPE(typmod);
-	int32 typmod_z = TYPMOD_GET_Z(typmod);
-	int32 typmod_m = TYPMOD_GET_M(typmod);
-
-	assert(lwgeom);
-
-	lwgeom_type = TYPE_GETTYPE(lwgeom->type);
-	lwgeom_srid = lwgeom->SRID;
-	lwgeom_z = TYPE_HASZ(lwgeom->type);
-	lwgeom_m = TYPE_HASM(lwgeom->type);
-
-	POSTGIS_DEBUG(2, "Entered function");
-
-	/* No typmod (-1) => no preferences */
-	if (typmod < 0) return;
-
-	POSTGIS_DEBUGF(3, "Got lwgeom(type = %d, srid = %d, hasz = %d, hasm = %d)", lwgeom_type, lwgeom_srid, lwgeom_z, lwgeom_m);
-	POSTGIS_DEBUGF(3, "Got typmod(type = %d, srid = %d, hasz = %d, hasm = %d)", typmod_type, typmod_srid, typmod_z, typmod_m);
-
-	/* Typmod has a preference for SRID and lwgeom has a non-default SRID? They had better match. */
-	if ( typmod_srid > 0 && typmod_srid != lwgeom_srid )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Geography SRID (%d) does not match column SRID (%d)", lwgeom_srid, typmod_srid) ));
-	}
-
-	/* Typmod has a preference for geometry type. */
-	if ( typmod_type > 0 &&
-	        /* GEOMETRYCOLLECTION column can hold any kind of collection */
-	        ((typmod_type == COLLECTIONTYPE && ! (lwgeom_type == COLLECTIONTYPE ||
-	                                              lwgeom_type == MULTIPOLYGONTYPE ||
-	                                              lwgeom_type == MULTIPOINTTYPE ||
-	                                              lwgeom_type == MULTILINETYPE )) ||
-	         /* Other types must be strictly equal. */
-	         (typmod_type != lwgeom_type)) )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Geometry type (%s) does not match column type (%s)", lwgeom_typename(lwgeom_type), lwgeom_typename(typmod_type)) ));
-	}
-
-	/* Mismatched Z dimensionality. */
-	if ( typmod_z && ! lwgeom_z )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Column has Z dimension but geometry does not" )));
-	}
-
-	/* Mismatched Z dimensionality (other way). */
-	if ( lwgeom_z && ! typmod_z )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Geometry has Z dimension but column does not" )));
-	}
-
-	/* Mismatched M dimensionality. */
-	if ( typmod_m && ! lwgeom_m )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Column has M dimension but geometry does not" )));
-	}
-
-	/* Mismatched M dimensionality (other way). */
-	if ( lwgeom_m && ! typmod_m )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Geometry has M dimension but column does not" )));
-	}
-}
-
-/*
-** geography_in(cstring) returns *GSERIALIZED
-*/
-PG_FUNCTION_INFO_V1(geography_in);
-Datum geography_in(PG_FUNCTION_ARGS)
-{
-	char *geog_str = PG_GETARG_CSTRING(0);
-	/* Datum geog_oid = PG_GETARG_OID(1); Not needed. */
-	int32 geog_typmod = PG_GETARG_INT32(2);
-	LWGEOM_PARSER_RESULT lwg_parser_result;
-	LWGEOM *lwgeom = NULL;
 	GSERIALIZED *g_ser = NULL;
-	int result = 0;
 
-	/* Handles both HEXEWKB and EWKT */
-	result = serialized_lwgeom_from_ewkt(&lwg_parser_result, geog_str, PARSER_CHECK_ALL);
-	if (result)
-		PG_PARSER_ERROR(lwg_parser_result);
+	/* Set geodetic flag */
+	lwgeom_set_geodetic(lwgeom, true);
 
-	lwgeom = lwgeom_deserialize(lwg_parser_result.serialized_lwgeom);
+	/* Check that this is a type we can handle */
+	geography_valid_type(lwgeom->type);
 
-	geography_valid_type(TYPE_GETTYPE(lwgeom->type));
+	/* Check that the coordinates are in range */
+	if ( lwgeom_check_geodetic(lwgeom) == LW_FALSE )
+	{
+		if ( (! lwgeom_nudge_geodetic(lwgeom)) || lwgeom_check_geodetic(lwgeom) == LW_FALSE )
+		{
+			ereport(ERROR, (
+			        errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+			        errmsg("Coordinate values are out of range [-180 -90, 180 90] for GEOGRAPHY type" )));
+		}
+	}
 
 	/* Force default SRID to the default */
-	if ( (int)lwgeom->SRID <= 0 )
-	{
-		lwgeom->SRID = SRID_DEFAULT;
-	}
+	if ( (int)lwgeom->srid <= 0 )
+		lwgeom->srid = SRID_DEFAULT;
 
+	/*
+	** Serialize our lwgeom and set the geodetic flag so subsequent
+	** functions do the right thing.
+	*/
+	g_ser = geography_serialize(lwgeom);
+
+	/* Check for typmod agreement */
 	if ( geog_typmod >= 0 )
 	{
-		geography_valid_typmod(lwgeom, geog_typmod);
+		postgis_valid_typmod(g_ser, geog_typmod);
 		POSTGIS_DEBUG(3, "typmod and geometry were consistent");
 	}
 	else
@@ -221,26 +117,60 @@ Datum geography_in(PG_FUNCTION_ARGS)
 		POSTGIS_DEBUG(3, "typmod was -1");
 	}
 
-	/*
-	** Serialize our lwgeom and set the geodetic flag so subsequent
-	** functions do the right thing.
-	*/
-	g_ser = geography_serialize(lwgeom);
-	FLAGS_SET_GEODETIC(g_ser->flags, 1);
+	return g_ser;
+}
 
-	/*
-	** Replace the unaligned lwgeom with a new aligned one based on GSERIALIZED.
-	*/
-	lwgeom_release(lwgeom);
-	lwgeom = lwgeom_from_gserialized(g_ser);
 
-	/* Check if the geography has valid coordinate range. */
-	if ( lwgeom_check_geodetic(lwgeom) == LW_FALSE )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Coordinate values are out of range [-180 -90, 180 90] for GEOGRAPHY type" )));
+/*
+** geography_in(cstring) returns *GSERIALIZED
+*/
+PG_FUNCTION_INFO_V1(geography_in);
+Datum geography_in(PG_FUNCTION_ARGS)
+{
+	char *str = PG_GETARG_CSTRING(0);
+	/* Datum geog_oid = PG_GETARG_OID(1); Not needed. */
+	int32 geog_typmod = -1;
+	LWGEOM_PARSER_RESULT lwg_parser_result;
+	LWGEOM *lwgeom = NULL;
+	GSERIALIZED *g_ser = NULL;
+
+	if ( (PG_NARGS()>2) && (!PG_ARGISNULL(2)) ) {
+		geog_typmod = PG_GETARG_INT32(2);
 	}
+
+	lwgeom_parser_result_init(&lwg_parser_result);
+
+	/* Empty string. */
+	if ( str[0] == '\0' )
+		ereport(ERROR,(errmsg("parse error - invalid geometry")));
+
+	/* WKB? Let's find out. */
+	if ( str[0] == '0' )
+	{
+		/* TODO: 20101206: No parser checks! This is inline with current 1.5 behavior, but needs discussion */
+		lwgeom = lwgeom_from_hexwkb(str, LW_PARSER_CHECK_NONE);
+		/* Error out if something went sideways */
+		if ( ! lwgeom ) 
+			ereport(ERROR,(errmsg("parse error - invalid geometry")));
+	}
+	/* WKT then. */
+	else
+	{
+		if ( lwgeom_parse_wkt(&lwg_parser_result, str, LW_PARSER_CHECK_ALL) == LW_FAILURE )
+			PG_PARSER_ERROR(lwg_parser_result);
+
+		lwgeom = lwg_parser_result.geom;
+	}
+
+	/* Error on any SRID != default */
+	srid_is_latlong(fcinfo, lwgeom->srid);
+	
+	/* Convert to gserialized */
+	g_ser = gserialized_geography_from_lwgeom(lwgeom, geog_typmod);
+
+	/* Clean up temporary object */
+	lwgeom_free(lwgeom);
+
 
 	PG_RETURN_POINTER(g_ser);
 }
@@ -251,243 +181,16 @@ Datum geography_in(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(geography_out);
 Datum geography_out(PG_FUNCTION_ARGS)
 {
-	LWGEOM_UNPARSER_RESULT lwg_unparser_result;
 	LWGEOM *lwgeom = NULL;
 	GSERIALIZED *g = NULL;
-	int result = 0;
+	char *hexwkb;
 
 	g = (GSERIALIZED*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
 	lwgeom = lwgeom_from_gserialized(g);
+	hexwkb = lwgeom_to_hexwkb(lwgeom, WKB_EXTENDED, 0);
+	lwgeom_free(lwgeom);
 
-	result = serialized_lwgeom_to_hexwkb(&lwg_unparser_result, lwgeom_serialize(lwgeom), PARSER_CHECK_ALL, -1);
-	if (result)
-		PG_UNPARSER_ERROR(lwg_unparser_result);
-
-	PG_RETURN_CSTRING(lwg_unparser_result.wkoutput);
-}
-
-/*
-** geography_enforce_typmod(*GSERIALIZED) returns *GSERIALIZED
-*/
-PG_FUNCTION_INFO_V1(geography_enforce_typmod);
-Datum geography_enforce_typmod(PG_FUNCTION_ARGS)
-{
-	GSERIALIZED *arg = (GSERIALIZED*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	LWGEOM *lwgeom = NULL;
-	int32 typmod = PG_GETARG_INT32(1);
-	/* We don't need to have different behavior based on explicitness. */
-	/* bool isExplicit = PG_GETARG_BOOL(2); */
-
-	lwgeom = lwgeom_from_gserialized(arg);
-
-	/* Check if geometry typmod is consistent with the supplied one. */
-	geography_valid_typmod(lwgeom, typmod);
-
-	PG_RETURN_POINTER(geography_serialize(lwgeom));
-}
-
-/*
-** geography_typmod_in(cstring[]) returns int32
-**
-** Modified from ArrayGetIntegerTypmods in PostgreSQL 8.3
-*/
-PG_FUNCTION_INFO_V1(geography_typmod_in);
-Datum geography_typmod_in(PG_FUNCTION_ARGS)
-{
-
-	ArrayType *arr = (ArrayType *) DatumGetPointer(PG_GETARG_DATUM(0));
-	uint32 typmod = 0;
-	Datum *elem_values;
-	int n = 0;
-	int	i = 0;
-
-	if (ARR_ELEMTYPE(arr) != CSTRINGOID)
-		ereport(ERROR,
-		        (errcode(ERRCODE_ARRAY_ELEMENT_ERROR),
-		         errmsg("typmod array must be type cstring[]")));
-
-	if (ARR_NDIM(arr) != 1)
-		ereport(ERROR,
-		        (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
-		         errmsg("typmod array must be one-dimensional")));
-
-	if (ARR_HASNULL(arr))
-		ereport(ERROR,
-		        (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-		         errmsg("typmod array must not contain nulls")));
-
-	deconstruct_array(arr,
-	                  CSTRINGOID, -2, false, 'c', /* hardwire cstring representation details */
-	                  &elem_values, NULL, &n);
-
-	/* Set the SRID to the default value first */
-	TYPMOD_SET_SRID(typmod, SRID_DEFAULT);
-
-	for (i = 0; i < n; i++)
-	{
-		if ( i == 1 ) /* SRID */
-		{
-			int srid = pg_atoi(DatumGetCString(elem_values[i]), sizeof(int32), '\0');
-			if ( srid > 0 )
-			{
-				POSTGIS_DEBUGF(3, "srid: %d", srid);
-				if ( srid > SRID_MAXIMUM )
-				{
-					ereport(ERROR,
-					        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					         errmsg("SRID value may not exceed %d",
-					                SRID_MAXIMUM)));
-				}
-				else
-				{
-					/* TODO: Check that the value provided is in fact a lonlat entry in spatial_ref_sys. */
-					/* For now, we only accept SRID_DEFAULT. */
-					if ( srid != SRID_DEFAULT )
-					{
-						ereport(ERROR,
-						        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						         errmsg("Currently, only %d is accepted as an SRID for GEOGRAPHY", SRID_DEFAULT)));
-					}
-					else
-					{
-						TYPMOD_SET_SRID(typmod, srid);
-					}
-				}
-			}
-			else
-			{
-			}
-		}
-		if ( i == 0 ) /* TYPE */
-		{
-			char *s = DatumGetCString(elem_values[i]);
-			int type = 0;
-			int z = 0;
-			int m = 0;
-
-			if ( geometry_type_from_string(s, &type, &z, &m) == G_FAILURE )
-			{
-				ereport(ERROR,
-				        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				         errmsg("Invalid geometry type modifier: %s", s)));
-			}
-			else
-			{
-				TYPMOD_SET_TYPE(typmod, type);
-				if ( z )
-					TYPMOD_SET_Z(typmod);
-				if ( m )
-					TYPMOD_SET_M(typmod);
-			}
-		}
-	}
-
-	pfree(elem_values);
-
-	PG_RETURN_INT32(typmod);
-
-}
-
-
-/*
-** geography_typmod_out(int) returns cstring
-*/
-PG_FUNCTION_INFO_V1(geography_typmod_out);
-Datum geography_typmod_out(PG_FUNCTION_ARGS)
-{
-	char *s = (char*)palloc(64);
-	char *str = s;
-	uint32 typmod = PG_GETARG_INT32(0);
-	uint32 srid = TYPMOD_GET_SRID(typmod);
-	uint32 type = TYPMOD_GET_TYPE(typmod);
-	uint32 hasz = TYPMOD_GET_Z(typmod);
-	uint32 hasm = TYPMOD_GET_M(typmod);
-
-	POSTGIS_DEBUGF(3, "Got typmod(srid = %d, type = %d, hasz = %d, hasm = %d)", srid, type, hasz, hasm);
-
-	/* No SRID or type or dimensionality? Then no typmod at all. Return empty string. */
-	if ( ! ( srid || type || hasz || hasz ) )
-	{
-		*str = '\0';
-		PG_RETURN_CSTRING(str);
-	}
-
-	/* Opening bracket. */
-	str += sprintf(str, "(");
-
-	/* Has type? */
-	if ( type ) 
-		str += sprintf(str, "%s", lwgeom_typename(type));
-  else if ( (!type) &&  ( srid || hasz || hasm ) )
-    str += sprintf(str, "Geometry");
-
-	/* Has Z? */
-	if ( hasz )
-		str += sprintf(str, "%s", "Z");
-
-	/* Has M? */
-	if ( hasm )
-		str += sprintf(str, "%s", "M");
-
-	/* Comma? */
-	if ( srid )
-		str += sprintf(str, ",");
-
-	/* Has SRID? */
-	if ( srid )
-		str += sprintf(str, "%d", srid);
-
-	/* Closing bracket. */
-	str += sprintf(str, ")");
-
-	PG_RETURN_CSTRING(s);
-
-}
-
-/*
-** geography_as_text(*GSERIALIZED) returns text
-*/
-PG_FUNCTION_INFO_V1(geography_as_text);
-Datum geography_as_text(PG_FUNCTION_ARGS)
-{
-	LWGEOM *lwgeom = NULL;
-	GSERIALIZED *g = NULL;
-	int result = 0;
-	char *semicolon_loc = NULL;
-	char *wkt = NULL;
-	uchar *lwgeom_serialized = NULL;
-	LWGEOM_UNPARSER_RESULT lwg_unparser_result;
-	size_t len = 0;
-
-	g = (GSERIALIZED*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-
-	/* Convert to lwgeom so we can run the old functions */
-	lwgeom = lwgeom_from_gserialized(g);
-	lwgeom_serialized = lwgeom_serialize(lwgeom);
-
-	/* Generate WKT */
-	result = serialized_lwgeom_to_ewkt(&lwg_unparser_result, lwgeom_serialized, PARSER_CHECK_ALL);
-	if (result)
-		PG_UNPARSER_ERROR(lwg_unparser_result);
-
-	/* Strip SRID=NNNN;' off the front of the EWKT. */
-	semicolon_loc = strchr(lwg_unparser_result.wkoutput,';');
-	if (semicolon_loc == NULL)
-		semicolon_loc = lwg_unparser_result.wkoutput;
-	else
-		semicolon_loc = semicolon_loc + 1;
-
-	len = strlen(semicolon_loc) + VARHDRSZ;
-	wkt = palloc(len);
-	SET_VARSIZE(wkt, len);
-
-	memcpy(VARDATA(wkt), semicolon_loc, len - VARHDRSZ);
-
-	pfree(lwg_unparser_result.wkoutput);
-	pfree(lwgeom_serialized);
-	lwgeom_release(lwgeom);
-
-	PG_RETURN_POINTER(wkt);
+	PG_RETURN_CSTRING(hexwkb);
 }
 
 
@@ -501,13 +204,17 @@ Datum geography_as_gml(PG_FUNCTION_ARGS)
 	GSERIALIZED *g = NULL;
 	char *gml;
 	text *result;
-	int len;
 	int version;
 	char *srs;
-	int SRID = SRID_DEFAULT;
-	int precision = MAX_DOUBLE_PRECISION;
+	int srid = SRID_DEFAULT;
+	int precision = OUT_MAX_DOUBLE_PRECISION;
 	int option=0;
-	bool is_deegree=false;
+	int lwopts = LW_GML_IS_DIMS;
+	static const char *default_prefix = "gml:";
+	char *prefixbuf;
+	const char* prefix = default_prefix;
+	text *prefix_text;
+
 
 	/* Get the version */
 	version = PG_GETARG_INT32(0);
@@ -528,8 +235,8 @@ Datum geography_as_gml(PG_FUNCTION_ARGS)
 	if (PG_NARGS() >2 && !PG_ARGISNULL(2))
 	{
 		precision = PG_GETARG_INT32(2);
-		if ( precision > MAX_DOUBLE_PRECISION )
-			precision = MAX_DOUBLE_PRECISION;
+		if ( precision > OUT_MAX_DOUBLE_PRECISION )
+			precision = OUT_MAX_DOUBLE_PRECISION;
 		else if ( precision < 0 ) precision = 0;
 	}
 
@@ -537,34 +244,57 @@ Datum geography_as_gml(PG_FUNCTION_ARGS)
 	if (PG_NARGS() >3 && !PG_ARGISNULL(3))
 		option = PG_GETARG_INT32(3);
 
-	/* Revert lat/lon only with long SRS */
-	if (option & 1) is_deegree = true;
 
-	if (option & 1) srs = getSRSbySRID(SRID, false);
-	else srs = getSRSbySRID(SRID, true);
+	/* retrieve prefix */
+	if (PG_NARGS() >4 && !PG_ARGISNULL(4))
+	{
+		prefix_text = PG_GETARG_TEXT_P(4);
+		if ( VARSIZE(prefix_text)-VARHDRSZ == 0 )
+		{
+			prefix = "";
+		}
+		else
+		{
+			/* +2 is one for the ':' and one for term null */
+			prefixbuf = palloc(VARSIZE(prefix_text)-VARHDRSZ+2);
+			memcpy(prefixbuf, VARDATA(prefix_text),
+			       VARSIZE(prefix_text)-VARHDRSZ);
+			/* add colon and null terminate */
+			prefixbuf[VARSIZE(prefix_text)-VARHDRSZ] = ':';
+			prefixbuf[VARSIZE(prefix_text)-VARHDRSZ+1] = '\0';
+			prefix = prefixbuf;
+		}
+	}
+
+	if (option & 1) srs = getSRSbySRID(srid, false);
+	else srs = getSRSbySRID(srid, true);
 	if (!srs)
 	{
 		elog(ERROR, "SRID %d unknown in spatial_ref_sys table", SRID_DEFAULT);
 		PG_RETURN_NULL();
 	}
 
+	/* Revert lat/lon only with long SRS */
+	if (option & 1) lwopts |= LW_GML_IS_DEGREE;
+	if (option & 2) lwopts &= ~LW_GML_IS_DIMS; 
+
 	if (version == 2)
-		gml = geometry_to_gml2(lwgeom_serialize(lwgeom), srs, precision);
+		gml = lwgeom_to_gml2(lwgeom, srs, precision, prefix);
 	else
-		gml = geometry_to_gml3(lwgeom_serialize(lwgeom), srs, precision, is_deegree);
+		gml = lwgeom_to_gml3(lwgeom, srs, precision, lwopts, prefix);
 
-	PG_FREE_IF_COPY(lwgeom, 1);
+    lwgeom_free(lwgeom);
+	PG_FREE_IF_COPY(g, 1);
 
-	len = strlen(gml) + VARHDRSZ;
+	/* Return null on null */
+	if ( ! gml ) 
+		PG_RETURN_NULL();
 
-	result = palloc(len);
-	SET_VARSIZE(result, len);
+	/* Turn string result into text for return */
+	result = cstring2text(gml);
+	lwfree(gml);
 
-	memcpy(VARDATA(result), gml, len-VARHDRSZ);
-
-	pfree(gml);
-
-	PG_RETURN_POINTER(result);
+	PG_RETURN_TEXT_P(result);
 }
 
 
@@ -578,9 +308,12 @@ Datum geography_as_kml(PG_FUNCTION_ARGS)
 	LWGEOM *lwgeom = NULL;
 	char *kml;
 	text *result;
-	int len;
 	int version;
-	int precision = MAX_DOUBLE_PRECISION;
+	int precision = OUT_MAX_DOUBLE_PRECISION;
+	static const char *default_prefix = "";
+	char *prefixbuf;
+	const char* prefix = default_prefix;
+	text *prefix_text;
 
 
 	/* Get the version */
@@ -602,25 +335,44 @@ Datum geography_as_kml(PG_FUNCTION_ARGS)
 	if (PG_NARGS() >2 && !PG_ARGISNULL(2))
 	{
 		precision = PG_GETARG_INT32(2);
-		if ( precision > MAX_DOUBLE_PRECISION )
-			precision = MAX_DOUBLE_PRECISION;
+		if ( precision > OUT_MAX_DOUBLE_PRECISION )
+			precision = OUT_MAX_DOUBLE_PRECISION;
 		else if ( precision < 0 ) precision = 0;
 	}
 
-	kml = geometry_to_kml2(lwgeom_serialize(lwgeom), precision);
+	/* retrieve prefix */
+	if (PG_NARGS() >3 && !PG_ARGISNULL(3))
+	{
+		prefix_text = PG_GETARG_TEXT_P(3);
+		if ( VARSIZE(prefix_text)-VARHDRSZ == 0 )
+		{
+			prefix = "";
+		}
+		else
+		{
+			/* +2 is one for the ':' and one for term null */
+			prefixbuf = palloc(VARSIZE(prefix_text)-VARHDRSZ+2);
+			memcpy(prefixbuf, VARDATA(prefix_text),
+			       VARSIZE(prefix_text)-VARHDRSZ);
+			/* add colon and null terminate */
+			prefixbuf[VARSIZE(prefix_text)-VARHDRSZ] = ':';
+			prefixbuf[VARSIZE(prefix_text)-VARHDRSZ+1] = '\0';
+			prefix = prefixbuf;
+		}
+	}
 
-	PG_FREE_IF_COPY(lwgeom, 1);
+	kml = lwgeom_to_kml2(lwgeom, precision, prefix);
 
-	len = strlen(kml) + VARHDRSZ;
+    lwgeom_free(lwgeom);
+	PG_FREE_IF_COPY(g, 1);
 
-	result = palloc(len);
-	SET_VARSIZE(result, len);
+	if ( ! kml )
+		PG_RETURN_NULL();
 
-	memcpy(VARDATA(result), kml, len-VARHDRSZ);
+	result = cstring2text(kml);
+	lwfree(kml);
 
-	pfree(kml);
-
-	PG_RETURN_POINTER(result);
+	PG_RETURN_TEXT_P(result);
 }
 
 
@@ -634,9 +386,8 @@ Datum geography_as_svg(PG_FUNCTION_ARGS)
 	LWGEOM *lwgeom = NULL;
 	char *svg;
 	text *result;
-	int len;
-	bool relative = false;
-	int precision=MAX_DOUBLE_PRECISION;
+	int relative = 0;
+	int precision=OUT_MAX_DOUBLE_PRECISION;
 
 	if ( PG_ARGISNULL(0) ) PG_RETURN_NULL();
 
@@ -647,27 +398,25 @@ Datum geography_as_svg(PG_FUNCTION_ARGS)
 
 	/* check for relative path notation */
 	if ( PG_NARGS() > 1 && ! PG_ARGISNULL(1) )
-		relative = PG_GETARG_INT32(1) ? true:false;
+		relative = PG_GETARG_INT32(1) ? 1:0;
 
 	if ( PG_NARGS() > 2 && ! PG_ARGISNULL(2) )
 	{
 		precision = PG_GETARG_INT32(2);
-		if ( precision > MAX_DOUBLE_PRECISION )
-			precision = MAX_DOUBLE_PRECISION;
+		if ( precision > OUT_MAX_DOUBLE_PRECISION )
+			precision = OUT_MAX_DOUBLE_PRECISION;
 		else if ( precision < 0 ) precision = 0;
 	}
 
-	svg = geometry_to_svg(lwgeom_serialize(lwgeom), relative, precision);
-	PG_FREE_IF_COPY(lwgeom, 0);
+	svg = lwgeom_to_svg(lwgeom, precision, relative);
+	
+    lwgeom_free(lwgeom);
+	PG_FREE_IF_COPY(g, 0);
 
-	len = strlen(svg) + VARHDRSZ;
-	result = palloc(len);
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), svg, len-VARHDRSZ);
+	result = cstring2text(svg);
+	lwfree(svg);
 
-	pfree(svg);
-
-	PG_RETURN_POINTER(result);
+	PG_RETURN_TEXT_P(result);
 }
 
 
@@ -681,11 +430,10 @@ Datum geography_as_geojson(PG_FUNCTION_ARGS)
 	GSERIALIZED *g = NULL;
 	char *geojson;
 	text *result;
-	int len;
 	int version;
 	int option = 0;
-	bool has_bbox = 0;
-	int precision = MAX_DOUBLE_PRECISION;
+	int has_bbox = 0;
+	int precision = OUT_MAX_DOUBLE_PRECISION;
 	char * srs = NULL;
 
 	/* Get the version */
@@ -707,8 +455,8 @@ Datum geography_as_geojson(PG_FUNCTION_ARGS)
 	if (PG_NARGS() >2 && !PG_ARGISNULL(2))
 	{
 		precision = PG_GETARG_INT32(2);
-		if ( precision > MAX_DOUBLE_PRECISION )
-			precision = MAX_DOUBLE_PRECISION;
+		if ( precision > OUT_MAX_DOUBLE_PRECISION )
+			precision = OUT_MAX_DOUBLE_PRECISION;
 		else if ( precision < 0 ) precision = 0;
 	}
 
@@ -729,25 +477,22 @@ Datum geography_as_geojson(PG_FUNCTION_ARGS)
 
 		if (!srs)
 		{
-			elog(ERROR, "SRID %d unknown in spatial_ref_sys table", SRID_DEFAULT);
+			elog(ERROR, "SRID SRID_DEFAULT unknown in spatial_ref_sys table");
 			PG_RETURN_NULL();
 		}
 	}
 
 	if (option & 1) has_bbox = 1;
 
-	geojson = geometry_to_geojson(lwgeom_serialize(lwgeom), srs, has_bbox, precision);
-	PG_FREE_IF_COPY(lwgeom, 1);
+	geojson = lwgeom_to_geojson(lwgeom, srs, precision, has_bbox);
+    lwgeom_free(lwgeom);
+	PG_FREE_IF_COPY(g, 1);
 	if (srs) pfree(srs);
 
-	len = strlen(geojson) + VARHDRSZ;
-	result = palloc(len);
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), geojson, len-VARHDRSZ);
+	result = cstring2text(geojson);
+	lwfree(geojson);
 
-	pfree(geojson);
-
-	PG_RETURN_POINTER(result);
+	PG_RETURN_TEXT_P(result);
 }
 
 
@@ -759,67 +504,25 @@ Datum geography_as_geojson(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(geography_from_text);
 Datum geography_from_text(PG_FUNCTION_ARGS)
 {
-	Datum r = 0;
+	LWGEOM_PARSER_RESULT lwg_parser_result;
+	GSERIALIZED *g_ser = NULL;
 	text *wkt_text = PG_GETARG_TEXT_P(0);
-	size_t size = VARSIZE(wkt_text) - VARHDRSZ;
+	
 	/* Extract the cstring from the varlena */
-	char *wkt = palloc(size+1);
-	memcpy(wkt, VARDATA(wkt_text), size);
-	/* Null terminate it */
-	wkt[size] = '\0';
-	/* Pass the cstring to the input parser, and magic occurs! */
-	r = DirectFunctionCall3(geography_in, PointerGetDatum(wkt), Int32GetDatum(0), Int32GetDatum(-1));
-	/* Clean up and return */
+	char *wkt = text2cstring(wkt_text);
+
+	/* Pass the cstring to the input parser, and magic occurs! */	
+	if ( lwgeom_parse_wkt(&lwg_parser_result, wkt, LW_PARSER_CHECK_ALL) == LW_FAILURE )
+		PG_PARSER_ERROR(lwg_parser_result);
+
+	/* Clean up string */
 	pfree(wkt);
-	PG_RETURN_DATUM(r);
-}
+	g_ser = gserialized_geography_from_lwgeom(lwg_parser_result.geom, -1);
 
-/*
-** geography_as_binary(*GSERIALIZED) returns bytea
-*/
-PG_FUNCTION_INFO_V1(geography_as_binary);
-Datum geography_as_binary(PG_FUNCTION_ARGS)
-{
-	LWGEOM_UNPARSER_RESULT lwg_unparser_result;
-	LWGEOM *lwgeom = NULL;
-	uchar *lwgeom_serialized = NULL;
-	size_t lwgeom_serialized_size = 0;
-	uchar *lwgeom_serialized_2d = NULL;
-	int result = 0;
-	char *wkb = NULL;
-	size_t wkb_size = 0;
-	GSERIALIZED *g = (GSERIALIZED*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	/* Clean up temporary object */
+	lwgeom_free(lwg_parser_result.geom);
 
-	/* Drop SRID so that WKB does not contain SRID. */
-	gserialized_set_srid(g, 0);
-
-	/* Convert to lwgeom so we can run the old functions */
-	lwgeom = lwgeom_from_gserialized(g);
-	lwgeom_serialized_size = lwgeom_serialize_size(lwgeom);
-	lwgeom_serialized = lwgeom_serialize(lwgeom);
-
-	/* Force to 2D */
-	lwgeom_serialized_2d = lwalloc(lwgeom_serialized_size);
-	lwgeom_force2d_recursive(lwgeom_serialized, lwgeom_serialized_2d, &lwgeom_serialized_size);
-
-	/* Create WKB */
-	result = serialized_lwgeom_to_ewkb(&lwg_unparser_result, lwgeom_serialized_2d, PARSER_CHECK_ALL, NDR);
-	if (result)
-		PG_UNPARSER_ERROR(lwg_unparser_result);
-
-	/* Copy to varlena pointer */
-	wkb_size = lwg_unparser_result.size + VARHDRSZ;
-	wkb = palloc(wkb_size);
-	SET_VARSIZE(wkb, wkb_size);
-	memcpy(VARDATA(wkb), lwg_unparser_result.wkoutput, lwg_unparser_result.size);
-
-	/* Clean up */
-	pfree(lwg_unparser_result.wkoutput);
-	lwgeom_release(lwgeom);
-	lwfree(lwgeom_serialized);
-	lwfree(lwgeom_serialized_2d);
-
-	PG_RETURN_POINTER(wkb);
+	PG_RETURN_POINTER(g_ser);
 }
 
 /*
@@ -828,128 +531,68 @@ Datum geography_as_binary(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(geography_from_binary);
 Datum geography_from_binary(PG_FUNCTION_ARGS)
 {
-	char *wkb_cstring = NULL;
-	char *wkb_hex = NULL;
 	char *wkb_bytea = (char*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	char *hexarg = palloc(4 + VARHDRSZ);
-	size_t wkb_hex_size;
-
-	/* Create our second argument to binary_encode */
-	SET_VARSIZE(hexarg, 4 + VARHDRSZ);
-	memcpy(VARDATA(hexarg), "hex", 4);
-
-	/* Convert the bytea into a hex representation cstring */
-	wkb_hex = DatumGetPointer(DirectFunctionCall2(binary_encode, PointerGetDatum(wkb_bytea), PointerGetDatum(hexarg)));
-	wkb_hex_size = VARSIZE(wkb_hex) - VARHDRSZ;
-	wkb_cstring = palloc(wkb_hex_size + 1);
-	memcpy(wkb_cstring, VARDATA(wkb_hex), wkb_hex_size);
-	wkb_cstring[wkb_hex_size] = '\0'; /* Null terminate the cstring */
-	pfree(hexarg);
-
-	/* Pass the cstring to the input parser, and magic occurs! */
-	PG_RETURN_DATUM(DirectFunctionCall3(geography_in, PointerGetDatum(wkb_cstring), Int32GetDatum(0), Int32GetDatum(-1)));
+	GSERIALIZED *gser = NULL;
+	size_t wkb_size = VARSIZE(wkb_bytea);
+	uint8_t *wkb = (uint8_t*)VARDATA(wkb_bytea);
+	LWGEOM *lwgeom = lwgeom_from_wkb(wkb, wkb_size, LW_PARSER_CHECK_NONE);
+	
+	if ( ! lwgeom )
+		lwerror("Unable to parse WKB");
+ 		
+	gser = gserialized_geography_from_lwgeom(lwgeom, 0);
+	lwgeom_free(lwgeom);
+	PG_RETURN_POINTER(gser);
 }
 
-PG_FUNCTION_INFO_V1(geography_typmod_dims);
-Datum geography_typmod_dims(PG_FUNCTION_ARGS)
-{
-	int32 typmod = PG_GETARG_INT32(0);
-	int32 dims = 2;
-	if ( typmod < 0 )
-		PG_RETURN_INT32(dims);
-	if ( TYPMOD_GET_Z(typmod) )
-		dims++;
-	if ( TYPMOD_GET_M(typmod) )
-		dims++;
-	PG_RETURN_INT32(dims);
-}
-
-PG_FUNCTION_INFO_V1(geography_typmod_srid);
-Datum geography_typmod_srid(PG_FUNCTION_ARGS)
-{
-	int32 typmod = PG_GETARG_INT32(0);
-	if ( typmod < 0 )
-		PG_RETURN_INT32(0);
-	PG_RETURN_INT32(TYPMOD_GET_SRID(typmod));
-}
-
-PG_FUNCTION_INFO_V1(geography_typmod_type);
-Datum geography_typmod_type(PG_FUNCTION_ARGS)
-{
-	int32 typmod = PG_GETARG_INT32(0);
-	int32 type = TYPMOD_GET_TYPE(typmod);
-	char *s = (char*)palloc(64);
-	char *str = s;
-	int slen = 0;
-
-	/* Has type? */
-	if ( typmod < 0 || type == 0 )
-		str += sprintf(str, "Geometry");
-	else
-		str += sprintf(str, "%s", lwgeom_typename(type));
-
-	/* Has Z? */
-	if ( typmod >= 0 && TYPMOD_GET_Z(typmod) )
-		str += sprintf(str, "%s", "Z");
-
-	/* Has M? */
-	if ( typmod >= 0 && TYPMOD_GET_M(typmod) )
-		str += sprintf(str, "%s", "M");
-
-	slen = strlen(s) + 1;
-	str = palloc(slen + VARHDRSZ);
-	SET_VARSIZE(str, slen + VARHDRSZ);
-	memcpy(VARDATA(str), s, slen);
-	pfree(s);
-	PG_RETURN_POINTER(str);
-}
 
 PG_FUNCTION_INFO_V1(geography_from_geometry);
 Datum geography_from_geometry(PG_FUNCTION_ARGS)
 {
+	GSERIALIZED *geom = (GSERIALIZED*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
 	LWGEOM *lwgeom = NULL;
 	GSERIALIZED *g_ser = NULL;
-	uchar *lwgeom_serialized = (uchar*)VARDATA(PG_DETOAST_DATUM(PG_GETARG_DATUM(0)));
 
-	geography_valid_type(TYPE_GETTYPE(lwgeom_serialized[0]));
+	geography_valid_type(gserialized_get_type(geom));
 
-	lwgeom = lwgeom_deserialize(lwgeom_serialized);
+	lwgeom = lwgeom_from_gserialized(geom);
 
 	/* Force default SRID */
-	if ( (int)lwgeom->SRID <= 0 )
+	if ( (int)lwgeom->srid <= 0 )
 	{
-		lwgeom->SRID = SRID_DEFAULT;
+		lwgeom->srid = SRID_DEFAULT;
 	}
 
 	/* Error on any SRID != default */
-	if ( lwgeom->SRID != SRID_DEFAULT )
+	srid_is_latlong(fcinfo, lwgeom->srid);
+
+	/* Check if the geography has valid coordinate range. */
+	if ( lwgeom_check_geodetic(lwgeom) == LW_FALSE )
 	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Only SRID %d is currently supported in geography.", SRID_DEFAULT )));
+		if ( (! lwgeom_nudge_geodetic(lwgeom)) || lwgeom_check_geodetic(lwgeom) == LW_FALSE )
+		{
+			ereport(ERROR, (
+			        errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+			        errmsg("Coordinate values are out of range [-180 -90, 180 90] for GEOGRAPHY type" )));
+		}
 	}
 
 	/*
 	** Serialize our lwgeom and set the geodetic flag so subsequent
 	** functions do the right thing.
 	*/
+	lwgeom_set_geodetic(lwgeom, true);
+	/* Recalculate the boxes after re-setting the geodetic bit */
+	lwgeom_drop_bbox(lwgeom);
+	lwgeom_add_bbox(lwgeom);
 	g_ser = geography_serialize(lwgeom);
-	FLAGS_SET_GEODETIC(g_ser->flags, 1);
 
 	/*
 	** Replace the unaligned lwgeom with a new aligned one based on GSERIALIZED.
 	*/
-	lwgeom_release(lwgeom);
-	lwgeom = lwgeom_from_gserialized(g_ser);
+	lwgeom_free(lwgeom);
 
-	/* Check if the geography has valid coordinate range. */
-	if ( lwgeom_check_geodetic(lwgeom) == LW_FALSE )
-	{
-		ereport(ERROR, (
-		            errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		            errmsg("Coordinate values are out of range [-180 -90, 180 90] for GEOGRAPHY type" )));
-	}
-
+	PG_FREE_IF_COPY(geom, 0);
 	PG_RETURN_POINTER(g_ser);
 
 }
@@ -958,24 +601,74 @@ PG_FUNCTION_INFO_V1(geometry_from_geography);
 Datum geometry_from_geography(PG_FUNCTION_ARGS)
 {
 	LWGEOM *lwgeom = NULL;
-	PG_LWGEOM *ret = NULL;
+	GSERIALIZED *ret = NULL;
 	GSERIALIZED *g_ser = (GSERIALIZED*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
 
 	lwgeom = lwgeom_from_gserialized(g_ser);
 
+	/* Recalculate the boxes after re-setting the geodetic bit */
+	lwgeom_set_geodetic(lwgeom, false);	
+	lwgeom_drop_bbox(lwgeom);
+	lwgeom_add_bbox(lwgeom);
+
 	/* We want "geometry" to think all our "geography" has an SRID, and the
 	   implied SRID is the default, so we fill that in if our SRID is actually unknown. */
-	if ( (int)lwgeom->SRID <= 0 )
-		lwgeom->SRID = SRID_DEFAULT;
+	if ( (int)lwgeom->srid <= 0 )
+		lwgeom->srid = SRID_DEFAULT;
 
-	ret = pglwgeom_serialize(lwgeom);
-	lwgeom_release(lwgeom);
-
-	if ( is_worth_caching_pglwgeom_bbox(ret) )
-	{
-		ret = (PG_LWGEOM *)DatumGetPointer(DirectFunctionCall1(LWGEOM_addBBOX, PointerGetDatum(ret)));
-	}
+	ret = geometry_serialize(lwgeom);
+	lwgeom_free(lwgeom);
 
 	PG_RETURN_POINTER(ret);
 }
 
+PG_FUNCTION_INFO_V1(geography_recv);
+Datum geography_recv(PG_FUNCTION_ARGS)
+{
+	StringInfo buf = (StringInfo) PG_GETARG_POINTER(0);
+	int32 geog_typmod = -1;
+	LWGEOM *lwgeom = NULL;
+	GSERIALIZED *g_ser = NULL;
+
+	if ( (PG_NARGS()>2) && (!PG_ARGISNULL(2)) ) {
+		geog_typmod = PG_GETARG_INT32(2);
+	}
+
+	lwgeom = lwgeom_from_wkb((uint8_t*)buf->data, buf->len, LW_PARSER_CHECK_ALL);
+
+	/* Error on any SRID != default */
+	srid_is_latlong(fcinfo, lwgeom->srid);
+
+	g_ser = gserialized_geography_from_lwgeom(lwgeom, geog_typmod);
+
+	/* Clean up temporary object */
+	lwgeom_free(lwgeom);
+
+	/* Set cursor to the end of buffer (so the backend is happy) */
+	buf->cursor = buf->len;
+
+	PG_RETURN_POINTER(g_ser);
+}
+
+
+PG_FUNCTION_INFO_V1(geography_send);
+Datum geography_send(PG_FUNCTION_ARGS)
+{
+	LWGEOM *lwgeom = NULL;
+	GSERIALIZED *g = NULL;
+	size_t size_result;
+	uint8_t *wkb;
+	bytea *result;
+
+	g = (GSERIALIZED*)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	lwgeom = lwgeom_from_gserialized(g);
+	wkb = lwgeom_to_wkb(lwgeom, WKB_EXTENDED, &size_result);
+	lwgeom_free(lwgeom);
+
+	result = palloc(size_result + VARHDRSZ);
+	SET_VARSIZE(result, size_result + VARHDRSZ);
+	memcpy(VARDATA(result), wkb, size_result);
+	pfree(wkb);
+
+	PG_RETURN_POINTER(result);
+}

@@ -25,6 +25,24 @@ dnl
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_CXX
+AC_PATH_PROG([ANT], [ant], [])
+AC_SUBST([ANT])
+
+dnl
+dnl SQL Preprocessor
+dnl
+AC_PATH_PROG([CPPBIN], [cpp], [])
+if test "x$CPPBIN" != "x"; then
+  SQLPP="${CPPBIN} -traditional-cpp -P"
+else
+  AC_PATH_PROG([GPP], [gpp_], [])
+  if test "x$GPP" != "x"; then
+    SQLPP="${GPP} -C -s \'" dnl Use better string support
+  else
+    SQLPP="${CPP} -traditional-cpp"
+  fi
+fi
+AC_SUBST([SQLPP])
 
 dnl
 dnl Define PIC flags in PICFLAGS (note: this variable is set as part of libtool initialisation above)
@@ -82,6 +100,18 @@ dnl Search for OS-specific headers
 dnl
 AC_CHECK_HEADER([ieeefp.h], [HAVE_IEEEFP_H=1], [HAVE_IEEEFP_H=0])
 AC_DEFINE_UNQUOTED([HAVE_IEEEFP_H], [$HAVE_IEEEFP_H], [ieeefp.h header])
+AC_CHECK_HEADER([termios.h], [HAVE_TERMIOS_H=1], [HAVE_TERMIOS_H=0])
+AC_DEFINE_UNQUOTED([HAVE_TERMIOS_H], [$HAVE_TERMIOS_H], [termios.h header])
+
+
+dnl
+dnl Check for platform-specific functions
+dnl
+AC_CHECK_FUNC(vasprintf, [HAVE_VASPRINTF=1], [HAVE_VASPRINTF=0])
+AC_DEFINE([HAVE_VASPRINTF])
+AC_CHECK_FUNC(asprintf, [HAVE_ASPRINTF=1], [HAVE_ASPRINTF=0])
+AC_DEFINE([HAVE_ASPRINTF])
+AC_FUNC_FSEEKO()
 
 dnl 
 dnl MingW requires use of pwd -W to give proper Windows (not MingW) paths 
@@ -89,15 +119,19 @@ dnl for in-place regression tests
 dnl 
 case $host_os in
          *mingw*)
-                 PWDREGRESS="pwd -W"
+                 MINGWBUILD=1
                  ;;
          *)
-                 PWDREGRESS="pwd"
+                 MINGWBUILD=0
                  ;;
 esac
-AC_DEFINE_UNQUOTED([PWDREGRESS])
-AC_SUBST([PWDREGRESS])
+AC_SUBST([MINGWBUILD])
 
+AC_PATH_PROG([PERL], [perl], [])
+if test "x$PERL" = "x"; then
+        AC_MSG_ERROR([Perl was not found. Building PostGIS requires Perl.])
+fi
+AC_SUBST([PERL])
 
 dnl ===========================================================================
 dnl Find components needed to build documentation
@@ -114,6 +148,11 @@ fi
 AC_PATH_PROG([XSLTPROC], [xsltproc], [])
 if test "x$XSLTPROC" = "x"; then
 	AC_MSG_WARN([xsltproc is not installed so documentation cannot be built])
+fi
+
+AC_PATH_PROG([XMLLINT], [xmllint], [])
+if test "x$XMLLINT" = "x"; then
+	AC_MSG_WARN([xmllint is not installed so documentation cannot be checked])
 fi
 
 AC_PATH_PROG([DBLATEX], [dblatex], [])
@@ -182,6 +221,23 @@ fi
 
 AC_SUBST([XSLBASE])
 
+dnl
+dnl Let's see if we can find mathml2.dtd
+dnl
+
+MATHML2_DTD="http://www.w3.org/Math/DTD/mathml2/mathml2.dtd"
+dnl TODO: get more paths to add here...
+SEARCHPATH="
+		/usr/share/xml/schema/w3c/mathml/dtd
+		"
+for p in ${SEARCHPATH}; do
+	if test -r "${p}"/mathml2.dtd; then
+		MATHML2_DTD="${p}/mathml2.dtd"
+		break
+	fi
+done
+
+AC_SUBST([MATHML2_DTD])
 
 dnl ===========================================================================
 dnl Detect CUnit if it is installed (used for unit testing)
@@ -319,6 +375,10 @@ PGSQL_MINOR_VERSION=`$PGCONFIG --version | sed 's/[[A-Za-z ]]*//' | cut -d. -f2 
 PGSQL_FULL_VERSION=`$PGCONFIG --version`
 POSTGIS_PGSQL_VERSION="$PGSQL_MAJOR_VERSION$PGSQL_MINOR_VERSION"
 
+PGSQL_PKGLIBDIR=`$PGCONFIG --pkglibdir`
+PGSQL_LIBDIR=`$PGCONFIG --libdir`
+PGSQL_SHAREDIR=`$PGCONFIG --sharedir`
+
 AC_MSG_RESULT([checking PostgreSQL version... $PGSQL_FULL_VERSION])
 dnl Ensure that we are using PostgreSQL >= 8.3
 if test ! "$PGSQL_MAJOR_VERSION" -ge 8; then
@@ -349,12 +409,28 @@ PGSQL_FE_CPPFLAGS=-I`$PGCONFIG --includedir`
 AC_SUBST([PGSQL_FE_LDFLAGS])
 AC_SUBST([PGSQL_FE_CPPFLAGS])
 
+dnl Extract the include flags for the backend (libpgcommon)
+PGSRV_INC=`$PGCONFIG --includedir-server`
+PGSQL_BE_CPPFLAGS="-I${PGSRV_INC}"
+dnl Add $PGSRV_INC/port/win32 to MinGW build to pick up netdb.h
+case $host in
+	*mingw32*)
+		PGSQL_BE_CPPFLAGS="${PGSQL_BE_CPPFLAGS} -I${PGSRV_INC}/port/win32"
+		;;
+esac
+
+AC_SUBST([PGSQL_BE_CPPFLAGS])
+
 dnl Extract the documentation and man page directories
 PGSQL_DOCDIR=`$PGCONFIG --docdir`
 PGSQL_MANDIR=`$PGCONFIG --mandir`
 
 AC_SUBST([PGSQL_DOCDIR])
 AC_SUBST([PGSQL_MANDIR])
+
+dnl Extract the locale directory
+PGSQL_LOCALEDIR=`$PGCONFIG --localedir`
+AC_DEFINE_UNQUOTED([PGSQL_LOCALEDIR], ["$PGSQL_LOCALEDIR"], [Location of PostgreSQL locale directory])
 
 dnl Extract the executable directory
 PGSQL_BINDIR=`$PGCONFIG --bindir`
@@ -384,6 +460,21 @@ LIBS="$LIBS_SAVE"
 AC_DEFINE_UNQUOTED([POSTGIS_PGSQL_VERSION], [$POSTGIS_PGSQL_VERSION], [PostgreSQL server version])	
 AC_SUBST([POSTGIS_PGSQL_VERSION])
 
+
+dnl ===========================================================================
+dnl Explain our prefix policy if necessary.
+dnl ===========================================================================
+
+if test "$prefix" != "NONE"; then
+  AC_MSG_RESULT([------------------------------------------------------------------------])
+  AC_MSG_RESULT([  WARNING: You have set the --prefix to '$prefix'. But we mostly    ])
+  AC_MSG_RESULT([  ignore the --prefix. For your info, using the values determined from ])
+  AC_MSG_RESULT([  $PGCONFIG we will be installing:   ])
+  AC_MSG_RESULT([    * postgis shared library in $PGSQL_LIBDIR ])
+  AC_MSG_RESULT([    * postgis SQL files in $PGSQL_SHAREDIR/contrib/postgis-$POSTGIS_MAJOR_VERSION.$POSTGIS_MINOR_VERSION ])
+  AC_MSG_RESULT([    * postgis executables in $PGSQL_BINDIR ])
+  AC_MSG_RESULT([------------------------------------------------------------------------])
+fi
 
 dnl ===========================================================================
 dnl Detect libxml2 if it is installed
@@ -428,11 +519,13 @@ CPPFLAGS_SAVE="$CPPFLAGS"
 CPPFLAGS="$XML2_CPPFLAGS"
 AC_CHECK_HEADERS([libxml/tree.h libxml/parser.h libxml/xpath.h libxml/xpathInternals.h],
 		 [], [AC_MSG_ERROR([could not find headers include related to libxml2])])
+CPPFLAGS="$CPPFLAGS_SAVE"
 
 dnl Ensure we can link against libxml2
 LIBS_SAVE="$LIBS"
 LIBS="$XML2_LDFLAGS"
 AC_CHECK_LIB([xml2], [xmlInitParser], [], [AC_MSG_ERROR([could not find libxml2])], [])
+LIBS="$LIBS_SAVE"
 
 AC_DEFINE_UNQUOTED([POSTGIS_LIBXML2_VERSION], ["$POSTGIS_LIBXML2_VERSION"], [PostGIS libxml2 version])
 AC_SUBST([POSTGIS_LIBXML2_VERSION])
@@ -475,6 +568,9 @@ dnl This is to guard against user error...
 GEOS_MAJOR_VERSION=`$GEOSCONFIG --version | cut -d. -f1 | sed 's/[[^0-9]]//g'`
 GEOS_MINOR_VERSION=`$GEOSCONFIG --version | cut -d. -f2 | sed 's/[[^0-9]]//g'`
 GEOS_PATCH_VERSION=`$GEOSCONFIG --version | cut -d. -f3 | sed 's/[[^0-9]]//g'`
+if test "x$GEOS_PATCH_VERSION" = "x"; then 
+	GEOS_PATCH_VERSION="0"; 
+fi
 GEOS_FULL_VERSION=`$GEOSCONFIG --version`
 POSTGIS_GEOS_VERSION="$GEOS_MAJOR_VERSION$GEOS_MINOR_VERSION"
 GEOS_NUMERIC_VERSION="$GEOS_MAJOR_VERSION$GEOS_MINOR_VERSION$GEOS_PATCH_VERSION"
@@ -488,6 +584,8 @@ fi
 dnl Extract the linker and include flags 
 GEOS_LDFLAGS=`$GEOSCONFIG --ldflags`
 GEOS_CPPFLAGS=-I`$GEOSCONFIG --includes`
+AC_SUBST([GEOS_LDFLAGS])
+AC_SUBST([GEOS_CPPFLAGS])
 
 dnl Ensure that we can parse geos_c.h
 CPPFLAGS_SAVE="$CPPFLAGS"
@@ -509,6 +607,43 @@ AC_SUBST([POSTGIS_GEOS_VERSION])
 
 
 dnl ===========================================================================
+dnl Detect gettext
+dnl ===========================================================================
+
+GETTEXT_CFLAGS=""
+GETTEXT_LDFLAGS=""
+
+AC_ARG_WITH([gettext], 
+	[AS_HELP_STRING([--with-gettext=PATH], [specify a path to non-default gettext installation])], 
+	[GETTEXT_PATH="$withval"], [GETTEXT_PATH="yes"])
+
+LDFLAGS_SAVE="$LDFLAGS"
+CFLAGS_SAVE="$CFLAGS"
+
+if test "x$GETTEXT_PATH" != "xno"; then
+	dnl If user has specified a custom gettext installation path, use it.
+	if test "x$GETTEXT_PATH" != "xyes"; then
+		AC_MSG_RESULT([checking user-specified gettext location: $GETTEXT_PATH])
+		GETTEXT_CFLAGS="-I$GETTEXT_PATH/include"
+		GETTEXT_LDFLAGS="-L$GETTEXT_PATH/lib"
+		LDFLAGS="$GETTEXT_LDFLAGS $LDFLAGS"
+		CFLAGS="$GETTEXT_CFLAGS $CFLAGS"
+	fi
+
+	AM_GNU_GETTEXT([external], [], [])
+
+	if test "x$LIBINTL" = "x"; then
+		USE_NLS=no
+	fi
+fi
+
+AC_SUBST([GETTEXT_CFLAGS])
+AC_SUBST([GETTEXT_LDFLAGS])
+
+LDFLAGS="$LDFLAGS_SAVE"
+CFLAGS="$CFLAGS_SAVE"
+
+dnl ===========================================================================
 dnl Detect the version of PROJ.4 installed
 dnl ===========================================================================
 
@@ -519,7 +654,7 @@ AC_ARG_WITH([projdir],
 if test ! "x$PROJDIR" = "x"; then
 	dnl Make sure that the directory exists 
 	if test "x$PROJDIR" = "xyes"; then
-		AC_MSG_ERROR([you must specifiy a parameter to --with-projdir, e.g. --with-projdir=/path/to])
+		AC_MSG_ERROR([you must specify a parameter to --with-projdir, e.g. --with-projdir=/path/to])
 	else
 		if test -d "$PROJDIR"; then
 			AC_MSG_RESULT([Using user-specified proj directory: $PROJDIR])
@@ -545,6 +680,9 @@ AC_DEFINE_UNQUOTED([POSTGIS_PROJ_VERSION], [$POSTGIS_PROJ_VERSION], [PROJ librar
 AC_SUBST([POSTGIS_PROJ_VERSION])
 CPPFLAGS="$CPPFLAGS_SAVE"
 
+AC_SUBST([PROJ_CPPFLAGS])
+AC_SUBST([PROJ_LDFLAGS])
+
 dnl Ensure that we are using PROJ >= 4.5.0 (requires pj_set_searchpath) 
 if test ! "$POSTGIS_PROJ_VERSION" -ge 45; then
 	AC_MSG_ERROR([PostGIS requires PROJ >= 4.5.0])
@@ -558,6 +696,62 @@ AC_CHECK_LIB([proj], [pj_get_release],
 	[AC_MSG_ERROR([could not find libproj - you may need to specify the directory of a PROJ.4 installation using --with-projdir])],
 	[])
 LIBS="$LIBS_SAVE"
+
+dnl ===========================================================================
+dnl Detect if json-c installed
+dnl ===========================================================================
+
+HAVE_JSON=no
+AC_SUBST([HAVE_JSON])
+
+AC_ARG_WITH([jsondir],
+	[AS_HELP_STRING([--with-jsondir=PATH], [specify the json-c installation directory])],
+	[JSONDIR="$withval"], [JSONDIR=])
+
+if test ! "x$JSONDIR" = "x"; then
+	dnl Make sure that the directory exists
+	if test "x$JSONDIR" = "xyes"; then
+		AC_MSG_ERROR([you must specify a parameter to --with-jsondir, e.g. --with-jsondir=/path/to])
+	else
+		dnl We need (libjson.so OR libjson.a OR libjson.dll) AND json/json.h
+		if test ! -e "${JSONDIR}/include/json/json.h" -o \
+		        ! \( -e "${JSONDIR}/lib/libjson.so" -o \
+		            -e "${JSONDIR}/lib/libjson.dll" -o \
+		            -e "${JSONDIR}/lib/libjson.dylib" -o \
+		            -e "${JSONDIR}/bin/libjson.dll" -o \
+		            -e "${JSONDIR}/lib/libjson.a" \) 
+		then
+			AC_MSG_ERROR([Cannot find json dev files in "$JSONDIR"])
+		fi
+		AC_MSG_RESULT([Using user-specified json-c directory: $JSONDIR])
+
+		dnl Add the include directory to JSON_CPPFLAGS
+		JSON_CPPFLAGS="-I$JSONDIR/include"
+		JSON_LDFLAGS="-L$JSONDIR/lib -ljson"
+	fi
+fi
+
+dnl Check that we can find the json/json.h header file
+CPPFLAGS_SAVE="$CPPFLAGS"
+CPPFLAGS="$JSON_CPPFLAGS"
+AC_CHECK_HEADER([json/json.h], [HAVE_JSON=yes], [])	
+CPPFLAGS="$CPPFLAGS_SAVE"
+
+dnl Ensure we can link against libjson
+LIBS_SAVE="$LIBS"
+LIBS="$JSON_LDFLAGS"
+AC_CHECK_LIB([json], [json_object_get], [HAVE_JSON=yes], [], [])
+LIBS="$LIBS_SAVE"
+
+if test "$HAVE_JSON" = "yes"; then
+	AC_DEFINE([HAVE_LIBJSON], 1, [Define to 1 if libjson is present])
+    if test "x$JSON_LDFLAGS" = "x"; then
+        JSON_LDFLAGS="-ljson"
+    fi
+fi
+
+AC_SUBST([JSON_CPPFLAGS])
+AC_SUBST([JSON_LDFLAGS])
 
 dnl ===========================================================================
 dnl Detect GTK+2.0 for GUI
@@ -593,7 +787,6 @@ AC_SUBST([IGE_MAC_CFLAGS])
 AC_SUBST([IGE_MAC_LIBS])
 
 
-
 dnl ===========================================================================
 dnl Allow the user to enable debugging with --enable-debug
 dnl
@@ -625,8 +818,7 @@ fi
 
 POSTGIS_LIB_VERSION="$POSTGIS_MAJOR_VERSION.$POSTGIS_MINOR_VERSION.$POSTGIS_MICRO_VERSION"
 POSTGIS_BUILD_DATE=`date -u "+%Y-%m-%d %H:%M:%S"`
-POSTGIS_SCRIPTS_SVNREV=`perl utils/read_scripts_version.pl`
-POSTGIS_SCRIPTS_VERSION="$POSTGIS_MAJOR_VERSION.$POSTGIS_MINOR_VERSION r$POSTGIS_SCRIPTS_SVNREV"
+POSTGIS_SCRIPTS_VERSION="$POSTGIS_LIB_VERSION"
 
 AC_DEFINE_UNQUOTED([POSTGIS_VERSION], ["$POSTGIS_VERSION"], [PostGIS version])
 AC_DEFINE_UNQUOTED([POSTGIS_LIB_VERSION], ["$POSTGIS_LIB_VERSION"], [PostGIS library version])
@@ -650,16 +842,277 @@ dnl Always enable use of ANALYZE statistics by default
 AC_DEFINE_UNQUOTED([POSTGIS_USE_STATS], [1], [Enable use of ANALYZE statistics])
 
 
-CPPFLAGS="$PGSQL_CPPFLAGS $GEOS_CPPFLAGS $PROJ_CPPFLAGS $XML2_CPPFLAGS"
+CPPFLAGS="$PGSQL_CPPFLAGS $GEOS_CPPFLAGS $PROJ_CPPFLAGS $JSON_CPPFLAGS $XML2_CPPFLAGS"
 dnl AC_MSG_RESULT([CPPFLAGS: $CPPFLAGS])
 
-SHLIB_LINK="$PGSQL_LDFLAGS $GEOS_LDFLAGS $PROJ_LDFLAGS -lgeos_c -lproj $XML2_LDFLAGS"
+SHLIB_LINK="$PGSQL_LDFLAGS $GEOS_LDFLAGS $PROJ_LDFLAGS -lgeos_c -lproj $JSON_LDFLAGS $XML2_LDFLAGS"
 AC_SUBST([SHLIB_LINK])
 dnl AC_MSG_RESULT([SHLIB_LINK: $SHLIB_LINK])
 
-dnl Output the relevant files
-AC_OUTPUT([liblwgeom/Makefile liblwgeom/cunit/Makefile postgis/Makefile postgis/sqldefines.h loader/Makefile topology/Makefile regress/Makefile doc/Makefile doc/Makefile.comments doc/html/image_src/Makefile])
+dnl ====================================
+dnl topology stuff
+dnl ====================================
+AC_ARG_WITH([topology],
+    [AS_HELP_STRING([--without-topology],
+                    [Disable the topology extension])],
+    [], [])
 
+if test "x$with_topology" != "xno"; then
+
+    TOPOLOGY="topology"
+    AC_MSG_RESULT([TOPOLOGY: Topology support requested])
+	if test "$GEOS_NUMERIC_VERSION" -lt 332; then
+		AC_MSG_ERROR([Topology requires GEOS version >= 3.3.2. Use --without-topology or install a newer GEOS.])
+	fi
+else
+    AC_MSG_RESULT([TOPOLOGY: Topology support disabled])
+fi
+
+AC_SUBST([TOPOLOGY])
+
+dnl ===========================================================================
+dnl SRID stuff
+dnl ===========================================================================
+
+SRID_MAX=999999
+SRID_USR_MAX=998999
+AC_SUBST([SRID_MAX])
+AC_SUBST([SRID_USR_MAX])
+
+
+dnl ====================================
+dnl raster stuff
+dnl ====================================
+AC_ARG_WITH(
+	[raster],
+	AC_HELP_STRING([--without-raster], [Disable the raster extension]),
+	[], [])
+
+if test "x$with_raster" != "xno"; then
+	RASTER="raster"
+	AC_MSG_RESULT([RASTER: Raster support requested])
+
+	AC_CONFIG_HEADERS([raster/raster_config.h]) 
+
+	dnl
+	dnl Raster Version Information imported from raster/Version.config
+	dnl
+	POSTGIS_RASTER_MAJOR_VERSION=`cat raster/Version.config | grep POSTGIS_RASTER_MAJOR_VERSION | sed 's/[[^=]]*=\([[0-9]]\)/\1/g'`
+	POSTGIS_RASTER_MINOR_VERSION=`cat raster/Version.config | grep POSTGIS_RASTER_MINOR_VERSION | sed 's/[[^=]]*=\([[0-9]]\)/\1/g'`
+	POSTGIS_RASTER_MICRO_VERSION=`cat raster/Version.config | grep POSTGIS_RASTER_MICRO_VERSION | sed 's/[[^=]]*=\([[0-9]]\)/\1/g'`
+
+	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_MAJOR_VERSION], ["$POSTGIS_RASTER_MAJOR_VERSION"], [PostGIS Raster major version])
+	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_MINOR_VERSION], ["$POSTGIS_RASTER_MINOR_VERSION"], [PostGIS Raster minor version])
+	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_MICRO_VERSION], ["$POSTGIS_RASTER_MICRO_VERSION"], [PostGIS Raster micro version])
+
+	AC_SUBST([POSTGIS_RASTER_MAJOR_VERSION])
+	AC_SUBST([POSTGIS_RASTER_MINOR_VERSION])
+	AC_SUBST([POSTGIS_RASTER_MICRO_VERSION])
+
+	dnl ==============================
+	dnl Define raster version macros
+	dnl ==============================
+	POSTGIS_RASTER_VERSION="$POSTGIS_RASTER_MAJOR_VERSION.$POSTGIS_RASTER_MINOR_VERSION"
+	POSTGIS_RASTER_LIB_VERSION="$POSTGIS_RASTER_MAJOR_VERSION.$POSTGIS_RASTER_MINOR_VERSION.$POSTGIS_RASTER_MICRO_VERSION"
+	POSTGIS_RASTER_BUILD_DATE=`date -u "+%Y-%m-%d %H:%M:%S"`
+	POSTGIS_RASTER_SCRIPTS_VERSION="$POSTGIS_RASTER_LIB_VERSION"
+
+	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_VERSION], ["$POSTGIS_RASTER_VERSION"], [PostGIS Raster version])
+	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_LIB_VERSION], ["$POSTGIS_RASTER_LIB_VERSION"], [PostGIS Raster library version])
+	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_BUILD_DATE], ["$POSTGIS_RASTER_BUILD_DATE"], [PostGIS Raster build date])
+	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_SCRIPTS_VERSION], ["$POSTGIS_RASTER_SCRIPTS_VERSION"], [PostGIS Raster scripts version])
+
+	AC_SUBST([POSTGIS_RASTER_VERSION])
+	AC_SUBST([POSTGIS_RASTER_LIB_VERSION])
+	AC_SUBST([POSTGIS_RASTER_BUILD_DATE])
+	AC_SUBST([POSTGIS_RASTER_SCRIPTS_VERSION])
+
+	dnl ===========================================================================
+	dnl Allow output of double truncation warnings with --with-raster-dblwarning
+	dnl ===========================================================================
+	AC_ARG_WITH(
+		[raster-dblwarning],
+		AC_HELP_STRING([--with-raster-dblwarning], [output double truncation warnings.  Only used with --with-raster]),
+		[POSTGIS_RASTER_WARN_ON_TRUNCATION=1],
+		[POSTGIS_RASTER_WARN_ON_TRUNCATION=0])
+
+	AC_DEFINE_UNQUOTED(
+		[POSTGIS_RASTER_WARN_ON_TRUNCATION],
+		[$POSTGIS_RASTER_WARN_ON_TRUNCATION],
+		[Define to 1 if a warning is outputted every time a double is truncated])
+
+	dnl ========================================================================
+	dnl Determine GDAL Support
+	dnl
+	dnl TODO: Now, --with-gdalconfig can have only 1 value: path to gdal-config. It
+	dnl could be useful to allow path to GDAL tree, because the cflags and the
+	dnl libs can be obtained from GDAL tree too, apart from gdal-config
+	dnl How to get cflags and libs from GDAL tree?
+	dnl
+	dnl LIBGDAL_CFLAGS="-I$with_gdal/port -I$with_gdal/ogr -I$with_gdal/alg -I$with_gdal/gcore -I$with_gdal/frmts "
+	dnl LIBGDAL_LDFLAGS="-L${with_gdal}/.libs -lgdal -L${with_gdal}/ -lgdal"
+	dnl ========================================================================
+	dnl not used right now
+	USE_GDAL_SOURCE_TREE="no"
+	LIBGDAL_CFLAGS=""
+	LIBGDAL_LDFLAGS=""
+
+	dnl GDAL version constants, update here
+	GDAL_MIN_VERSION=1.6.0
+	GDAL_MIN_VERSION_NUMBER=160 dnl TODO: Use GDAL version calculation MAJOR*1000+MINOR*100+REV*10+BUILD
+
+	AC_ARG_WITH(
+		[gdalconfig],
+		AC_HELP_STRING([--with-gdalconfig=@<:@ARG@:>@],[specify location of gdal-config (ARG=path).  Only used with --with-raster]),
+		[GDAL_CONFIG="$withval"],
+		[AC_PATH_PROG([GDAL_CONFIG], [gdal-config], [])]
+  )
+
+	AC_MSG_CHECKING([for GDAL >= $GDAL_MIN_VERSION])
+
+	if test -x "$GDAL_CONFIG"; then
+		dnl Extract the version information from gdal-config
+		dnl Note: we extract the major & minor separately, ensure they are numeric,
+		dnl and then combine to give the final version.
+		dnl This is to guard against user error...
+		GDAL_MAJOR_VERSION=`$GDAL_CONFIG --version | cut -d. -f1 | sed 's/[[^0-9]]//g'`
+		GDAL_MINOR_VERSION=`$GDAL_CONFIG --version | cut -d. -f2 | sed 's/[[^0-9]]//g'`
+		GDAL_PATCH_VERSION=`$GDAL_CONFIG --version | cut -d. -f3 | sed 's/[[^0-9]]//g'`
+		GDAL_FULL_VERSION=`$GDAL_CONFIG --version`
+		POSTGIS_GDAL_VERSION="$GDAL_MAJOR_VERSION$GDAL_MINOR_VERSION"
+		GDAL_VERSION_NUMBER="$GDAL_MAJOR_VERSION$GDAL_MINOR_VERSION$GDAL_PATCH_VERSION"
+
+		dnl Ensure we are using minimum required version of GDAL
+		if test ! "$GDAL_VERSION_NUMBER" -ge "$GDAL_MIN_VERSION_NUMBER" ; then
+			AC_MSG_RESULT([not found])
+			AC_MSG_ERROR([PostGIS raster requires GDAL >= $GDAL_MIN_VERSION. Use --without-raster to build without raster support.])
+		fi
+
+		AC_MSG_RESULT([found])
+
+		AC_DEFINE_UNQUOTED([POSTGIS_GDAL_VERSION], [$POSTGIS_GDAL_VERSION], [GDAL library version])	
+		AC_SUBST([POSTGIS_GDAL_VERSION])
+
+		dnl Extract the linker and include flags 
+		LIBGDAL_LDFLAGS=`$GDAL_CONFIG --libs`
+		LIBGDAL_CFLAGS=`$GDAL_CONFIG --cflags`
+
+		CPPFLAGS_SAVE="$CPPFLAGS"
+		CPPFLAGS="$LIBGDAL_CFLAGS"
+		CFLAGS_SAVE="$CFLAGS"
+		CFLAGS=""
+		LIBS_SAVE="$LIBS"
+		LIBS="$LIBGDAL_LDFLAGS"
+
+		dnl Check headers file
+		AC_CHECK_HEADERS(
+			[gdal.h ogr_api.h cpl_conv.h],
+			[],
+			[AC_MSG_ERROR([could not find headers include related to gdal])])
+
+		dnl Ensure we can link against gdal
+		AC_SEARCH_LIBS([GDALAllRegister], [gdal], [], [AC_MSG_ERROR([could not find gdal])], [])
+
+		LIBS="$LIBGDAL_LDFLAGS"
+
+		dnl Check if the new polygonize function is present
+		AC_SEARCH_LIBS(
+			[GDALFPolygonize],
+			[gdal],
+			[AC_DEFINE_UNQUOTED([GDALFPOLYGONIZE], [1], [Define to 1 if GDALFPolygonize function is available])],
+			[])
+
+		CPPFLAGS="$CPPFLAGS_SAVE"
+		CFLAGS="$CFLAGS_SAVE"
+		LIBS="$LIBS_SAVE"
+
+		AC_SUBST([LIBGDAL_CFLAGS])
+		AC_SUBST([LIBGDAL_LDFLAGS])
+
+		AC_SUBST([GDALFPOLYGONIZE])
+	else
+		AC_MSG_RESULT([not found])
+		AC_MSG_ERROR([gdal-config not found. Use --without-raster or try --with-gdalconfig=<path to gdal-config>])
+	fi
+
+	dnl Define raster objects, for makefiles
+	RT_CORE_LIB=corelib
+	RT_PG_LIB=pglib
+	RT_LOADER=rtloader
+	RT_POSTGIS_SQL=rtpostgis.sql
+
+	AC_SUBST([RASTER])
+	AC_SUBST([RT_CORE_LIB])
+	AC_SUBST([RT_PG_LIB])
+	AC_SUBST([RT_LOADER])
+	AC_SUBST([RT_POSTGIS_SQL])
+
+	RT_MAKEFILE_LIST="
+		raster/Makefile \
+		raster/rt_core/Makefile \
+		raster/rt_pg/Makefile \
+		raster/loader/Makefile \
+		raster/test/Makefile \
+		raster/test/core/Makefile \
+		raster/test/regress/Makefile \
+		raster/scripts/Makefile \
+		raster/scripts/python/Makefile"
+
+else
+	AC_MSG_RESULT([RASTER: Raster support disabled])
+	RT_MAKEFILE_LIST="raster/Makefile"
+fi
+
+dnl ===========================================================================
+dnl See if we have the requirements for building the extensions, namely
+dnl PostgreSQL 9.1 or better and the xlstproc tool for generating the commends
+dnl SQL file.
+dnl ===========================================================================
+
+EXTENSIONS=""
+if test $POSTGIS_PGSQL_VERSION -ge 91; then
+	if test \
+          "x$XSLTPROC" != "x" -o \
+          -e doc/postgis_comments.sql -a \
+          -e doc/raster_comments.sql;
+  then
+		if test "x$RASTER" = "xraster"; then
+				AC_MSG_RESULT([enabling PostgreSQL extension support...])
+				EXTENSIONS=extensions
+				AC_SUBST([EXTENSIONS])
+		fi
+	fi
+fi
+
+
+dnl ===========================================================================
+dnl Output the relevant files
+dnl ===========================================================================
+
+AC_OUTPUT([GNUmakefile 
+   extensions/Makefile
+   extensions/postgis/Makefile 
+   extensions/postgis/postgis.control 
+   extensions/postgis_topology/Makefile 
+   extensions/postgis_topology/postgis_topology.control 
+   liblwgeom/Makefile 
+   liblwgeom/cunit/Makefile 
+   liblwgeom/liblwgeom.h 
+   libpgcommon/Makefile 
+   libpgcommon/cunit/Makefile 
+   postgis/Makefile 
+   postgis/sqldefines.h 
+   loader/Makefile 
+   loader/cunit/Makefile 
+   topology/Makefile 
+   regress/Makefile 
+   doc/Makefile 
+   doc/Makefile.comments 
+   doc/html/image_src/Makefile 
+   utils/Makefile 
+   java/jdbc/Makefile
+   $RT_MAKEFILE_LIST])
+    
 dnl ===========================================================================
 dnl Display the configuration status information
 dnl ===========================================================================
@@ -670,22 +1123,53 @@ AC_MSG_RESULT()
 AC_MSG_RESULT([ -------------- Compiler Info ------------- ])
 AC_MSG_RESULT([  C compiler:           ${CC} ${CFLAGS}])
 AC_MSG_RESULT([  C++ compiler:         ${CXX} ${CXXFLAGS}])
+AC_MSG_RESULT([  SQL preprocessor:     ${SQLPP}])
 AC_MSG_RESULT()
 AC_MSG_RESULT([ -------------- Dependencies -------------- ])
 AC_MSG_RESULT([  GEOS config:          ${GEOSCONFIG}])
 AC_MSG_RESULT([  GEOS version:         ${GEOS_FULL_VERSION}])
+if test "x$RASTER" = "xraster"; then
+    AC_MSG_RESULT([  GDAL config:          ${GDAL_CONFIG}])
+    AC_MSG_RESULT([  GDAL version:         ${GDAL_FULL_VERSION}])
+fi
 AC_MSG_RESULT([  PostgreSQL config:    ${PGCONFIG}])
 AC_MSG_RESULT([  PostgreSQL version:   ${PGSQL_FULL_VERSION}])
 AC_MSG_RESULT([  PROJ4 version:        ${POSTGIS_PROJ_VERSION}])
 AC_MSG_RESULT([  Libxml2 config:       ${XML2CONFIG}])
 AC_MSG_RESULT([  Libxml2 version:      ${POSTGIS_LIBXML2_VERSION}])
+AC_MSG_RESULT([  JSON-C support:       ${HAVE_JSON}])
 AC_MSG_RESULT([  PostGIS debug level:  ${POSTGIS_DEBUG_LEVEL}])
+AC_MSG_RESULT([  Perl:                 ${PERL}])
+AC_MSG_RESULT()
+AC_MSG_RESULT([ --------------- Extensions --------------- ])
+if test "x$RASTER" = "xraster"; then
+    AC_MSG_RESULT([  PostGIS Raster:       enabled])
+else
+    AC_MSG_RESULT([  PostGIS Raster:       disabled])
+
+fi
+if test "x$TOPOLOGY" = "xtopology"; then
+    AC_MSG_RESULT([  PostGIS Topology:     enabled])
+else
+    AC_MSG_RESULT([  PostGIS Topology:     disabled])
+fi
 AC_MSG_RESULT()
 AC_MSG_RESULT([ -------- Documentation Generation -------- ])
 AC_MSG_RESULT([  xsltproc:             ${XSLTPROC}])
 AC_MSG_RESULT([  xsl style sheets:     ${XSLBASE}])
 AC_MSG_RESULT([  dblatex:              ${DBLATEX}])
 AC_MSG_RESULT([  convert:              ${IMAGEMAGICK}])
+AC_MSG_RESULT([  mathml2.dtd:          ${MATHML2_DTD}])
 AC_MSG_RESULT()
 
+if test "$GEOS_NUMERIC_VERSION" -lt 332; then
+AC_MSG_RESULT([ --------- GEOS VERSION NOTICE ------------ ])
+AC_MSG_RESULT([  You are building against GEOS ${GEOS_FULL_VERSION} ])
+AC_MSG_RESULT([  To take advantage of all the features of ])
+AC_MSG_RESULT([  PostGIS we recommend you build using ])
+AC_MSG_RESULT([  GEOS 3.3.2 or higher. You can download ])
+AC_MSG_RESULT([  the latest versions from ])
+AC_MSG_RESULT([  http://trac.osgeo.org/geos ])
+AC_MSG_RESULT()
+fi
 

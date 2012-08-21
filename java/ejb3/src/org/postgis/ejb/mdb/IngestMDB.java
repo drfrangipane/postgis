@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: IngestMDB.java 3639 2009-02-04 00:28:37Z pramsey $
+ * $Id: IngestMDB.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 package org.postgis.ejb.mdb;
 

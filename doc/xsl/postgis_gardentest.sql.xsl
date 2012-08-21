@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"  xmlns:pgis="http://postgis.refractions.net/pgis">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"  xmlns:pgis="http://www.postgis.org/pgis">
 <!-- ********************************************************************
- * $Id: postgis_gardentest.sql.xsl 7043 2011-04-17 16:35:58Z robe $
+ * $Id: postgis_gardentest.sql.xsl 7493 2011-06-26 19:44:47Z robe $
  ********************************************************************
 	 Copyright 2008-2010, Regina Obe
 	 License: BSD
@@ -9,9 +9,9 @@
 			using a garden variety of geometries.  Its intent is to flag major crashes.
 	 ******************************************************************** -->
 	<xsl:output method="text" />
-	<xsl:variable name='testversion'>1.5.3</xsl:variable>
+	<xsl:variable name='testversion'>2.0.0</xsl:variable>
 	<xsl:variable name='fnexclude14'>AddGeometryColumn DropGeometryColumn DropGeometryTable</xsl:variable>
-	<xsl:variable name='fnexclude'>AddGeometryColumn DropGeometryColumn DropGeometryTable Populate_Geometry_Columns</xsl:variable>
+	<xsl:variable name='fnexclude'>AddGeometryColumn DropGeometryColumn DropGeometryTable</xsl:variable>
 	<!--This is just a place holder to state functions not supported in 1.3 or tested separately -->
 
 	<xsl:variable name='var_srid'>3395</xsl:variable>
@@ -31,7 +31,7 @@
 	<xsl:variable name='var_spheroid'>'SPHEROID["GRS_1980",6378137,298.257222101]'</xsl:variable>
 	<xsl:variable name='var_matrix'>'FF1FF0102'</xsl:variable>
 	<xsl:variable name='var_boolean'>false</xsl:variable>
-	<xsl:variable name='var_logtable'>postgis_garden15_log</xsl:variable>
+	<xsl:variable name='var_logtable'>postgis_garden_log20</xsl:variable>
 	<xsl:variable name='var_logupdatesql'>UPDATE <xsl:value-of select="$var_logtable" /> SET log_end = clock_timestamp() 
 		FROM (SELECT logid FROM <xsl:value-of select="$var_logtable" /> ORDER BY logid DESC limit 1) As foo
 		WHERE <xsl:value-of select="$var_logtable" />.logid = foo.logid  AND <xsl:value-of select="$var_logtable" />.log_end IS NULL;</xsl:variable>
@@ -43,8 +43,8 @@
 				    FROM <xsl:value-of select="$var_logtable" /> ORDER BY logid DESC LIMIT 1;</xsl:variable>
 	<pgis:gardens>
 		<pgis:gset ID='POINT' GeometryType='POINT'>(SELECT ST_SetSRID(ST_Point(i,j),4326) As the_geom
-		FROM (SELECT a*1.11111111 FROM generate_series(-10,50,10) As a) As i(i)
-			CROSS JOIN generate_series(40,70, 15) j
+		FROM (SELECT a*1.11111111 FROM generate_series(-10,50,2) As a) As i(i)
+			CROSS JOIN generate_series(40,70, 5) j
 			ORDER BY i,j
 			)</pgis:gset>
 		<pgis:gset ID='LINESTRING' GeometryType='LINESTRING'>(SELECT ST_MakeLine(ST_SetSRID(ST_Point(i,j),4326),ST_SetSRID(ST_Point(j,i),4326))  As the_geom
@@ -102,7 +102,41 @@ FROM (VALUES ( ST_GeomFromEWKT('SRID=4326;POLYGON((-71.0771 42.3866 1,-71.0767 4
 FROM (VALUES ( ST_GeomFromEWKT('SRID=4326;POLYGON((-71.0771 42.3866 1 2,-71.0767 42.3872 1 2.3,-71.0767 42.3863 1 2.3,-71.0771 42.3866 1 2))') ),
 	( ST_GeomFromEWKT('SRID=4326;POLYGON((-71.0775 42.386 2 1.5,-71.0773 42.3863 1.75 1.5,-71.0773 42.3859 1.75 1.5,-71.0775 42.386 2 1.5))') )
 		)	As g(geom))</pgis:gset>
+			
+		<pgis:gset ID='POLYHEDRALSURFACE' GeometryType='POLYHEDRALSURFACE'>(SELECT ST_Translate(the_geom,-72.2, 41.755) As the_geom
+		FROM (VALUES ( ST_GeomFromEWKT(
+'SRID=4326;PolyhedralSurface( 
+((0 0 0, 0 0 1, 0 1 1, 0 1 0, 0 0 0)),  
+((0 0 0, 0 1 0, 1 1 0, 1 0 0, 0 0 0)), ((0 0 0, 1 0 0, 1 0 1, 0 0 1, 0 0 0)),  ((1 1 0, 1 1 1, 1 0 1, 1 0 0, 1 1 0)),  
+((0 1 0, 0 1 1, 1 1 1, 1 1 0, 0 1 0)),  ((0 0 1, 1 0 1, 1 1 1, 0 1 1, 0 0 1)) 
+)') ) ,
+( ST_GeomFromEWKT(
+'SRID=4326;PolyhedralSurface( 
+((0 0 0, 0 0 1, 0 1 1, 0 1 0, 0 0 0)),  
+((0 0 0, 0 1 0, 1 1 0, 1 0 0, 0 0 0)) )') ) )
+As foo(the_geom)  ) </pgis:gset>
 
+		<pgis:gset ID='TRIANGLE' GeometryType='TRIANGLE'>(SELECT ST_GeomFromEWKT(
+'SRID=4326;TRIANGLE ((
+                -71.0821 42.3036, 
+                -71.0821 42.3936, 
+                -71.0901 42.3036, 
+                -71.0821 42.3036
+            ))') As the_geom) </pgis:gset>
+            
+		<pgis:gset ID='TIN' GeometryType='TIN'>(SELECT ST_GeomFromEWKT(
+'SRID=4326;TIN (((
+                -71.0821 42.3036 0, 
+               -71.0821 42.3036 1, 
+                -71.0821 42.3436 0, 
+                -71.0821 42.3036 0
+            )), ((
+                -71.0821 42.3036 0, 
+                -71.0821 42.3436 0, 
+                -71.0831 42.3436 0, 
+                -71.0821 42.3036 0
+            ))
+            )') As the_geom) </pgis:gset>
 
 <!--		<pgis:gset ID='GCSet3D' GeometryType='GEOMETRYCOLLECTIONZ' SkipUnary='1'>(SELECT ST_Collect(ST_Collect(ST_SetSRID(ST_MakePoint(i,j,m),4326),ST_SetSRID(ST_MakePolygon(ST_AddPoint(ST_AddPoint(ST_MakeLine(ST_MakePoint(i+m,j,m),ST_MakePoint(j+m,i-m,m)),ST_MakePoint(i,j,m)),ST_MakePointM(i+m,j,m))),4326)))  As the_geom
 		FROM generate_series(-10,50,20) As i
@@ -184,28 +218,36 @@ FROM (VALUES ( ST_GeomFromEWKT('SRID=4326;MULTIPOLYGON(((-71.0821 42.3036 2,-71.
 			
 		<!-- replacing crasher with a more harmless curve polygon and circular string -->
 		<pgis:gset ID='CURVEPOLYGON' GeometryType='CURVEPOLYGON'>(SELECT ST_GeomFromEWKT('SRID=4326;CURVEPOLYGON(CIRCULARSTRING(-71.0821 42.3036, -71.4821 42.3036, -71.7821 42.7036, -71.0821 42.7036, -71.0821 42.3036),(-71.1821 42.4036, -71.3821 42.6036, -71.3821 42.4036, -71.1821 42.4036) ) ') As the_geom)</pgis:gset>
+		
+		<pgis:gset ID='CURVEPOLYGON2' GeometryType='CURVEPOLYGON'>(SELECT ST_LineToCurve(ST_Buffer(ST_SetSRID(ST_Point(i,j),4326), j))  As the_geom 
+		        FROM generate_series(-10,50,10) As i
+					CROSS JOIN generate_series(40,70, 20) As j
+					ORDER BY i, j, i*j)
+		</pgis:gset>
 
 		<pgis:gset ID='CIRCULARSTRING' GeometryType='CIRCULARSTRING'>(SELECT ST_GeomFromEWKT('SRID=4326;CIRCULARSTRING(-71.0821 42.3036,-71.4821 42.3036,-71.7821 42.7036,-71.0821 42.7036,-71.0821 42.3036)') As the_geom)</pgis:gset>
 		<pgis:gset ID='MULTISURFACE' GeometryType='MULTISURFACE'>(SELECT ST_GeomFromEWKT('SRID=4326;MULTISURFACE(CURVEPOLYGON(CIRCULARSTRING(-71.0821 42.3036, -71.4821 42.3036, -71.7821 42.7036, -71.0821 42.7036, -71.0821 42.3036),(-71.1821 42.4036, -71.3821 42.6036, -71.3821 42.4036, -71.1821 42.4036) ))') As the_geom)</pgis:gset>
 		<!--These are special case geometries -->
-		<pgis:gset ID="Empty Geometries without Polygon Empty" GeometryType="GEOMETRY" createtable="false">(SELECT ST_GeomFromText('GEOMETRYCOLLECTION EMPTY',4326) As the_geom
+		<pgis:gset ID="Typed Empty Geometries" GeometryType="GEOMETRY" createtable="false">(SELECT ST_GeomFromText('POINT EMPTY',4326) As the_geom
+			UNION ALL SELECT ST_GeomFromText('MULTIPOINT EMPTY',4326) As the_geom
+			UNION ALL SELECT ST_GeomFromText('MULTIPOLYGON EMPTY',4326) As the_geom
 			UNION ALL SELECT ST_GeomFromText('LINESTRING EMPTY',4326) As the_geom
-			UNION ALL SELECT ST_GeomFromText('POINT EMPTY',4326) As the_geom
+			UNION ALL SELECT ST_GeomFromText('MULTILINESTRING EMPTY',4326) As the_geom
 		)
 		</pgis:gset>
 		
-		
-		
+	
+		<pgis:gset ID="Empty Geometry Collection" GeometryType="GEOMETRY" createtable="false">
+		 (SELECT ST_GeomFromText('GEOMETRYCOLLECTION EMPTY',4326) As the_geom )
+		</pgis:gset>
+			
 		<pgis:gset ID="Single NULL" GeometryType="GEOMETRY" createtable="false">(SELECT CAST(Null As geometry) As the_geom)</pgis:gset>
 		<pgis:gset ID="Multiple NULLs" GeometryType="GEOMETRY" createtable="false">(SELECT CAST(Null As geometry) As the_geom FROM generate_series(1,4) As foo)</pgis:gset>
 
 
 	<!-- TODO: Finish off MULTI list -->
 	</pgis:gardens>
-	
-
-	<pgis:gardencrashers>
-<!--This is just a placeholder to hold geometries that will crash server when hitting against some functions
+	<!--This is just a placeholder to hold geometries that will crash server when hitting against some functions
 		We'll fix these crashers in 1.4 -->
 		<pgis:gset ID='CurvePolySet' GeometryType='CURVEPOLYGON'>(SELECT ST_LineToCurve(ST_Buffer(ST_SetSRID(ST_Point(i,j),4326), j))  As the_geom
 				FROM generate_series(-10,50,10) As i
@@ -216,18 +258,15 @@ FROM (VALUES ( ST_GeomFromEWKT('SRID=4326;MULTIPOLYGON(((-71.0821 42.3036 2,-71.
 					CROSS JOIN generate_series(40,70, 20) As j
 					ORDER BY i, j, i*j)</pgis:gset>
 					
-		<pgis:gset ID="Empty Geometries with Polygon Empty" GeometryType="GEOMETRY" createtable="false">(SELECT ST_GeomFromText('GEOMETRYCOLLECTION EMPTY',4326) As the_geom
-			UNION ALL SELECT ST_GeomFromText('POLYGON EMPTY',4326) As the_geom
-			UNION ALL SELECT ST_GeomFromText('LINESTRING EMPTY',4326) As the_geom
-			UNION ALL SELECT ST_GeomFromText('POINT EMPTY',4326) As the_geom
-		)
-		</pgis:gset>
-					
 		<pgis:gset ID="Collection of Empties" GeometryType="GEOMETRY" createtable="false">(SELECT ST_Collect(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY',4326), ST_GeomFromText('POLYGON EMPTY',4326)) As the_geom
 			UNION ALL SELECT ST_COLLECT(ST_GeomFromText('POLYGON EMPTY',4326),ST_GeomFromText('TRIANGLE EMPTY',4326))  As the_geom
 			UNION ALL SELECT ST_Collect(ST_GeomFromText('POINT EMPTY',4326), ST_GeomFromText('MULTIPOINT EMPTY',4326)) As the_geom
-		)
-		</pgis:gset>
+		)</pgis:gset>
+		<pgis:gset ID="POLYGON EMPTY" GeometryType="POLYGON" createtable="false">(SELECT ST_GeomFromText('POLYGON EMPTY',4326) As the_geom)</pgis:gset>
+		
+
+	<pgis:gardencrashers>
+
 
 	</pgis:gardencrashers>
 
@@ -268,8 +307,12 @@ BEGIN;
 COMMIT;
 SELECT '<xsl:value-of select="$log_label" /> geometry index: End Testing <xsl:value-of select="@ID" />';
 
-INSERT INTO <xsl:value-of select="$var_logtable" />(log_label, func, g1, log_start) 
-VALUES('<xsl:value-of select="$log_label" /> insert data Geometry','insert data', '<xsl:value-of select="@ID" />', clock_timestamp());
+
+INSERT INTO <xsl:value-of select="$var_logtable" />(log_label, func, g1, log_start, log_sql) 
+VALUES('<xsl:value-of select="$log_label" /> insert data Geometry','insert data', '<xsl:value-of select="@ID" />', clock_timestamp(), '<xsl:call-template name="escapesinglequotes">
+ <xsl:with-param name="arg1">INSERT INTO pgis_garden(the_geom, the_geom_multi)
+	SELECT the_geom, ST_Multi(the_geom)
+	FROM (<xsl:value-of select="." />) As foo;</xsl:with-param></xsl:call-template>');
 
 BEGIN;
 	INSERT INTO pgis_garden(the_geom, the_geom_multi)
@@ -277,6 +320,17 @@ BEGIN;
 	FROM (<xsl:value-of select="." />) As foo;
 	<xsl:value-of select="$var_logupdatesql" />
 COMMIT;	
+
+
+SELECT '<xsl:value-of select="$log_label" /> Geometry index overlaps: Start Testing <xsl:value-of select="@ID" />';
+INSERT INTO <xsl:value-of select="$var_logtable" />(log_label, func, g1, log_start, log_sql) VALUES('<xsl:value-of select="$log_label" /> gist index Geometry overlaps test','Gist index overlap', '<xsl:value-of select="@ID" />', clock_timestamp(),
+    'SELECT count(*) As result FROM pgis_garden As foo1 INNER JOIN pgis_garden As foo2 ON foo1.the_geom &amp;&amp; foo2.the_geom');
+BEGIN;
+	<xsl:value-of select="$var_logresultsasxml" />
+	<xsl:value-of select="$var_logupdatesql" />
+COMMIT;
+
+SELECT '<xsl:value-of select="$log_label" /> geometry index overlaps: End Testing <xsl:value-of select="@ID" />';
 		
 INSERT INTO <xsl:value-of select="$var_logtable" />(log_label, func, g1, log_start) 
 VALUES('<xsl:value-of select="$log_label" /> UpdateGeometrySRID','UpdateGeometrySRID', '<xsl:value-of select="@GeometryType" />', clock_timestamp());
@@ -349,7 +403,7 @@ SELECT '<xsl:value-of select="$log_label" /> Geography: End Testing';
 <!--End Test table creation, insert, drop  -->
 
 <!--Start test on operators  -->
-	<xsl:for-each select="sect1[contains(@id,'Operator')]/refentry">
+	<xsl:for-each select="sect1[contains(@id,'Operator') and not(contains($fnexclude,funcdef/function))]/refentry">
 		<xsl:sort select="@id"/>
 		<xsl:for-each select="refsynopsisdiv/funcsynopsis/funcprototype">
 			<xsl:variable name='fnname'><xsl:value-of select="funcdef/function"/></xsl:variable>
@@ -406,7 +460,7 @@ SELECT '<xsl:value-of select="$log_label" /> Geography: End Testing';
 		<xsl:sort select="@id"/>
 
 			<xsl:for-each select="refsynopsisdiv/funcsynopsis/funcprototype">
-<!--Create dummy paramaters to be used later -->
+<!--Create dummy parameters to be used later -->
 				<xsl:variable name='fnfakeparams'><xsl:call-template name="replaceparams"><xsl:with-param name="func" select="." /></xsl:call-template></xsl:variable>
 				<xsl:variable name='fnargs'><xsl:call-template name="listparams"><xsl:with-param name="func" select="." /></xsl:call-template></xsl:variable>
 				<xsl:variable name='fnname'><xsl:value-of select="funcdef/function"/></xsl:variable>
@@ -525,6 +579,8 @@ SELECT '<xsl:value-of select="$fnname" /><xsl:text> </xsl:text><xsl:value-of sel
 		<xsl:for-each select="$func">
 			<xsl:for-each select="paramdef">
 				<xsl:choose>
+				    <!-- ignore output parameters -->
+				    <xsl:when test="contains(parameter,'OUT')"></xsl:when>
 				    	<xsl:when test="contains(parameter, 'buffer_style_parameters') or contains(parameter, 'buffer_style_parameters')">
 						<xsl:value-of select="$var_buffer_style" />
 					</xsl:when>
@@ -613,7 +669,8 @@ SELECT '<xsl:value-of select="$fnname" /><xsl:text> </xsl:text><xsl:value-of sel
 						<xsl:value-of select="$var_boolean" />
 					</xsl:when>
 				</xsl:choose>
-				<xsl:if test="position()&lt;last()"><xsl:text>, </xsl:text></xsl:if>
+				<!-- put a comma before an arg if it is not the first argument in a function and it is not an OUT parameter nor does it precede an OUT parameter -->
+				<xsl:if test="position()&lt;last() and not(contains(parameter,'OUT')) and not(contains(following-sibling::paramdef[1],'OUT'))"><xsl:text>, </xsl:text></xsl:if>
 			</xsl:for-each>
 		</xsl:for-each>
 	</xsl:template>

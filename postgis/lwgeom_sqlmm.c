@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_sqlmm.c 5181 2010-02-01 17:35:55Z pramsey $
+ * $Id: lwgeom_sqlmm.c 9324 2012-02-27 22:08:12Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -10,16 +10,17 @@
  *
  **********************************************************************/
 
-#include "postgres.h"
-#include "liblwgeom.h"
-#include "fmgr.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <math.h>
 
+#include "postgres.h"
+#include "fmgr.h"
+
+#include "../postgis_config.h"
+#include "liblwgeom.h"
 #include "lwgeom_pg.h"
 
 
@@ -36,8 +37,10 @@ Datum LWGEOM_line_desegmentize(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(LWGEOM_has_arc);
 Datum LWGEOM_has_arc(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *geom = (PG_LWGEOM *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	uint32 result = has_arc(lwgeom_deserialize(SERIALIZED_FORM(geom)));
+	GSERIALIZED *geom = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	LWGEOM *lwgeom = lwgeom_from_gserialized(geom);
+	uint32 result = lwgeom_has_arc(lwgeom);
+	lwgeom_free(lwgeom);
 	PG_RETURN_BOOL(result == 1);
 }
 
@@ -50,9 +53,9 @@ Datum LWGEOM_has_arc(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(LWGEOM_curve_segmentize);
 Datum LWGEOM_curve_segmentize(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *geom = (PG_LWGEOM *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	GSERIALIZED *geom = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
 	uint32 perQuad = PG_GETARG_INT32(1);
-	PG_LWGEOM *ret;
+	GSERIALIZED *ret;
 	LWGEOM *igeom = NULL, *ogeom = NULL;
 
 	POSTGIS_DEBUG(2, "LWGEOM_curve_segmentize called.");
@@ -68,16 +71,16 @@ Datum LWGEOM_curve_segmentize(PG_FUNCTION_ARGS)
 		POSTGIS_DEBUGF(3, "perQuad = %d", perQuad);
 	}
 #endif
-	igeom = lwgeom_deserialize(SERIALIZED_FORM(geom));
-	if ( ! has_arc(igeom) )
+	igeom = lwgeom_from_gserialized(geom);
+	if ( ! lwgeom_has_arc(igeom) )
 	{
 		PG_RETURN_POINTER(geom);
 	}
 	ogeom = lwgeom_segmentize(igeom, perQuad);
 	if (ogeom == NULL) PG_RETURN_NULL();
-	ret = pglwgeom_serialize(ogeom);
-	lwgeom_release(igeom);
-	lwgeom_release(ogeom);
+	ret = geometry_serialize(ogeom);
+	lwgeom_free(igeom);
+	lwgeom_free(ogeom);
 	PG_FREE_IF_COPY(geom, 0);
 	PG_RETURN_POINTER(ret);
 }
@@ -85,22 +88,24 @@ Datum LWGEOM_curve_segmentize(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(LWGEOM_line_desegmentize);
 Datum LWGEOM_line_desegmentize(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *geom = (PG_LWGEOM *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	PG_LWGEOM *ret;
+	GSERIALIZED *geom = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+	GSERIALIZED *ret;
 	LWGEOM *igeom = NULL, *ogeom = NULL;
 
 	POSTGIS_DEBUG(2, "LWGEOM_line_desegmentize.");
 
-	igeom = lwgeom_deserialize(SERIALIZED_FORM(geom));
+	igeom = lwgeom_from_gserialized(geom);
 	ogeom = lwgeom_desegmentize(igeom);
+	lwgeom_free(igeom);
+
 	if (ogeom == NULL)
 	{
-		lwgeom_release(igeom);
+		PG_FREE_IF_COPY(geom, 0);
 		PG_RETURN_NULL();
 	}
-	ret = pglwgeom_serialize(ogeom);
-	lwgeom_release(igeom);
-	lwgeom_release(ogeom);
+
+	ret = geometry_serialize(ogeom);
+	lwgeom_free(ogeom);
 	PG_FREE_IF_COPY(geom, 0);
 	PG_RETURN_POINTER(ret);
 }

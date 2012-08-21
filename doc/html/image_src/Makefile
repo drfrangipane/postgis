@@ -11,7 +11,7 @@
 # **********************************************************************
 
 CC=gcc
-CFLAGS=-g -O2  -Wall -Wmissing-prototypes
+CFLAGS=-g -O2  -Wall -Wmissing-prototypes 
 
 CUNIT_LDFLAGS= -lcunit
 CUNIT_CPPFLAGS= -I../../../liblwgeom
@@ -19,6 +19,8 @@ CUNIT_CPPFLAGS= -I../../../liblwgeom
 IMAGES= \
 	../images/de9im01.png \
 	../images/de9im02.png \
+	../images/st_azimuth01.png \
+	../images/st_azimuth02.png \
 	../images/st_buffer01.png \
 	../images/st_buffer02.png \
 	../images/st_buffer03.png \
@@ -41,6 +43,14 @@ IMAGES= \
 	../images/st_contains04.png \
 	../images/st_contains05.png \
 	../images/st_contains06.png \
+	../images/st_concavehull01.png \
+	../images/st_concavehull02.png \
+	../images/st_concavehull03.png \
+	../images/st_concavehull04.png \
+	../images/st_concavehull05.png \
+	../images/st_concavehull06.png \
+	../images/st_concavehull07.png \
+	../images/st_concavehull08.png \
 	../images/st_convexhull01.png \
 	../images/st_crosses01.png \
 	../images/st_crosses02.png \
@@ -63,6 +73,7 @@ IMAGES= \
 	../images/st_isvalid06.png \
 	../images/st_isvalid07.png \
 	../images/st_isvalid08.png \
+	../images/st_isvalid09.png \
 	../images/st_linecrossingdirection01.png \
 	../images/st_linecrossingdirection02.png \
 	../images/st_linecrossingdirection03.png \
@@ -73,8 +84,28 @@ IMAGES= \
 	../images/st_longestline02.png \
 	../images/st_longestline03.png \
 	../images/st_minimumboundingcircle01.png \
+	../images/st_offsetcurve01.png \
+	../images/st_offsetcurve02.png \
+	../images/st_offsetcurve03.png \
+	../images/st_offsetcurve04.png \
+	../images/st_offsetcurve05.png \
+	../images/st_offsetcurve06.png \
+	../images/st_overlaps01.png \
+	../images/st_overlaps02.png \
+	../images/st_overlaps03.png \
+	../images/st_sharedpaths01.png \
+	../images/st_sharedpaths02.png \
 	../images/st_shortestline01.png \
 	../images/st_shortestline02.png \
+	../images/st_snap01.png \
+	../images/st_snap02.png \
+	../images/st_snap03.png \
+	../images/st_snap04.png \
+	../images/st_snap05.png \
+	../images/st_split01.png \
+	../images/st_split02.png \
+	../images/st_split03.png \
+	../images/st_split04.png \
 	../images/st_symdifference01.png \
 	../images/st_symdifference02.png \
 	../images/st_touches01.png \
@@ -121,16 +152,22 @@ $(IMAGES_RESIZED): ../images/%.png: %.wkt generator styles.conf
 	convert $@ -resize 100x100 $@
 
 # Build the main executable
-generator: ../../../liblwgeom/liblwgeom.a $(OBJS)
-	$(CC) -o $@ $(OBJS) ../../../liblwgeom/liblwgeom.a -lm $(CUNIT_LDFLAGS)
+generator: ../../../liblwgeom/.libs/liblwgeom.a $(OBJS)
+	$(CC) -o $@ $(OBJS) ../../../liblwgeom/.libs/liblwgeom.a -lm $(CUNIT_LDFLAGS)
 
 # Build liblwgeom
-../../../liblwgeom/liblwgeom.a:
-	make -C ../../../liblwgeom liblwgeom.a
+../../../liblwgeom/.libs/liblwgeom.a:
+	make -C ../../../liblwgeom liblwgeom.la
 
 # Clean target
 clean:
-	@rm -f $(OBJS)
-	@rm -f generator
-	@rm -f tmp[0-9].png
+	rm -f $(OBJS)
+	rm -f generator
+	rm -f tmp[0-9].png
+
+distclean: clean
+	rm -f Makefile
+
+images-clean:
+	rm -f $(IMAGES) $(IMAGES_RESIZED)
 

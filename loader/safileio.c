@@ -76,7 +76,7 @@ SHP_CVSID("$Id: safileio.c,v 1.4 2008-01-16 20:05:14 bram Exp $");
 #   endif
 #endif
 
-/* Local Prototypes */
+/* Local prototypes */
 SAFile SADFOpen( const char *pszFilename, const char *pszAccess );
 SAOffset SADFRead( void *p, SAOffset size, SAOffset nmemb, SAFile file );
 SAOffset SADFWrite( void *p, SAOffset size, SAOffset nmemb, SAFile file );
@@ -86,6 +86,7 @@ int SADFFlush( SAFile file );
 int SADFClose( SAFile file );
 int SADRemove( const char *filename );
 void SADError( const char *message );
+
 
 /************************************************************************/
 /*                              SADFOpen()                              */
@@ -126,7 +127,11 @@ SAOffset SADFWrite( void *p, SAOffset size, SAOffset nmemb, SAFile file )
 SAOffset SADFSeek( SAFile file, SAOffset offset, int whence )
 
 {
+#ifdef HAVE_FSEEKO
+    return (SAOffset) fseeko( (FILE *) file, (off_t) offset, whence );
+#else
     return (SAOffset) fseek( (FILE *) file, (long) offset, whence );
+#endif
 }
 
 /************************************************************************/
@@ -136,7 +141,11 @@ SAOffset SADFSeek( SAFile file, SAOffset offset, int whence )
 SAOffset SADFTell( SAFile file )
 
 {
+#ifdef HAVE_FSEEKO
+    return (SAOffset) ftello( (FILE *) file );
+#else
     return (SAOffset) ftell( (FILE *) file );
+#endif
 }
 
 /************************************************************************/

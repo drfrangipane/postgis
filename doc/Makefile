@@ -9,24 +9,38 @@
 # that we could produce a large number of files (think chunked HTML)
 #
 
-POSTGIS_MAJOR_VERSION=1
-POSTGIS_MINOR_VERSION=5
-POSTGIS_MICRO_VERSION=3
+POSTGIS_MAJOR_VERSION=2
+POSTGIS_MINOR_VERSION=0
+POSTGIS_MICRO_VERSION=1
+MATHML2_DTD=http://www.w3.org/Math/DTD/mathml2/mathml2.dtd
+
+INSTALL=/opt/local/bin/ginstall -c
+INSTALL_DATA=${INSTALL} -m 644
 
 XSLTPROC=/opt/local/bin/xsltproc
 XSLBASE=/opt/local/share/xsl/docbook-xsl
+XMLLINT=/opt/local/bin/xmllint
+
+# To allow network access use:
+#
+# make html XSLTPROCFLAGS=
+#
+ifeq ($(XSLTPROCFLAGS),)
+	XSLTPROCFLAGS=--nonet
+endif
 
 XSLTPROC_COMMONOPTS= \
 	--param section.autolabel 1 \
 	--param section.label.includes.component.label 1 \
 	--param chunk.section.depth 0 \
 	--param generate.section.toc.level 1 \
-	--param funcsynopsis.style ansi \
+	--param funcsynopsis.style kr \
 	--param admon.graphics 1 \
 	--param admon.textlabel 0 \
 	--param simplesect.in.toc 0 \
 	--param use.id.as.filename 1 \
-	--param chunk.quietly 1
+	--param chunk.quietly 1 \
+	$(XSLTPROCFLAGS)
 
 XSLTPROC_HTMLOPTS= \
 	--stringparam html.stylesheet style.css \
@@ -56,36 +70,96 @@ else
 ifeq ($(IMAGEMAGICK),)
 all: requirements_not_met_imagemagick
 else
-all: images html/postgis.html postgis_comments.sql
+all: comments
 endif
 endif
 endif
 
-postgis_aggs_mm.xml: ./xsl/postgis_aggs_mm.xml.xsl postgis.xml
-	$(XSLTPROC) ./xsl/postgis_aggs_mm.xml.xsl postgis.xml > $@
+XML_INPUTS = \
+	extras_historytable.xml \
+	extras_tigergeocoder.xml \
+	extras_topology.xml \
+	extras.xml \
+	faq_raster.xml \
+	faq.xml \
+	installation.xml \
+	introduction.xml \
+	performance_tips.xml \
+	postgis_aggs_mm.xml \
+	postgis-out.xml \
+	reference_accessor.xml \
+	reference_constructor.xml \
+	reference_editor.xml \
+	reference_exception.xml \
+	reference_lrs.xml \
+	reference_management.xml \
+	reference_measure.xml \
+	reference_misc.xml \
+	reference_operator.xml \
+	reference_output.xml \
+	reference_processing.xml \
+	reference_raster.xml \
+	reference_transaction.xml \
+	reference.xml \
+	release_notes.xml \
+	reporting.xml \
+	using_postgis_app.xml \
+	using_postgis_dataman.xml \
+	using_raster_dataman.xml 
 
-postgis_comments.sql: ./xsl/postgis_comments.sql.xsl postgis.xml postgis_aggs_mm.xml
-	$(XSLTPROC) ./xsl/postgis_comments.sql.xsl postgis.xml > $@
 
-postgis-out.xml: postgis.xml introduction.xml installation.xml faq.xml using_postgis_dataman.xml  using_postgis_app.xml performance_tips.xml reference.xml reference_management.xml reference_constructor.xml reference_accessor.xml reference_editor.xml reference_output.xml reference_operator.xml reference_measure.xml reference_processing.xml reference_lrs.xml reference_transaction.xml reference_misc.xml reference_exception.xml postgis_aggs_mm.xml reporting.xml release_notes.xml ../Version.config
-	cat $< | sed "s/@@LAST_RELEASE_VERSION@@/${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}.${POSTGIS_MICRO_VERSION}/g" > $@
+ifeq ($(XSLTPROC),)
+postgis_aggs_mm.xml: requirements_not_met_xsltproc
+else
+postgis_aggs_mm.xml: ./xsl/postgis_aggs_mm.xml.xsl postgis-out.xml Makefile
+	$(XSLTPROC) ./xsl/postgis_aggs_mm.xml.xsl postgis-out.xml > $@
+endif
 
-chunked-html: postgis-out.xml images
+postgis_comments.sql: ./xsl/postgis_comments.sql.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/postgis_comments.sql.xsl postgis-out.xml > $@
+	
+postgis_cheatsheet.html: ./xsl/postgis_cheatsheet.html.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/postgis_cheatsheet.html.xsl postgis-out.xml > $@
+	
+raster_comments.sql: ./xsl/raster_comments.sql.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/raster_comments.sql.xsl postgis-out.xml > $@
+	
+raster_cheatsheet.html: ./xsl/raster_cheatsheet.html.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/raster_cheatsheet.html.xsl postgis-out.xml > $@
+	
+topology_comments.sql: ./xsl/topology_comments.sql.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/topology_comments.sql.xsl postgis-out.xml > $@
+	
+topology_cheatsheet.html: ./xsl/topology_cheatsheet.html.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/topology_cheatsheet.html.xsl postgis-out.xml > $@
+	
+tiger_geocoder_comments.sql: ./xsl/tiger_geocoder_comments.sql.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/tiger_geocoder_comments.sql.xsl postgis-out.xml > $@
+	
+tiger_geocoder_cheatsheet.html: ./xsl/tiger_geocoder_cheatsheet.html.xsl $(XML_INPUTS)
+	$(XSLTPROC) ./xsl/tiger_geocoder_cheatsheet.html.xsl postgis-out.xml > $@
+
+postgis-out.xml: postgis.xml Makefile
+	cat $< | sed -e "s/@@LAST_RELEASE_VERSION@@/${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}.${POSTGIS_MICRO_VERSION}/g" -e "s;@@MATHML_PATH@@;${MATHML2_DTD};g" > $@
+
+chunked-html: postgis-out.xml Makefile images $(XML_INPUTS)
 	$(XSLTPROC) $(XSLTPROC_COMMONOPTS) $(XSLTPROC_HTMLOPTS) \
 		--output html/ \
 		--stringparam saxon.character.representation decimal \
 		$(CHUNK_HTML_DOCBOOK_XSL) \
 		$<
 
-html/postgis.html: postgis-out.xml images
+html: html/postgis.html
+
+html/postgis.html: postgis-out.xml Makefile images $(XML_INPUTS)
 	$(XSLTPROC) $(XSLTPROC_COMMONOPTS) $(XSLTPROC_HTMLOPTS) \
 		--output html/postgis.html \
 		$(HTML_DOCBOOK_XSL) \
 		$<
 
 
-postgis-${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}.${POSTGIS_MICRO_VERSION}.pdf: postgis-out.xml images
-	@if test x"$(DBLATEX)" = x; then \
+postgis-${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}.${POSTGIS_MICRO_VERSION}.pdf: postgis-out.xml images $(XML_INPUTS)
+	if test x"$(DBLATEX)" = x; then \
 	   echo "Error: dblatex not found, can't build pdf"; \
 	   echo "       try installing dblatex and then re-run configure"; \
 	   false; \
@@ -111,55 +185,117 @@ doxygen: doxygen.cfg
 	doxygen $<
 
 images: 
-	make -C html/image_src images
+	$(MAKE) -C html/image_src images
+
+images-clean:
+	$(MAKE) -C html/image_src images-clean
 	
-clean:
-	make -C html/image_src clean
-	@rm -f postgis-out.xml postgis_aggs_mm.xml
+clean: 
+	rm -f html/*.html
+	rm -f postgis-${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}.${POSTGIS_MICRO_VERSION}.pdf
+	$(MAKE) -C html/image_src clean
+	rm -f postgis-out.xml postgis_aggs_mm.xml
 
-maintainer-clean: clean
-	make -C html/image_src clean
-	@rm -f html/*.html \
-		postgis-${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}.${POSTGIS_MICRO_VERSION}.pdf
+distclean: clean
+	$(MAKE) -C html/image_src distclean
+	rm -f Makefile
 
-comments: postgis_comments.sql
+maintainer-clean: clean images-clean
+	rm -f postgis_comments.sql raster_comments.sql topology_comments.sql tiger_geocoder_comments.sql
 
+ifeq ($(XSLTPROC),)
+comments: requirements_not_met_xsltproc
+else
+comments: postgis_comments.sql raster_comments.sql topology_comments.sql tiger_geocoder_comments.sql
+endif
+
+cheatsheets: postgis_cheatsheet.html raster_cheatsheet.html topology_cheatsheet.html tiger_geocoder_cheatsheet.html
+
+ifeq ($(XSLTPROC),)
+comments-install: 
+	if test -e postgis_comments.sql  -a \
+	        -e raster_comments.sql   -a \
+	        -e topology_comments.sql -a \
+	        -e tiger_geocoder_comments.sql; then \
+	  $(MAKE) -f Makefile.comments install; \
+	fi
+else
 comments-install: comments
-	make -f Makefile.comments install
+	$(MAKE) -f Makefile.comments install
+endif
 
 comments-uninstall:
-	make -f Makefile.comments uninstall
+	$(MAKE) -f Makefile.comments uninstall
 
-install: html/postgis.html man/shp2pgsql.1 man/pgsql2shp.1
-	@mkdir -p $(PGSQL_DOCDIR)/postgis
-	@mkdir -p $(PGSQL_MANDIR)/man1
-	cp html/postgis.html $(PGSQL_DOCDIR)/postgis/postgis.html
-	cp ../README.postgis $(PGSQL_DOCDIR)/postgis/README.postgis
-	cp man/pgsql2shp.1 $(PGSQL_MANDIR)/man1/pgsql2shp.1
-	cp man/shp2pgsql.1 $(PGSQL_MANDIR)/man1/shp2pgsql.1
+man-install: man/shp2pgsql.1 man/pgsql2shp.1
+	mkdir -p $(DESTDIR)$(PGSQL_MANDIR)/man1
+	$(INSTALL_DATA) man/pgsql2shp.1 $(DESTDIR)$(PGSQL_MANDIR)/man1/pgsql2shp.1
+	$(INSTALL_DATA) man/shp2pgsql.1 $(DESTDIR)$(PGSQL_MANDIR)/man1/shp2pgsql.1
 
-uninstall:
-	rm -f $(PGSQL_DOCDIR)/postgis/postgis.html
-	rm -f $(PGSQL_DOCDIR)/postgis/README.postgis
-	rm -f $(PGSQL_MANDIR)/man1/shp2pgsql.1
-	rm -f $(PGSQL_MANDIR)/man1/pgsql2shp.1
+man-uninstall:
+	rm -f $(DESTDIR)$(PGSQL_MANDIR)/man1/shp2pgsql.1
+	rm -f $(DESTDIR)$(PGSQL_MANDIR)/man1/pgsql2shp.1
+
+docs-install: html/postgis.html
+	mkdir -p $(DESTDIR)$(PGSQL_DOCDIR)/postgis
+	$(INSTALL_DATA) html/postgis.html $(DESTDIR)$(PGSQL_DOCDIR)/postgis/postgis.html
+	$(INSTALL_DATA) ../README.postgis $(DESTDIR)$(PGSQL_DOCDIR)/postgis/README.postgis
+
+docs-uninstall: 
+	rm -f $(DESTDIR)$(PGSQL_DOCDIR)/postgis/postgis.html
+	rm -f $(DESTDIR)$(PGSQL_DOCDIR)/postgis/README.postgis
+
+install: comments-install
+
+uninstall: comments-uninstall
+
+ifeq ($(XSLTPROC),)
+garden: requirements_not_met_xsltproc
+else
+garden:	xsl/postgis_gardentest.sql.xsl $(XML_INPUTS)
+	$(XSLTPROC) -o postgis_gardentest_${POSTGIS_MAJOR_VERSION}${POSTGIS_MINOR_VERSION}.sql xsl/postgis_gardentest.sql.xsl postgis-out.xml
+	$(XSLTPROC) -o raster_gardentest_${POSTGIS_MAJOR_VERSION}${POSTGIS_MINOR_VERSION}.sql xsl/raster_gardentest.sql.xsl postgis-out.xml
+endif
+
+
+
+ifeq ($(XMLLINT),)
+check: requirements_not_met_xmllint
+else
+check: $(XML_INPUTS)
+	$(XMLLINT) --loaddtd --xinclude --valid postgis-out.xml > /dev/null
+endif
+
 
 requirements_not_met_xsltproc:
 	@echo
-	@echo "configure was unable to find 'xsltproc' which is required to build the documentation."
-	@echo "To build the documentation, install xsltproc and then re-run configure. Alternatively "
+	@echo "configure was unable to find 'xsltproc' which is required"
+	@echo "to build the documentation."
+	@echo "Install xsltproc and then re-run configure. Alternatively "
 	@echo "refer to online manual:"
 	@echo
-	@echo "  http://postgis.refractions.net/docs"
+	@echo "  http://www.postgis.org/docs"
+	@echo
+
+requirements_not_met_xmllint:
+	@echo
+	@echo "configure was unable to find 'xmllint' which is required"
+	@echo "to test the documentation."
+	@echo "Install xmllint and then re-run configure. Alternatively "
+	@echo "refer to online manual:"
+	@echo
+	@echo "  http://www.postgis.org/docs"
 	@echo
 
 requirements_not_met_xslbase:
 	@echo
-	@echo "configure was unable to find the Docbook XSL stylesheet directory which is required to build the documentation."
-	@echo "To build the documentation, install the Docbook XSL stylesheets and/or re-run configure with the --with-xsldir option. Alternatively "
-	@echo "refer to online manual:"
+	@echo "configure was unable to find the Docbook XSL stylesheet directory"
+	@echo "which is required to build the documentation."
+	@echo "Install the Docbook XSL stylesheets and/or re-run configure "
+	@echo "with the --with-xsldir option."
+	@echo "Alternatively refer to online manual:"
 	@echo
-	@echo "  http://postgis.refractions.net/docs"
+	@echo "  http://www.postgis.org/docs"
 	@echo
 
 requirements_not_met_imagemagick:
@@ -168,8 +304,6 @@ requirements_not_met_imagemagick:
 	@echo "To build the documentation, install ImageMagick and then re-run configure. Alternatively "
 	@echo "refer to online manual:"
 	@echo
-	@echo "  http://postgis.refractions.net/docs"
+	@echo "  http://www.postgis.org/docs"
 	@echo 
 	
-.PHONY: html
-

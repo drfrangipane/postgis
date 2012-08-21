@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeom_dump.c 4635 2009-10-09 19:23:05Z pramsey $
+ * $Id: lwgeom_dump.c 9324 2012-02-27 22:08:12Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -9,18 +9,6 @@
  * the terms of the GNU General Public Licence. See the COPYING file.
  *
  **********************************************************************/
-#include "postgres.h"
-#include "fmgr.h"
-#include "utils/elog.h"
-#include "utils/array.h"
-#include "utils/geo_decls.h"
-#include "funcapi.h"
-
-#include "liblwgeom.h"
-#include "lwgeom_pg.h"
-#include "profile.h"
-
-#include "../postgis_config.h"
 
 #include <math.h>
 #include <float.h>
@@ -29,6 +17,17 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "postgres.h"
+#include "fmgr.h"
+#include "utils/elog.h"
+#include "utils/array.h"
+#include "utils/geo_decls.h"
+#include "funcapi.h"
+
+#include "../postgis_config.h"
+#include "liblwgeom.h"
+#include "lwgeom_pg.h"
+
 
 Datum LWGEOM_dump(PG_FUNCTION_ARGS);
 Datum LWGEOM_dump_rings(PG_FUNCTION_ARGS);
@@ -36,7 +35,7 @@ Datum LWGEOM_dump_rings(PG_FUNCTION_ARGS);
 typedef struct GEOMDUMPNODE_T
 {
 	int idx;
-	LWCOLLECTION *geom;
+	LWGEOM *geom;
 }
 GEOMDUMPNODE;
 
@@ -46,7 +45,6 @@ typedef struct GEOMDUMPSTATE
 	int stacklen;
 	GEOMDUMPNODE *stack[MAXDEPTH];
 	LWGEOM *root;
-	LWGEOM *geom;
 }
 GEOMDUMPSTATE;
 
@@ -58,7 +56,7 @@ GEOMDUMPSTATE;
 PG_FUNCTION_INFO_V1(LWGEOM_dump);
 Datum LWGEOM_dump(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *pglwgeom;
+	GSERIALIZED *pglwgeom;
 	LWCOLLECTION *lwcoll;
 	LWGEOM *lwgeom;
 	FuncCallContext *funcctx;
@@ -71,7 +69,7 @@ Datum LWGEOM_dump(PG_FUNCTION_ARGS)
 	Datum result;
 	char address[256];
 	char *ptr;
-	unsigned int i;
+	uint32 i;
 	char *values[2];
 
 	if (SRF_IS_FIRSTCALL())
@@ -81,22 +79,22 @@ Datum LWGEOM_dump(PG_FUNCTION_ARGS)
 
 		oldcontext = MemoryContextSwitchTo(newcontext);
 
-		pglwgeom = (PG_LWGEOM *)PG_DETOAST_DATUM_COPY(PG_GETARG_DATUM(0));
-		lwgeom = lwgeom_deserialize(SERIALIZED_FORM(pglwgeom));
+		pglwgeom = (GSERIALIZED *)PG_DETOAST_DATUM_COPY(PG_GETARG_DATUM(0));
+		lwgeom = lwgeom_from_gserialized(pglwgeom);
 
 		/* Create function state */
 		state = lwalloc(sizeof(GEOMDUMPSTATE));
 		state->root = lwgeom;
 		state->stacklen=0;
 
-		if ( lwgeom_is_collection(TYPE_GETTYPE(lwgeom->type)) )
+		if ( lwgeom_is_collection(lwgeom) )
 		{
 			/*
 			 * Push a GEOMDUMPNODE on the state stack
 			 */
 			node = lwalloc(sizeof(GEOMDUMPNODE));
 			node->idx=0;
-			node->geom = (LWCOLLECTION *)lwgeom;
+			node->geom = lwgeom;
 			PUSH(state, node);
 		}
 
@@ -127,10 +125,12 @@ Datum LWGEOM_dump(PG_FUNCTION_ARGS)
 
 	/* Handled simple geometries */
 	if ( ! state->root ) SRF_RETURN_DONE(funcctx);
-	if ( ! lwgeom_is_collection(TYPE_GETTYPE(state->root->type)) )
+	/* Return nothing for empties */
+	if ( lwgeom_is_empty(state->root) ) SRF_RETURN_DONE(funcctx);
+	if ( ! lwgeom_is_collection(state->root) )
 	{
 		values[0] = "{}";
-		values[1] = lwgeom_to_hexwkb(state->root, PARSER_CHECK_NONE, -1);
+		values[1] = lwgeom_to_hexwkb(state->root, WKB_EXTENDED, 0);
 		tuple = BuildTupleFromCStrings(funcctx->attinmeta, values);
 		result = HeapTupleGetDatum(tuple);
 
@@ -141,12 +141,12 @@ Datum LWGEOM_dump(PG_FUNCTION_ARGS)
 	while (1)
 	{
 		node = LAST(state);
-		lwcoll = node->geom;
+		lwcoll = (LWCOLLECTION*)node->geom;
 
 		if ( node->idx < lwcoll->ngeoms )
 		{
 			lwgeom = lwcoll->geoms[node->idx];
-			if ( ! lwgeom_is_collection(TYPE_GETTYPE(lwgeom->type)) )
+			if ( ! lwgeom_is_collection(lwgeom) )
 			{
 				/* write address of current geom */
 				ptr=address;
@@ -172,7 +172,7 @@ Datum LWGEOM_dump(PG_FUNCTION_ARGS)
 
 			node = lwalloc(sizeof(GEOMDUMPNODE));
 			node->idx=0;
-			node->geom = (LWCOLLECTION *)lwgeom;
+			node->geom = lwgeom;
 			PUSH(state, node);
 
 			MemoryContextSwitchTo(oldcontext);
@@ -184,10 +184,10 @@ Datum LWGEOM_dump(PG_FUNCTION_ARGS)
 		LAST(state)->idx++;
 	}
 
-	lwgeom->SRID = state->root->SRID;
+	lwgeom->srid = state->root->srid;
 
 	values[0] = address;
-	values[1] = lwgeom_to_hexwkb(lwgeom, PARSER_CHECK_NONE, -1);
+	values[1] = lwgeom_to_hexwkb(lwgeom, WKB_EXTENDED, 0);
 	tuple = BuildTupleFromCStrings(funcctx->attinmeta, values);
 	result = TupleGetDatum(funcctx->slot, tuple);
 	node->idx++;
@@ -203,7 +203,7 @@ struct POLYDUMPSTATE
 PG_FUNCTION_INFO_V1(LWGEOM_dump_rings);
 Datum LWGEOM_dump_rings(PG_FUNCTION_ARGS)
 {
-	PG_LWGEOM *pglwgeom;
+	GSERIALIZED *pglwgeom;
 	LWGEOM *lwgeom;
 	FuncCallContext *funcctx;
 	struct POLYDUMPSTATE *state;
@@ -222,13 +222,13 @@ Datum LWGEOM_dump_rings(PG_FUNCTION_ARGS)
 
 		oldcontext = MemoryContextSwitchTo(newcontext);
 
-		pglwgeom = (PG_LWGEOM *)PG_DETOAST_DATUM_COPY(PG_GETARG_DATUM(0));
-		if ( TYPE_GETTYPE(pglwgeom->type) != POLYGONTYPE )
+		pglwgeom = (GSERIALIZED *)PG_DETOAST_DATUM_COPY(PG_GETARG_DATUM(0));
+		if ( gserialized_get_type(pglwgeom) != POLYGONTYPE )
 		{
 			lwerror("Input is not a polygon");
 		}
 
-		lwgeom = lwgeom_deserialize(SERIALIZED_FORM(pglwgeom));
+		lwgeom = lwgeom_from_gserialized(pglwgeom);
 
 		/* Create function state */
 		state = lwalloc(sizeof(struct POLYDUMPSTATE));
@@ -273,11 +273,11 @@ Datum LWGEOM_dump_rings(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(newcontext);
 
 		/* We need a copy of input ring here */
-		ring = ptarray_clone(poly->rings[state->ringnum]);
+		ring = ptarray_clone_deep(poly->rings[state->ringnum]);
 
 		/* Construct another polygon with shell only */
 		ringgeom = (LWGEOM*)lwpoly_construct(
-		               poly->SRID,
+		               poly->srid,
 		               NULL, /* TODO: could use input bounding box here */
 		               1, /* one ring */
 		               &ring);
@@ -286,7 +286,7 @@ Datum LWGEOM_dump_rings(PG_FUNCTION_ARGS)
 		sprintf(address, "{%d}", state->ringnum);
 
 		values[0] = address;
-		values[1] = lwgeom_to_hexwkb(ringgeom, PARSER_CHECK_NONE, -1);
+		values[1] = lwgeom_to_hexwkb(ringgeom, WKB_EXTENDED, 0);
 
 		MemoryContextSwitchTo(oldcontext);
 

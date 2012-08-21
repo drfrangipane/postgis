@@ -1,9 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 <!-- ********************************************************************
-	 $Id: postgis_aggs_mm.xml.xsl 5082 2009-12-30 15:31:27Z robe $
+	 $Id: postgis_aggs_mm.xml.xsl 9450 2012-03-10 12:51:42Z strk $
 	 ********************************************************************
-	 Copyright 2008, Regina Obe
+	 Copyright 2010, Regina Obe
 	 License: BSD
 	 Purpose: This is an xsl transform that generates index listing of aggregate functions and mm /sql compliant functions xml section from reference_new.xml to then
 	 be processed by doc book
@@ -15,28 +14,31 @@
 		<xsl:apply-templates select="/book/chapter[@id='reference']" />
 	</xsl:template>
 
-	<xsl:template match="chapter">
-	<chapter>
+	<xsl:template match="//chapter">
+	<chapter id="PostGIS_Special_Functions_Index">
 		<title>PostGIS Special Functions Index</title>
 		<sect1 id="PostGIS_Aggregate_Functions">
 			<title>PostGIS Aggregate Functions</title>
 			<para>The functions given below are spatial aggregate functions provided with PostGIS that can be used just like any other sql aggregate function such as sum, average.</para>
 			<itemizedlist>
 			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-			<xsl:for-each select='sect1/refentry'>
-				<xsl:sort select="@id"/>
+			<xsl:for-each select='//refentry'>
+				<xsl:sort select="refnamediv/refname"/>
 				<xsl:variable name='comment'>
 					<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
 				</xsl:variable>
 				<xsl:variable name="refid">
 					<xsl:value-of select="@id" />
 				</xsl:variable>
+				<xsl:variable name="refname">
+					<xsl:value-of select="refnamediv/refname" />
+				</xsl:variable>
 
 			<!-- For each function prototype if it takes a geometry set then catalog it as an aggregate function  -->
 				<xsl:for-each select="refsynopsisdiv/funcsynopsis/funcprototype">
 					<xsl:choose>
-						<xsl:when test="contains(paramdef/type,'geometry set')">
-							 <listitem><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /></listitem>
+						<xsl:when test="contains(paramdef/type,' set') or contains(paramdef/type,'geography set') or contains(paramdef/type,'raster set')">
+							 <listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
 						</xsl:when>
 					</xsl:choose>
 				</xsl:for-each>
@@ -53,7 +55,7 @@
 			</note>
 				<itemizedlist>
 			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-				<xsl:for-each select='sect1/refentry'>
+				<xsl:for-each select='//refentry'>
 					<xsl:sort select="@id"/>
 					<xsl:variable name='comment'>
 						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -67,7 +69,7 @@
 							<xsl:for-each select="para">
 								<xsl:choose>
 									<xsl:when test="contains(.,'implements the SQL/MM')">
-										<listitem><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /> <xsl:value-of select="." /></listitem>
+										<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /> <xsl:value-of select="." /></simpara></listitem>
 									</xsl:when>
 								</xsl:choose>
 							</xsl:for-each>
@@ -83,7 +85,7 @@
 				and for large geometries or geometry pairs that cover more than one UTM zone. Basic tranform - (favoring UTM, Lambert Azimuthal (North/South), and falling back on mercator in worst case scenario)</para></note>
 				<itemizedlist>
 			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-				<xsl:for-each select='sect1/refentry'>
+				<xsl:for-each select='//refentry'>
 					<xsl:sort select="@id"/>
 					<xsl:variable name='comment'>
 						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -98,19 +100,20 @@
 			<!-- If at least one proto function accepts or returns a geography -->
 					<xsl:choose>
 						<xsl:when test="contains(refsynopsisdiv/funcsynopsis,'geography') or contains(refsynopsisdiv/funcsynopsis/funcprototype/funcdef,'geography')">
-							<listitem><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></listitem>
+							<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
 						</xsl:when>
 					</xsl:choose>
 				</xsl:for-each>
 				</itemizedlist>
 		</sect1>
-		
-		<sect1 id="PostGIS_Geometry_DumpFunctions">
-			<title>PostGIS Geometry Dump Functions</title>
-			<para>The functions given below are PostGIS functions that take as input or return as output a set of or single <link linkend="geometry_dump">geometry_dump</link> data type object.</para>
+
+		<sect1 id="PostGIS_RasterFunctions">
+			<title>PostGIS Raster Support Functions</title>
+			<para>The functions and operators given below are PostGIS functions/operators that take as input or return as output a <xref linkend="raster" /> data type object. Listed
+			in alphabetical order.</para>
 				<itemizedlist>
 			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-				<xsl:for-each select='sect1/refentry'>
+				<xsl:for-each select='//refentry'>
 					<xsl:sort select="@id"/>
 					<xsl:variable name='comment'>
 						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -124,8 +127,36 @@
 
 			<!-- If at least one proto function accepts or returns a geography -->
 					<xsl:choose>
-						<xsl:when test="contains(refsynopsisdiv/funcsynopsis,'geometry_dump') or contains(refsynopsisdiv/funcsynopsis/funcprototype/funcdef,'geometry_dump')">
-							<listitem><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></listitem>
+						<xsl:when test="contains(refsynopsisdiv/funcsynopsis,'raster') or contains(refsynopsisdiv/funcsynopsis/funcprototype/funcdef,'raster')">
+							<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
+						</xsl:when>
+					</xsl:choose>
+				</xsl:for-each>
+				</itemizedlist>
+		</sect1>
+	
+		
+		<sect1 id="PostGIS_Geometry_DumpFunctions">
+			<title>PostGIS Geometry / Geography / Raster Dump Functions</title>
+			<para>The functions given below are PostGIS functions that take as input or return as output a set of or single <link linkend="geometry_dump">geometry_dump</link> or  <link linkend="geomval">geomval</link> data type object.</para>
+				<itemizedlist>
+			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
+				<xsl:for-each select='//refentry'>
+					<xsl:sort select="@id"/>
+					<xsl:variable name='comment'>
+						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
+					</xsl:variable>
+					<xsl:variable name="refid">
+						<xsl:value-of select="@id" />
+					</xsl:variable>
+					<xsl:variable name="refname">
+						<xsl:value-of select="refnamediv/refname" />
+					</xsl:variable>
+
+			<!-- If at least one proto function accepts or returns a geography -->
+					<xsl:choose>
+						<xsl:when test="contains(refsynopsisdiv/funcsynopsis,'geometry_dump') or contains(refsynopsisdiv/funcsynopsis/funcprototype/funcdef,'geometry_dump') or contains(refsynopsisdiv/funcsynopsis/funcprototype/funcdef,'geomval')">
+							<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
 						</xsl:when>
 					</xsl:choose>
 				</xsl:for-each>
@@ -135,10 +166,10 @@
 		<sect1 id="PostGIS_BoxFunctions">
 			<title>PostGIS Box Functions</title>
 			<para>The functions given below are PostGIS functions that take as input or return as output the box* family of PostGIS spatial types.
-				The box family of types consists of <link linkend="box2d">box2d</link>, <link linkend="box3d">box3d</link>, <link linkend="box3d_extent">box3d_extent</link> </para>
+				The box family of types consists of <link linkend="box2d_type">box2d</link>, and <link linkend="box3d_type">box3d</link></para>
 				<itemizedlist>
 			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-				<xsl:for-each select='sect1/refentry'>
+				<xsl:for-each select='//refentry'>
 					<xsl:sort select="@id"/>
 					<xsl:variable name='comment'>
 						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -153,7 +184,7 @@
 			<!-- If at least one proto function accepts or returns a geography -->
 					<xsl:choose>
 						<xsl:when test="contains(refsynopsisdiv/funcsynopsis,'box') or contains(refsynopsisdiv/funcsynopsis/funcprototype/funcdef,'box')">
-							<listitem><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></listitem>
+							<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
 						</xsl:when>
 					</xsl:choose>
 				</xsl:for-each>
@@ -165,7 +196,7 @@
 			<para>The functions given below are PostGIS functions that do not throw away the Z-Index.</para>
 				<itemizedlist>
 			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-				<xsl:for-each select='sect1/refentry'>
+				<xsl:for-each select='//refentry'>
 					<xsl:sort select="@id"/>
 					<xsl:variable name='comment'>
 						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -179,7 +210,7 @@
 							<xsl:for-each select="para">
 								<xsl:choose>
 									<xsl:when test="contains(.,'This function supports 3d')">
-										<listitem><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /></listitem>
+										<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
 									</xsl:when>
 								</xsl:choose>
 							</xsl:for-each>
@@ -193,7 +224,7 @@
 			<para>The functions given below are PostGIS functions that can use CIRCULARSTRING, CURVEDPOLYGON, and other curved geometry types</para>
 				<itemizedlist>
 			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-				<xsl:for-each select='sect1/refentry'>
+				<xsl:for-each select='//refentry'>
 					<xsl:sort select="@id"/>
 					<xsl:variable name='comment'>
 						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -210,7 +241,38 @@
 							<xsl:for-each select="para">
 								<xsl:choose>
 									<xsl:when test="contains(.,'supports Circular Strings')">
-										<listitem><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></listitem>
+										<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
+									</xsl:when>
+								</xsl:choose>
+							</xsl:for-each>
+						</xsl:for-each>
+				</xsl:for-each>
+				</itemizedlist>
+		</sect1>
+		
+		<sect1 id="PostGIS_PS_GeometryFunctions">
+			<title>PostGIS Polyhedral Surface Support Functions</title>
+			<para>The functions given below are PostGIS functions that can use POLYHEDRALSURFACE, POLYHEDRALSURFACEM geometries</para>
+				<itemizedlist>
+			<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
+				<xsl:for-each select='//refentry'>
+					<xsl:sort select="@id"/>
+					<xsl:variable name='comment'>
+						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
+					</xsl:variable>
+					<xsl:variable name="refid">
+						<xsl:value-of select="@id" />
+					</xsl:variable>
+					<xsl:variable name="refname">
+						<xsl:value-of select="refnamediv/refname" />
+					</xsl:variable>
+
+			<!-- For each section if there is note that it supports Polyhedral surfaces catalog it -->
+						<xsl:for-each select="refsection">
+							<xsl:for-each select="para">
+								<xsl:choose>
+									<xsl:when test="contains(.,'supports Polyhedral')">
+										<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="$comment" /></simpara></listitem>
 									</xsl:when>
 								</xsl:choose>
 							</xsl:for-each>
@@ -228,34 +290,43 @@
 			<para>Below is an alphabetical listing of spatial specific functions in PostGIS and the kinds of spatial
 				types they work with or OGC/SQL compliance they try to conform to.</para>
 			<para><itemizedlist>
-				<listitem>A <xsl:value-of select="$matrix_checkmark" disable-output-escaping="yes"/> means the function works with the type or subtype natively.</listitem>
-				<listitem>A <xsl:value-of select="$matrix_transform" disable-output-escaping="yes"/> means it works but with a transform cast built-in using cast to geometry, transform to a "best srid" spatial ref and then cast back. Results may not be as expected for large areas or areas at poles 
-						and may accumulate floating point junk.</listitem>
-				<listitem>A <xsl:value-of select="$matrix_autocast" disable-output-escaping="yes"/> means the function works with the type because of a auto-cast to another such as to box3d rather than direct type support.</listitem>
+				<listitem><simpara>A <xsl:value-of select="$matrix_checkmark" disable-output-escaping="yes"/> means the function works with the type or subtype natively.</simpara></listitem>
+				<listitem><simpara>A <xsl:value-of select="$matrix_transform" disable-output-escaping="yes"/> means it works but with a transform cast built-in using cast to geometry, transform to a "best srid" spatial ref and then cast back. Results may not be as expected for large areas or areas at poles 
+						and may accumulate floating point junk.</simpara></listitem>
+				<listitem><simpara>A <xsl:value-of select="$matrix_autocast" disable-output-escaping="yes"/> means the function works with the type because of a auto-cast to another such as to box3d rather than direct type support.</simpara></listitem>
+				<listitem><simpara>geom - Basic 2D geometry support (x,y).</simpara></listitem>
+				<listitem><simpara>geog - Basic 2D geography support (x,y).</simpara></listitem>
+				<listitem><simpara>2.5D - basic 2D geometries in 3 D/4D space (has Z or M coord).</simpara></listitem>
+				<listitem><simpara>PS - Polyhedral surfaces</simpara></listitem>
+				<listitem><simpara>T - Triangles and Triangulated Irregular Network surfaces (TIN)</simpara></listitem>
 				</itemizedlist>
 			</para>
 				
 			<para>
 				<informaltable frame='all'>
-					<tgroup cols='6' align='left' colsep='1' rowsep='1'>
-						<colspec colname='function' />
+					<tgroup cols='8' align='left' colsep='1' rowsep='1'>
+						<colspec colname='function' align='left'/>
 						<colspec colname='geometry' align='center'/>
 						<colspec colname='geography' align='center'/>
-						<colspec colname='3D' align='center'/>
+						<colspec colname='25D' align='center'/>
 						<colspec colname='Curves' align='center'/>
 						<colspec colname='SQLMM' align='center' />
+						<colspec colname='PS' align='center' />
+						<colspec colname='T' align='center' />
 						<thead>
 						  <row>
 							<entry>Function</entry>
-							<entry>geometry</entry>
-							<entry>geography</entry>
-							<entry>3D (2.5D)</entry>
+							<entry>geom</entry>
+							<entry>geog</entry>
+							<entry>2.5D</entry>
 							<entry>Curves</entry>
 							<entry>SQL MM</entry>
+							<entry>PS</entry>
+							<entry>T</entry>
 						  </row>
 						</thead>
 						<tbody>
-						<!-- Exclude PostGIS types ,management functions, long transaction support, or exceptional functions from consideration  -->
+						<!-- Exclude PostGIS types, management functions, long transaction support, or exceptional functions from consideration  -->
 						<!-- leaving out operators in an effor to try to fit on one page -->
 						<xsl:for-each select="sect1[not(@id='PostGIS_Types' or @id='Management_Functions' or @id='Long_Transactions_Support' or @id='Exceptional_Functions')]/refentry">
 							<xsl:sort select="@id"/>
@@ -336,6 +407,28 @@
 										<entry></entry>
 									</xsl:otherwise>
 								</xsl:choose>
+							<!-- Polyhedral surface support -->
+								<xsl:choose>
+									<!-- supports -->
+									<xsl:when test="contains(.,'Polyhedral')">
+										<entry><xsl:value-of select="$matrix_checkmark" disable-output-escaping="yes"/></entry>
+									</xsl:when>
+									<!-- no support -->
+									<xsl:otherwise>
+										<entry></entry>
+									</xsl:otherwise>
+								</xsl:choose>
+							<!-- Triangle and TIN surface support -->
+								<xsl:choose>
+									<!-- supports -->
+									<xsl:when test="contains(.,'Triang')">
+										<entry><xsl:value-of select="$matrix_checkmark" disable-output-escaping="yes"/></entry>
+									</xsl:when>
+									<!-- no support -->
+									<xsl:otherwise>
+										<entry></entry>
+									</xsl:otherwise>
+								</xsl:choose>
 							</row>
 						</xsl:for-each>
 						</tbody>
@@ -345,13 +438,112 @@
 	   </sect1>
 
 		<sect1 id="NewFunctions">
-			<title>New PostGIS Functions</title>
-			<sect2 id="NewFunctions_1_5">
-				<title>PostGIS Functions new, behavior changed, or enhanced in 1.5</title>
-				<para>The functions given below are PostGIS functions that were introduced or enhanced in this major release.</para>
+			<title>New, Enhanced or changed PostGIS Functions</title>
+			<sect2 id="NewFunctions_2_0">
+				<title>PostGIS Functions new, behavior changed, or enhanced in 2.0</title>
+				<para>The functions given below are PostGIS functions that were added, enhanced, or have <xref linkend="NewFunctions_2_0_Changed" /> breaking changes in 2.0 releases.</para>
+				<para>New geometry types: TIN and Polyhedral surfaces was introduced in 2.0</para>
+				<note><para>Greatly improved support for Topology.  Please refer to <xref linkend="Topology" /> for more details.</para></note>
+				<note><para>In PostGIS 2.0, raster type and raster functionality has been integrated.  There are way too many new raster functions to list here and all are new so 
+					please refer to <xref linkend="RT_reference" /> for more details of the raster functions available. Earlier pre-2.0 versions had raster_columns/raster_overviews as real tables. These were changed to views before release.  Functions such as <varname>ST_AddRasterColumn</varname> were removed and replaced with <xref linkend="RT_AddRasterConstraints"/>, <xref linkend="RT_DropRasterConstraints"/> as a result some apps that created raster tables may need changing.</para></note>
+				<note><para>Tiger Geocoder upgraded to work with TIGER 2010 census data and now included in the core PostGIS documentation.  A reverse geocoder function was also added.
+					Please refer to <xref linkend="Tiger_Geocoder" /> for more details.</para></note>
 				<itemizedlist>
 				<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-					<xsl:for-each select='sect1/refentry'>
+					<xsl:for-each select='//refentry'>
+						<xsl:sort select="refnamediv/refname"/>
+						<xsl:variable name='comment'>
+							<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
+						</xsl:variable>
+						<xsl:variable name="refid">
+							<xsl:value-of select="@id" />
+						</xsl:variable>
+						
+						<xsl:variable name="refname">
+							<xsl:value-of select="refnamediv/refname" />
+						</xsl:variable>
+
+
+				<!-- For each section if there is note about availability in this version -->
+							<xsl:for-each select="refsection">
+								<xsl:for-each select="para | */para">
+									<xsl:choose>
+										<xsl:when test="contains(.,'Availability: 2.0')">
+											<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="." /><xsl:text> </xsl:text> <xsl:value-of select="$comment" /></simpara></listitem>
+										</xsl:when>
+									</xsl:choose>
+								</xsl:for-each>
+							</xsl:for-each>
+					</xsl:for-each>
+				</itemizedlist>
+				
+				<para>The functions given below are PostGIS functions that are enhanced in PostGIS 2.0.</para>
+				<itemizedlist>
+				<!-- Pull out the purpose section for each ref entry   -->
+					<xsl:for-each select='//refentry'>
+						<xsl:sort select="@id"/>
+						<xsl:variable name="refid">
+							<xsl:value-of select="@id" />
+						</xsl:variable>
+						
+						<xsl:variable name="refname">
+							<xsl:value-of select="refnamediv/refname" />
+						</xsl:variable>
+				<!-- For each section if there is note about enhanced in this version -->
+							<xsl:for-each select="refsection">
+								<xsl:for-each select="para | */para">
+									<xsl:choose>
+										<xsl:when test="contains(.,'Enhanced: 2.0')">
+											<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="." /></simpara></listitem>
+										</xsl:when>
+									</xsl:choose>
+								</xsl:for-each>
+							</xsl:for-each>
+					</xsl:for-each>
+				</itemizedlist>				
+			</sect2>
+			<sect2 id="NewFunctions_2_0_Changed">
+			       <title>PostGIS Functions changed behavior in 2.0</title>
+			       <para>The functions given below are PostGIS functions that have changed behavior in PostGIS 2.0 and may require application changes.</para>
+                    <note><para>Most deprecated functions have been removed.  These are functions that haven't been documented since 1.2
+                        or some internal functions that were never documented.  If you are using a function that you don't see documented,
+                        it's probably deprecated, about to be deprecated, or internal and should be avoided.  If you have applications or tools
+                        that rely on deprecated functions, please refer to <link linkend="legacy_faq" /> for more details.</para></note>
+                    <note><para>Bounding boxes of geometries have been changed from float4 to double precision (float8).  This has an impact
+                    	on answers you get using bounding box operators and casting of bounding boxes to geometries. E.g ST_SetSRID(abbox) will
+                    	often return a different more accurate answer in PostGIS 2.0+ than it did in prior versions which may very well slightly
+                    	change answers to view port queries.</para></note>
+                    <note><para>The arguments hasnodata was replaced with exclude_nodata_value which has the same meaning as the older hasnodata but clearer in purpose.</para></note>
+                    <itemizedlist>
+                    <!-- Pull out the purpose section for each ref entry   -->
+                        <xsl:for-each select='//refentry'>
+                            <xsl:sort select="@id"/>
+                            <xsl:variable name="refid">
+                                <xsl:value-of select="@id" />
+                            </xsl:variable>
+                            
+                            <xsl:variable name="refname">
+                                <xsl:value-of select="refnamediv/refname" />
+                            </xsl:variable>
+                    <!-- For each section if there is note about enhanced in this version -->
+                                <xsl:for-each select="refsection">
+                                    <xsl:for-each select="para | */para">
+                                        <xsl:choose>
+                                            <xsl:when test="contains(.,'Changed: 2.0')">
+                                                <listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="." /></simpara></listitem>
+                                            </xsl:when>
+                                        </xsl:choose>
+                                    </xsl:for-each>
+                                </xsl:for-each>
+                        </xsl:for-each>
+                    </itemizedlist>
+             </sect2>
+			<sect2 id="NewFunctions_1_5">
+				<title>PostGIS Functions new, behavior changed, or enhanced in 1.5</title>
+				<para>The functions given below are PostGIS functions that were introduced or enhanced in this minor release.</para>
+				<itemizedlist>
+				<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
+					<xsl:for-each select='//refentry'>
 						<xsl:sort select="@id"/>
 						<xsl:variable name='comment'>
 							<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -370,7 +562,7 @@
 								<xsl:for-each select="para">
 									<xsl:choose>
 										<xsl:when test="contains(.,'Availability: 1.5')">
-											<listitem><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="." /><xsl:text> </xsl:text> <xsl:value-of select="$comment" /> </listitem>
+											<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refname" /></link> - <xsl:value-of select="." /><xsl:text> </xsl:text> <xsl:value-of select="$comment" /></simpara></listitem>
 										</xsl:when>
 									</xsl:choose>
 								</xsl:for-each>
@@ -383,7 +575,7 @@
 				<para>The functions given below are PostGIS functions that were introduced or enhanced in the 1.4 release.</para>
 				<itemizedlist>
 				<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-					<xsl:for-each select='sect1/refentry'>
+					<xsl:for-each select='//refentry'>
 						<xsl:sort select="@id"/>
 						<xsl:variable name='comment'>
 							<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -397,7 +589,7 @@
 								<xsl:for-each select="para|note">
 									<xsl:choose>
 										<xsl:when test="contains(.,'Availability: 1.4')">
-											<listitem><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /> <xsl:text> </xsl:text><xsl:value-of select="." /></listitem>
+											<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /> <xsl:text> </xsl:text><xsl:value-of select="." /></simpara></listitem>
 										</xsl:when>
 									</xsl:choose>
 								</xsl:for-each>
@@ -410,7 +602,7 @@
 				<para>The functions given below are PostGIS functions that were introduced in the 1.3 release.</para>
 				<itemizedlist>
 				<!-- Pull out the purpose section for each ref entry and strip whitespace and put in a variable to be tagged unto each function comment  -->
-				<xsl:for-each select='sect1/refentry'>
+				<xsl:for-each select='//refentry'>
 					<xsl:sort select="@id"/>
 					<xsl:variable name='comment'>
 						<xsl:value-of select="normalize-space(translate(translate(refnamediv/refpurpose,'&#x0d;&#x0a;', ' '), '&#09;', ' '))"/>
@@ -424,7 +616,7 @@
 							<xsl:for-each select="para">
 								<xsl:choose>
 									<xsl:when test="contains(.,'Availability: 1.3')">
-										<listitem><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /> <xsl:text> </xsl:text><xsl:value-of select="." /></listitem>
+										<listitem><simpara><link linkend="{$refid}"><xsl:value-of select="$refid" /></link> - <xsl:value-of select="$comment" /> <xsl:text> </xsl:text><xsl:value-of select="." /></simpara></listitem>
 									</xsl:when>
 								</xsl:choose>
 							</xsl:for-each>

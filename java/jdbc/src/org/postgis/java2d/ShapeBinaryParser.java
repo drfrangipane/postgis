@@ -19,12 +19,13 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: ShapeBinaryParser.java 4038 2009-04-28 17:04:30Z kneufeld $
+ * $Id: ShapeBinaryParser.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 package org.postgis.java2d;
 
 import java.awt.geom.GeneralPath;
 
+import org.postgis.Geometry;
 import org.postgis.binary.ByteGetter;
 import org.postgis.binary.ValueGetter;
 import org.postgis.binary.ByteGetter.BinaryByteGetter;
@@ -70,7 +71,7 @@ public class ShapeBinaryParser {
      * Is synchronized to protect offset counter. (Unfortunately, Java does not
      * have neither call by reference nor multiple return values.)
      * 
-     * @return a potential SRID or -1 if not present
+     * @return a potential SRID or Geometry.UNKNOWN_SRID if not present
      */
     public synchronized int parse(String value, GeneralPath path) {
         StringByteGetter bytes = new ByteGetter.StringByteGetter(value);
@@ -83,7 +84,7 @@ public class ShapeBinaryParser {
      * Is synchronized to protect offset counter. (Unfortunately, Java does not
      * have neither call by reference nor multiple return values.)
      * 
-     * @return a potential SRID or -1 if not present
+     * @return a potential SRID or Geometry.UNKNOWN_SRID if not present
      */
     public synchronized int parse(byte[] value, GeneralPath path) {
         BinaryByteGetter bytes = new ByteGetter.BinaryByteGetter(value);
@@ -108,10 +109,10 @@ public class ShapeBinaryParser {
         boolean haveM = (typeword & 0x40000000) != 0;
         boolean haveS = (typeword & 0x20000000) != 0;
 
-        int srid = -1;
+        int srid = Geometry.UNKNOWN_SRID;
 
         if (haveS) {
-            srid = data.getInt();
+            srid = Geometry.parseSRID(data.getInt());
         }
 
         switch (realtype) {
