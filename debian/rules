@@ -52,7 +52,6 @@ clean:
 	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
 	[ ! -f GNUmakefile ] || $(MAKE) distclean || true
 	[ ! -f java/jdbc/Makefile ] || $(MAKE) -C java/jdbc clean
-	rm -f $(CURDIR)/debian/*.postinst $(CURDIR)/debian/*.postrm
 	dh_clean 
 
 install: install-indep install-arch
@@ -88,12 +87,15 @@ install-arch: build-arch
 		--host=$(DEB_HOST_GNU_TYPE) \
 		--build=$(DEB_BUILD_GNU_TYPE) \
 		--prefix=/usr \
-		--with-docdir=$(CURDIR)/debian/postgis/usr/share/doc \
+		--disable-rpath \
+		--docdir=$(CURDIR)/debian/postgis/usr/share/doc \
 		--exec-prefix=\$${prefix}/lib/postgresql/9.1 \
 		--datadir=\$${prefix}/share/postgresql-9.1-postgis \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
 		--with-pgconfig=/usr/lib/postgresql/9.1/bin/pg_config \
+		--with-raster \
+		--with-topology \
 		--with-gui
 	$(MAKE)
 	$(MAKE) -C doc
@@ -102,24 +104,11 @@ install-arch: build-arch
 			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
 			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
 			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/9.1
-	install -o root -g root doc/postgis_comments.sql \
-		$(CURDIR)/debian/postgresql-9.1-postgis/usr/share/postgresql/9.1/contrib/.
 	install -o root -g root -d $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib
 	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
 	   $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib/.
-	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/bin $(CURDIR)/debian/postgis/usr
-	
-	# Create custom maint scripts: 9.1
-	
-	sed -e 's/@POSTGIS_VERSION@/$(VERSION)/' \
-	    -e 's/@POSTGRES_VERSION@/9.1/' \
-	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
-	    $(CURDIR)/debian/postgis-postgresql-generic.postinst.in >$(CURDIR)/debian/postgresql-9.1-postgis.postinst
-	
-	sed -e 's/@POSTGRES_VERSIONS@/9.1/' \
-	    -e 's/@SOVERSION@/$(MAJOR_VERSION).$(MINOR_VERSION)/' \
-	    $(CURDIR)/debian/postgis-generic.postrm.in >$(CURDIR)/debian/postgresql-9.1-postgis.postrm
-	
+	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/bin $(CURDIR)/debian/postgis/usr/
+
 	dh_install -s
 	
 	# copy utils for 9.1
