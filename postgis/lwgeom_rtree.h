@@ -1,6 +1,8 @@
 #ifndef _LWGEOM_RTREE_H
 #define _LWGEOM_RTREE_H
 
+#include "liblwgeom.h"
+
 typedef struct
 {
 	double min;
@@ -51,7 +53,7 @@ typedef struct
 	RTREE_NODE **ringIndices;
 	int* ringCounts;
 	int polyCount;
-	uchar *poly;
+	GSERIALIZED *poly;
 }
 RTREE_POLY_CACHE;
 
@@ -59,10 +61,10 @@ RTREE_POLY_CACHE;
  * Creates a new cachable index if needed, or returns the current cache if
  * it is applicable to the current polygon.
  */
-RTREE_POLY_CACHE *retrieveCache(LWGEOM *lwgeom, uchar *serializedPoly, RTREE_POLY_CACHE *currentCache);
+RTREE_POLY_CACHE *retrieveCache(LWGEOM *lwgeom, GSERIALIZED *serializedPoly, RTREE_POLY_CACHE *currentCache);
 RTREE_POLY_CACHE *createCache(void);
 /* Frees the cache. */
-void populateCache(RTREE_POLY_CACHE *cache, LWGEOM *lwgeom, uchar *serializedPoly);
+void populateCache(RTREE_POLY_CACHE *cache, LWGEOM *lwgeom, GSERIALIZED *serializedPoly);
 void clearCache(RTREE_POLY_CACHE *cache);
 
 

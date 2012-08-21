@@ -34,7 +34,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "lwalgorithm.h"
+#include "liblwgeom.h"
+#include "lwgeom_log.h"
 #include "styles.h"
 
 #define SHOW_DIGS_DOUBLE 15
@@ -110,7 +111,7 @@ drawPoint(char *output, LWPOINT *lwp, LAYERSTYLE *styles)
 	getPoint2d_p(pa, 0, &p);
 
 	LWDEBUGF(4, "%s", "drawPoint called");
-	LWDEBUGF( 4, "point = %s", lwgeom_to_ewkt((LWGEOM*)lwp,0) );
+	LWDEBUGF( 4, "point = %s", lwgeom_to_ewkt((LWGEOM*)lwp) );
 
 	sprintf(x, "%f", p.x);
 	trim_trailing_zeros(x);
@@ -141,7 +142,7 @@ drawLineString(char *output, LWLINE *lwl, LAYERSTYLE *style)
 	char *ptr = output;
 
 	LWDEBUGF(4, "%s", "drawLineString called");
-	LWDEBUGF( 4, "line = %s", lwgeom_to_ewkt((LWGEOM*)lwl,0) );
+	LWDEBUGF( 4, "line = %s", lwgeom_to_ewkt((LWGEOM*)lwl) );
 
 	ptr += sprintf(ptr, "-fill none -stroke %s -strokewidth %d ", style->lineColor, style->lineWidth);
 	ptr += sprintf(ptr, "-draw \"stroke-linecap round stroke-linejoin round path 'M ");
@@ -167,7 +168,7 @@ drawPolygon(char *output, LWPOLY *lwp, LAYERSTYLE *style)
 	int i;
 
 	LWDEBUGF(4, "%s", "drawPolygon called");
-	LWDEBUGF( 4, "poly = %s", lwgeom_to_ewkt((LWGEOM*)lwp,0) );
+	LWDEBUGF( 4, "poly = %s", lwgeom_to_ewkt((LWGEOM*)lwp) );
 
 	ptr += sprintf(ptr, "-fill %s -stroke %s -strokewidth %d ", style->polygonFillColor, style->polygonStrokeColor, style->polygonStrokeWidth );
 	ptr += sprintf(ptr, "-draw \"path '");
@@ -196,7 +197,7 @@ drawGeometry(char *output, LWGEOM *lwgeom, LAYERSTYLE *styles )
 {
 	char *ptr = output;
 	int i;
-	int type = lwgeom_getType(lwgeom->type);
+	int type = lwgeom->type;
 
 	switch (type)
 	{
@@ -337,12 +338,13 @@ int main( int argc, const char* argv[] )
 	int layerCount;
 	int styleNumber;
 	LAYERSTYLE *styles;
+	char *image_path = "../images/";
 
 	getStyles(&styles);
 
-	if ( argc != 2 )
+	if ( argc != 2 || strlen(argv[1]) < 3)
 	{
-		lwerror("You must specifiy a wkt filename to convert.\n");
+		lwerror("You must specify a wkt filename to convert, and it must be 3 or more characters long.\n");
 		return -1;
 	}
 
@@ -352,8 +354,8 @@ int main( int argc, const char* argv[] )
 		return -1;
 	}
 
-	filename = malloc( strlen(argv[1])+11 );
-	strncpy( filename, "../images/", 10 );
+	filename = malloc( strlen(argv[1]) + strlen(image_path) + 1 );
+	strcpy( filename, image_path );
 	strncat( filename, argv[1], strlen(argv[1])-3 );
 	strncat( filename, "png", 3 );
 
@@ -363,7 +365,7 @@ int main( int argc, const char* argv[] )
 	while ( fgets ( line, sizeof line, pfile ) != NULL && !isspace(*line) )
 	{
 
-		char output[2048];
+		char output[32768];
 		char *ptr = output;
 		char *styleName;
 		int useDefaultStyle;
@@ -376,11 +378,11 @@ int main( int argc, const char* argv[] )
 		if (useDefaultStyle)
 		{
 			printf("   Warning: using Default style for layer %d\n", layerCount);
-			lwgeom = lwgeom_from_ewkt( line, PARSER_CHECK_NONE );
+			lwgeom = lwgeom_from_wkt( line, LW_PARSER_CHECK_NONE );
 		}
 		else
-			lwgeom = lwgeom_from_ewkt( line+strlen(styleName)+1, PARSER_CHECK_NONE );
-		LWDEBUGF( 4, "geom = %s", lwgeom_to_ewkt((LWGEOM*)lwgeom,0) );
+			lwgeom = lwgeom_from_wkt( line+strlen(styleName)+1, LW_PARSER_CHECK_NONE );
+		LWDEBUGF( 4, "geom = %s", lwgeom_to_ewkt((LWGEOM*)lwgeom) );
 
 		styleNumber = layerCount % length(styles);
 		ptr += drawGeometry( ptr, lwgeom, getStyle(styles, styleName) );

@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: cu_algorithm.c 5181 2010-02-01 17:35:55Z pramsey $
+ * $Id: cu_algorithm.c 9324 2012-02-27 22:08:12Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -10,44 +10,13 @@
  *
  **********************************************************************/
 
-#include "cu_algorithm.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "CUnit/Basic.h"
 
-/*
-** Called from test harness to register the tests in this file.
-*/
-CU_pSuite register_cg_suite(void)
-{
-	CU_pSuite pSuite;
-	pSuite = CU_add_suite("PostGIS Computational Geometry Suite", init_cg_suite, clean_cg_suite);
-	if (NULL == pSuite)
-	{
-		CU_cleanup_registry();
-		return NULL;
-	}
-
-	if (
-	    (NULL == CU_add_test(pSuite, "test_lw_segment_side()", test_lw_segment_side)) ||
-	    (NULL == CU_add_test(pSuite, "test_lw_segment_intersects()", test_lw_segment_intersects)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwline_crossing_short_lines()", test_lwline_crossing_short_lines)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwline_crossing_long_lines()", test_lwline_crossing_long_lines)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwline_crossing_bugs()", test_lwline_crossing_bugs)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwpoint_set_ordinate()", test_lwpoint_set_ordinate)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwpoint_get_ordinate()", test_lwpoint_get_ordinate)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwpoint_interpolate()", test_lwpoint_interpolate)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwline_clip()", test_lwline_clip)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwline_clip_big()", test_lwline_clip_big)) ||
-	    (NULL == CU_add_test(pSuite, "test_lwmline_clip()", test_lwmline_clip)) ||
-	    (NULL == CU_add_test(pSuite, "test_geohash_point()", test_geohash_point)) ||
-	    (NULL == CU_add_test(pSuite, "test_geohash_precision()", test_geohash_precision)) ||
-	    (NULL == CU_add_test(pSuite, "test_geohash()", test_geohash))
-	)
-	{
-		CU_cleanup_registry();
-		return NULL;
-	}
-	return pSuite;
-}
-
+#include "liblwgeom_internal.h"
+#include "cu_tester.h"
 
 /*
 ** Global variables used by tests below
@@ -66,12 +35,12 @@ LWGEOM_PARSER_RESULT parse_result;
 ** The suite initialization function.
 ** Create any re-used objects.
 */
-int init_cg_suite(void)
+static int init_cg_suite(void)
 {
 	pa21 = ptarray_construct(0, 0, 2);
 	pa22 = ptarray_construct(0, 0, 2);
-	l21 = lwline_construct(-1, NULL, pa21);
-	l22 = lwline_construct(-1, NULL, pa22);
+	l21 = lwline_construct(SRID_UNKNOWN, NULL, pa21);
+	l22 = lwline_construct(SRID_UNKNOWN, NULL, pa22);
 	return 0;
 
 }
@@ -80,7 +49,7 @@ int init_cg_suite(void)
 ** The suite cleanup function.
 ** Frees any global objects.
 */
-int clean_cg_suite(void)
+static int clean_cg_suite(void)
 {
 	if ( l21 ) lwline_free(l21);
 	if ( l22 ) lwline_free(l22);
@@ -90,7 +59,7 @@ int clean_cg_suite(void)
 /*
 ** Test left/right side.
 */
-void test_lw_segment_side(void)
+static void test_lw_segment_side(void)
 {
 	double rv = 0.0;
 	POINT2D p1, p2, q;
@@ -125,7 +94,7 @@ void test_lw_segment_side(void)
 /*
 ** Test crossings side.
 */
-void test_lw_segment_intersects(void)
+static void test_lw_segment_intersects(void)
 {
 
 #define setpoint(p, x1, y1) {(p).x = (x1); (p).y = (y1);}
@@ -267,7 +236,7 @@ void test_lw_segment_intersects(void)
 
 }
 
-void test_lwline_crossing_short_lines(void)
+static void test_lwline_crossing_short_lines(void)
 {
 
 	POINT4D p;
@@ -279,58 +248,58 @@ void test_lwline_crossing_short_lines(void)
 	/* Vertical line from 0,0 to 1,1 */
 	p.x = 0.0;
 	p.y = 0.0;
-	setPoint4d(pa21, 0, &p);
+	ptarray_set_point4d(pa21, 0, &p);
 	p.y = 1.0;
-	setPoint4d(pa21, 1, &p);
+	ptarray_set_point4d(pa21, 1, &p);
 
 	/* Horizontal, crossing mid-segment */
 	p.x = -0.5;
 	p.y = 0.5;
-	setPoint4d(pa22, 0, &p);
+	ptarray_set_point4d(pa22, 0, &p);
 	p.x = 0.5;
-	setPoint4d(pa22, 1, &p);
+	ptarray_set_point4d(pa22, 1, &p);
 
 	CU_ASSERT( lwline_crossing_direction(l21, l22) == LINE_CROSS_RIGHT );
 
 	/* Horizontal, crossing at top end vertex (end crossings don't count) */
 	p.x = -0.5;
 	p.y = 1.0;
-	setPoint4d(pa22, 0, &p);
+	ptarray_set_point4d(pa22, 0, &p);
 	p.x = 0.5;
-	setPoint4d(pa22, 1, &p);
+	ptarray_set_point4d(pa22, 1, &p);
 
 	CU_ASSERT( lwline_crossing_direction(l21, l22) == LINE_NO_CROSS );
 
 	/* Horizontal, crossing at bottom end vertex */
 	p.x = -0.5;
 	p.y = 0.0;
-	setPoint4d(pa22, 0, &p);
+	ptarray_set_point4d(pa22, 0, &p);
 	p.x = 0.5;
-	setPoint4d(pa22, 1, &p);
+	ptarray_set_point4d(pa22, 1, &p);
 
 	CU_ASSERT( lwline_crossing_direction(l21, l22) == LINE_CROSS_RIGHT );
 
 	/* Horizontal, no crossing */
 	p.x = -0.5;
 	p.y = 2.0;
-	setPoint4d(pa22, 0, &p);
+	ptarray_set_point4d(pa22, 0, &p);
 	p.x = 0.5;
-	setPoint4d(pa22, 1, &p);
+	ptarray_set_point4d(pa22, 1, &p);
 
 	CU_ASSERT( lwline_crossing_direction(l21, l22) == LINE_NO_CROSS );
 
 	/* Vertical, no crossing */
 	p.x = -0.5;
 	p.y = 0.0;
-	setPoint4d(pa22, 0, &p);
+	ptarray_set_point4d(pa22, 0, &p);
 	p.y = 1.0;
-	setPoint4d(pa22, 1, &p);
+	ptarray_set_point4d(pa22, 1, &p);
 
 	CU_ASSERT( lwline_crossing_direction(l21, l22) == LINE_NO_CROSS );
 
 }
 
-void test_lwline_crossing_long_lines(void)
+static void test_lwline_crossing_long_lines(void)
 {
 	LWLINE *l51;
 	LWLINE *l52;
@@ -338,50 +307,50 @@ void test_lwline_crossing_long_lines(void)
 	** More complex test, longer lines and multiple crossings
 	*/
 	/* Vertical line with vertices at y integers */
-	l51 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(0 0, 0 1, 0 2, 0 3, 0 4)", PARSER_CHECK_NONE);
+	l51 = (LWLINE*)lwgeom_from_wkt("LINESTRING(0 0, 0 1, 0 2, 0 3, 0 4)", LW_PARSER_CHECK_NONE);
 
 	/* Two crossings at segment midpoints */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 1, -1 1.5, 1 3, 1 4, 1 5)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 1, -1 1.5, 1 3, 1 4, 1 5)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_MULTICROSS_END_SAME_FIRST_LEFT );
 	lwline_free(l52);
 
 	/* One crossing at interior vertex */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 1, 0 1, -1 1, -1 2, -1 3)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 1, 0 1, -1 1, -1 2, -1 3)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_CROSS_LEFT );
 	lwline_free(l52);
 
 	/* Two crossings at interior vertices */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 1, 0 1, -1 1, 0 3, 1 3)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 1, 0 1, -1 1, 0 3, 1 3)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_MULTICROSS_END_SAME_FIRST_LEFT );
 	lwline_free(l52);
 
 	/* Two crossings, one at the first vertex on at interior vertex */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 0, 0 0, -1 1, 0 3, 1 3)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 0, 0 0, -1 1, 0 3, 1 3)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_MULTICROSS_END_SAME_FIRST_LEFT );
 	lwline_free(l52);
 
 	/* Two crossings, one at the first vertex on the next interior vertex */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 0, 0 0, -1 1, 0 1, 1 2)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 0, 0 0, -1 1, 0 1, 1 2)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_MULTICROSS_END_SAME_FIRST_LEFT );
 	lwline_free(l52);
 
 	/* Three crossings, two at midpoints, one at vertex */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(0.5 1, -1 0.5, 1 2, -1 2, -1 3)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(0.5 1, -1 0.5, 1 2, -1 2, -1 3)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_MULTICROSS_END_LEFT );
 	lwline_free(l52);
 
 	/* One mid-point co-linear crossing */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 1, 0 1.5, 0 2.5, -1 3, -1 4)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 1, 0 1.5, 0 2.5, -1 3, -1 4)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_CROSS_LEFT );
 	lwline_free(l52);
 
 	/* One on-vertices co-linear crossing */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 1, 0 1, 0 2, -1 4, -1 4)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 1, 0 1, 0 2, -1 4, -1 4)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_CROSS_LEFT );
 	lwline_free(l52);
 
 	/* No crossing, but end on a co-linearity. */
-	l52 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 1, 1 2, 1 3, 0 3, 0 4)", PARSER_CHECK_NONE);
+	l52 = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 1, 1 2, 1 3, 0 3, 0 4)", LW_PARSER_CHECK_NONE);
 	CU_ASSERT( lwline_crossing_direction(l51, l52) == LINE_NO_CROSS );
 	lwline_free(l52);
 
@@ -390,13 +359,13 @@ void test_lwline_crossing_long_lines(void)
 }
 
 
-void test_lwline_crossing_bugs(void)
+static void test_lwline_crossing_bugs(void)
 {
 	LWLINE *l1;
 	LWLINE *l2;
 
-	l1 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(2.99 90.16,71 74,20 140,171 154)", PARSER_CHECK_NONE);
-	l2 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(25 169,89 114,40 70,86 43)", PARSER_CHECK_NONE);
+	l1 = (LWLINE*)lwgeom_from_wkt("LINESTRING(2.99 90.16,71 74,20 140,171 154)", LW_PARSER_CHECK_NONE);
+	l2 = (LWLINE*)lwgeom_from_wkt("LINESTRING(25 169,89 114,40 70,86 43)", LW_PARSER_CHECK_NONE);
 
 	CU_ASSERT( lwline_crossing_direction(l1, l2) == LINE_MULTICROSS_END_RIGHT );
 	lwline_free(l1);
@@ -404,7 +373,7 @@ void test_lwline_crossing_bugs(void)
 
 }
 
-void test_lwpoint_set_ordinate(void)
+static void test_lwpoint_set_ordinate(void)
 {
 	POINT4D p;
 
@@ -413,18 +382,18 @@ void test_lwpoint_set_ordinate(void)
 	p.z = 0.0;
 	p.m = 0.0;
 
-	lwpoint_set_ordinate(&p, 0, 1.5);
+	lwpoint_set_ordinate(&p, 'X', 1.5);
 	CU_ASSERT_EQUAL( p.x, 1.5 );
 
-	lwpoint_set_ordinate(&p, 3, 2.5);
+	lwpoint_set_ordinate(&p, 'M', 2.5);
 	CU_ASSERT_EQUAL( p.m, 2.5 );
 
-	lwpoint_set_ordinate(&p, 2, 3.5);
+	lwpoint_set_ordinate(&p, 'Z', 3.5);
 	CU_ASSERT_EQUAL( p.z, 3.5 );
 
 }
 
-void test_lwpoint_get_ordinate(void)
+static void test_lwpoint_get_ordinate(void)
 {
 	POINT4D p;
 
@@ -433,14 +402,14 @@ void test_lwpoint_get_ordinate(void)
 	p.z = 30.0;
 	p.m = 40.0;
 
-	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 0), 10.0 );
-	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 1), 20.0 );
-	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 2), 30.0 );
-	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 3), 40.0 );
+	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 'X'), 10.0 );
+	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 'Y'), 20.0 );
+	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 'Z'), 30.0 );
+	CU_ASSERT_EQUAL( lwpoint_get_ordinate(&p, 'M'), 40.0 );
 
 }
 
-void test_lwpoint_interpolate(void)
+static void test_point_interpolate(void)
 {
 	POINT4D p, q, r;
 	int rv = 0;
@@ -455,21 +424,21 @@ void test_lwpoint_interpolate(void)
 	q.z = 40.0;
 	q.m = 50.0;
 
-	rv = lwpoint_interpolate(&p, &q, &r, 4, 2, 35.0);
+	rv = point_interpolate(&p, &q, &r, 1, 1, 'Z', 35.0);
 	CU_ASSERT_EQUAL( r.x, 15.0);
 
-	rv = lwpoint_interpolate(&p, &q, &r, 4, 3, 41.0);
+	rv = point_interpolate(&p, &q, &r, 1, 1, 'M', 41.0);
 	CU_ASSERT_EQUAL( r.y, 21.0);
 
-	rv = lwpoint_interpolate(&p, &q, &r, 4, 3, 50.0);
+	rv = point_interpolate(&p, &q, &r, 1, 1, 'M', 50.0);
 	CU_ASSERT_EQUAL( r.y, 30.0);
 
-	rv = lwpoint_interpolate(&p, &q, &r, 4, 3, 40.0);
+	rv = point_interpolate(&p, &q, &r, 1, 1, 'M', 40.0);
 	CU_ASSERT_EQUAL( r.y, 20.0);
 
 }
 
-void test_lwline_clip(void)
+static void test_lwline_clip(void)
 {
 	LWCOLLECTION *c;
 	LWLINE *line = NULL;
@@ -477,78 +446,77 @@ void test_lwline_clip(void)
 	char *ewkt;
 
 	/* Vertical line with vertices at y integers */
-	l51 = (LWLINE*)lwgeom_from_ewkt("LINESTRING(0 0, 0 1, 0 2, 0 3, 0 4)", PARSER_CHECK_NONE);
+	l51 = (LWLINE*)lwgeom_from_wkt("LINESTRING(0 0, 0 1, 0 2, 0 3, 0 4)", LW_PARSER_CHECK_NONE);
 
 	/* Clip in the middle, mid-range. */
-	c = lwline_clip_to_ordinate_range(l51, 1, 1.5, 2.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(l51, 'Y', 1.5, 2.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0 1.5,0 2,0 2.5))");
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip off the top. */
-	c = lwline_clip_to_ordinate_range(l51, 1, 3.5, 5.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(l51, 'Y', 3.5, 5.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0 3.5,0 4))");
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip off the bottom. */
-	c = lwline_clip_to_ordinate_range(l51, 1, -1.5, 2.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(l51, 'Y', -1.5, 2.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0 0,0 1,0 2,0 2.5))" );
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Range holds entire object. */
-	c = lwline_clip_to_ordinate_range(l51, 1, -1.5, 5.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(l51, 'Y', -1.5, 5.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0 0,0 1,0 2,0 3,0 4))" );
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip on vertices. */
-	c = lwline_clip_to_ordinate_range(l51, 1, 1.0, 2.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(l51, 'Y', 1.0, 2.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0 1,0 2))" );
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip on vertices off the bottom. */
-	c = lwline_clip_to_ordinate_range(l51, 1, -1.0, 2.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(l51, 'Y', -1.0, 2.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0 0,0 1,0 2))" );
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip on top. */
-	c = lwline_clip_to_ordinate_range(l51, 1, -1.0, 0.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(l51, 'Y', -1.0, 0.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "GEOMETRYCOLLECTION(POINT(0 0))" );
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* ST_LocateBetweenElevations(ST_GeomFromEWKT('LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)'), 1, 2)) */
-	line = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)", PARSER_CHECK_NONE);
-	c = lwline_clip_to_ordinate_range(line, 2, 1.0, 2.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
-	//printf("a = %s\n", ewkt);
+	line = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)", LW_PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 1.0, 2.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((2 2 2,1 1 1))" );
 	lwfree(ewkt);
 	lwcollection_free(c);
 	lwline_free(line);
 
 	/* ST_LocateBetweenElevations('LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)', 1, 2)) */
-	line = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)", PARSER_CHECK_NONE);
-	c = lwline_clip_to_ordinate_range(line, 2, 1.0, 2.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	line = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)", LW_PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 1.0, 2.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("a = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((2 2 2,1 1 1))" );
 	lwfree(ewkt);
@@ -556,9 +524,9 @@ void test_lwline_clip(void)
 	lwline_free(line);
 
 	/* ST_LocateBetweenElevations('LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)', 1, 1)) */
-	line = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)", PARSER_CHECK_NONE);
-	c = lwline_clip_to_ordinate_range(line, 2, 1.0, 1.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	line = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 2 3, 4 5 6, 6 6 6, 1 1 1)", LW_PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 1.0, 1.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("b = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "GEOMETRYCOLLECTION(POINT(1 1 1))" );
 	lwfree(ewkt);
@@ -566,9 +534,9 @@ void test_lwline_clip(void)
 	lwline_free(line);
 
 	/* ST_LocateBetweenElevations('LINESTRING(1 1 1, 1 2 2)', 1,1) */
-	line = (LWLINE*)lwgeom_from_ewkt("LINESTRING(1 1 1, 1 2 2)", PARSER_CHECK_NONE);
-	c = lwline_clip_to_ordinate_range(line, 2, 1.0, 1.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	line = (LWLINE*)lwgeom_from_wkt("LINESTRING(1 1 1, 1 2 2)", LW_PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 1.0, 1.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "GEOMETRYCOLLECTION(POINT(1 1 1))" );
 	lwfree(ewkt);
@@ -579,7 +547,7 @@ void test_lwline_clip(void)
 
 }
 
-void test_lwmline_clip(void)
+static void test_lwmline_clip(void)
 {
 	LWCOLLECTION *c;
 	char *ewkt;
@@ -589,11 +557,11 @@ void test_lwmline_clip(void)
 	/*
 	** Set up the input line. Trivial one-member case.
 	*/
-	mline = (LWMLINE*)lwgeom_from_ewkt("MULTILINESTRING((0 0,0 1,0 2,0 3,0 4))", PARSER_CHECK_NONE);
+	mline = (LWMLINE*)lwgeom_from_wkt("MULTILINESTRING((0 0,0 1,0 2,0 3,0 4))", LW_PARSER_CHECK_NONE);
 
 	/* Clip in the middle, mid-range. */
-	c = lwmline_clip_to_ordinate_range(mline, 1, 1.5, 2.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c,0);
+	c = lwmline_clip_to_ordinate_range(mline, 'Y', 1.5, 2.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0 1.5,0 2,0 2.5))");
 	lwfree(ewkt);
@@ -604,11 +572,11 @@ void test_lwmline_clip(void)
 	/*
 	** Set up the input line. Two-member case.
 	*/
-	mline = (LWMLINE*)lwgeom_from_ewkt("MULTILINESTRING((1 0,1 1,1 2,1 3,1 4), (0 0,0 1,0 2,0 3,0 4))", PARSER_CHECK_NONE);
+	mline = (LWMLINE*)lwgeom_from_wkt("MULTILINESTRING((1 0,1 1,1 2,1 3,1 4), (0 0,0 1,0 2,0 3,0 4))", LW_PARSER_CHECK_NONE);
 
 	/* Clip off the top. */
-	c = lwmline_clip_to_ordinate_range(mline, 1, 3.5, 5.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwmline_clip_to_ordinate_range(mline, 'Y', 3.5, 5.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((1 3.5,1 4),(0 3.5,0 4))");
 	lwfree(ewkt);
@@ -619,11 +587,11 @@ void test_lwmline_clip(void)
 	/*
 	** Set up staggered input line to create multi-type output.
 	*/
-	mline = (LWMLINE*)lwgeom_from_ewkt("MULTILINESTRING((1 0,1 -1,1 -2,1 -3,1 -4), (0 0,0 1,0 2,0 3,0 4))", PARSER_CHECK_NONE);
+	mline = (LWMLINE*)lwgeom_from_wkt("MULTILINESTRING((1 0,1 -1,1 -2,1 -3,1 -4), (0 0,0 1,0 2,0 3,0 4))", LW_PARSER_CHECK_NONE);
 
 	/* Clip from 0 upwards.. */
-	c = lwmline_clip_to_ordinate_range(mline, 1, 0.0, 2.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwmline_clip_to_ordinate_range(mline, 'Y', 0.0, 2.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "GEOMETRYCOLLECTION(POINT(1 0),LINESTRING(0 0,0 1,0 2,0 2.5))");
 	lwfree(ewkt);
@@ -634,35 +602,35 @@ void test_lwmline_clip(void)
 	/*
 	** Set up input line from MAC
 	*/
-	line = (LWLINE*)lwgeom_from_ewkt("LINESTRING(0 0 0 0,1 1 1 1,2 2 2 2,3 3 3 3,4 4 4 4,3 3 3 5,2 2 2 6,1 1 1 7,0 0 0 8)", PARSER_CHECK_NONE);
+	line = (LWLINE*)lwgeom_from_wkt("LINESTRING(0 0 0 0,1 1 1 1,2 2 2 2,3 3 3 3,4 4 4 4,3 3 3 5,2 2 2 6,1 1 1 7,0 0 0 8)", LW_PARSER_CHECK_NONE);
 
 	/* Clip from 3 to 3.5 */
-	c = lwline_clip_to_ordinate_range(line, 2, 3.0, 3.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 3.0, 3.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((3 3 3 3,3.5 3.5 3.5 3.5),(3.5 3.5 3.5 4.5,3 3 3 5))");
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip from 2 to 3.5 */
-	c = lwline_clip_to_ordinate_range(line, 2, 2.0, 3.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 2.0, 3.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((2 2 2 2,3 3 3 3,3.5 3.5 3.5 3.5),(3.5 3.5 3.5 4.5,3 3 3 5,2 2 2 6))");
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip from 3 to 4 */
-	c = lwline_clip_to_ordinate_range(line, 2, 3.0, 4.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 3.0, 4.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((3 3 3 3,4 4 4 4,3 3 3 5))");
 	lwfree(ewkt);
 	lwcollection_free(c);
 
 	/* Clip from 2 to 3 */
-	c = lwline_clip_to_ordinate_range(line, 2, 2.0, 3.0);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 2.0, 3.0);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((2 2 2 2,3 3 3 3),(3 3 3 5,2 2 2 6))");
 	lwfree(ewkt);
@@ -675,10 +643,10 @@ void test_lwmline_clip(void)
 
 
 
-void test_lwline_clip_big(void)
+static void test_lwline_clip_big(void)
 {
 	POINTARRAY *pa = ptarray_construct(1, 0, 3);
-	LWLINE *line = lwline_construct(-1, NULL, pa);
+	LWLINE *line = lwline_construct(SRID_UNKNOWN, NULL, pa);
 	LWCOLLECTION *c;
 	char *ewkt;
 	POINT4D p;
@@ -686,20 +654,20 @@ void test_lwline_clip_big(void)
 	p.x = 0.0;
 	p.y = 0.0;
 	p.z = 0.0;
-	setPoint4d(pa, 0, &p);
+	ptarray_set_point4d(pa, 0, &p);
 
 	p.x = 1.0;
 	p.y = 1.0;
 	p.z = 1.0;
-	setPoint4d(pa, 1, &p);
+	ptarray_set_point4d(pa, 1, &p);
 
 	p.x = 2.0;
 	p.y = 2.0;
 	p.z = 2.0;
-	setPoint4d(pa, 2, &p);
+	ptarray_set_point4d(pa, 2, &p);
 
-	c = lwline_clip_to_ordinate_range(line, 2, 0.5, 1.5);
-	ewkt = lwgeom_to_ewkt((LWGEOM*)c, PARSER_CHECK_NONE);
+	c = lwline_clip_to_ordinate_range(line, 'Z', 0.5, 1.5);
+	ewkt = lwgeom_to_ewkt((LWGEOM*)c);
 	//printf("c = %s\n", ewkt);
 	CU_ASSERT_STRING_EQUAL(ewkt, "MULTILINESTRING((0.5 0.5 0.5,1 1 1,1.5 1.5 1.5))" );
 
@@ -708,11 +676,13 @@ void test_lwline_clip_big(void)
 	lwline_free(line);
 }
 
-void test_geohash_precision(void)
+static void test_geohash_precision(void)
 {
-	BOX3D bbox;
-	BOX3D bounds;
+	GBOX bbox;
+	GBOX bounds;
 	int precision = 0;
+	gbox_init(&bbox);
+	gbox_init(&bounds);
 
 	bbox.xmin = 23.0;
 	bbox.xmax = 23.0;
@@ -740,7 +710,7 @@ void test_geohash_precision(void)
 
 }
 
-void test_geohash_point(void)
+static void test_geohash_point(void)
 {
 	char *geohash;
 
@@ -761,47 +731,173 @@ void test_geohash_point(void)
 
 }
 
-void test_geohash(void)
+static void test_geohash(void)
 {
 	LWPOINT *lwpoint = NULL;
 	LWLINE *lwline = NULL;
 	LWMLINE *lwmline = NULL;
 	char *geohash = NULL;
 
-	lwpoint = (LWPOINT*)lwgeom_from_ewkt("POINT(23.0 25.2)", PARSER_CHECK_NONE);
+	lwpoint = (LWPOINT*)lwgeom_from_wkt("POINT(23.0 25.2)", LW_PARSER_CHECK_NONE);
 	geohash = lwgeom_geohash((LWGEOM*)lwpoint,0);
 	//printf("\ngeohash %s\n",geohash);
 	CU_ASSERT_STRING_EQUAL(geohash, "ss2r77s0du7p2ewb8hmx");
-	lwfree(lwpoint);
+	lwpoint_free(lwpoint);
 	lwfree(geohash);
 
-	lwpoint = (LWPOINT*)lwgeom_from_ewkt("POINT(23.0 25.2 2.0)", PARSER_CHECK_NONE);
+	lwpoint = (LWPOINT*)lwgeom_from_wkt("POINT(23.0 25.2 2.0)", LW_PARSER_CHECK_NONE);
 	geohash = lwgeom_geohash((LWGEOM*)lwpoint,0);
 	//printf("geohash %s\n",geohash);
 	CU_ASSERT_STRING_EQUAL(geohash, "ss2r77s0du7p2ewb8hmx");
-	lwfree(lwpoint);
+	lwpoint_free(lwpoint);
 	lwfree(geohash);
 
-	lwline = (LWLINE*)lwgeom_from_ewkt("LINESTRING(23.0 23.0,23.1 23.1)", PARSER_CHECK_NONE);
+	lwline = (LWLINE*)lwgeom_from_wkt("LINESTRING(23.0 23.0,23.1 23.1)", LW_PARSER_CHECK_NONE);
 	geohash = lwgeom_geohash((LWGEOM*)lwline,0);
 	//printf("geohash %s\n",geohash);
 	CU_ASSERT_STRING_EQUAL(geohash, "ss0");
-	lwfree(lwline);
+	lwline_free(lwline);
 	lwfree(geohash);
 
-	lwline = (LWLINE*)lwgeom_from_ewkt("LINESTRING(23.0 23.0,23.001 23.001)", PARSER_CHECK_NONE);
+	lwline = (LWLINE*)lwgeom_from_wkt("LINESTRING(23.0 23.0,23.001 23.001)", LW_PARSER_CHECK_NONE);
 	geohash = lwgeom_geohash((LWGEOM*)lwline,0);
 	//printf("geohash %s\n",geohash);
 	CU_ASSERT_STRING_EQUAL(geohash, "ss06g7");
-	lwfree(lwline);
+	lwline_free(lwline);
 	lwfree(geohash);
 
-	lwmline = (LWMLINE*)lwgeom_from_ewkt("MULTILINESTRING((23.0 23.0,23.1 23.1),(23.0 23.0,23.1 23.1))", PARSER_CHECK_NONE);
+	lwmline = (LWMLINE*)lwgeom_from_wkt("MULTILINESTRING((23.0 23.0,23.1 23.1),(23.0 23.0,23.1 23.1))", LW_PARSER_CHECK_NONE);
 	geohash = lwgeom_geohash((LWGEOM*)lwmline,0);
 	//printf("geohash %s\n",geohash);
 	CU_ASSERT_STRING_EQUAL(geohash, "ss0");
-	lwfree(lwmline);
+	lwmline_free(lwmline);
 	lwfree(geohash);
 }
 
+static void test_isclosed(void)
+{
+	LWGEOM *geom;
 
+	/* LINESTRING */
+
+	/* Not Closed on 2D */
+	geom = lwgeom_from_wkt("LINESTRING(1 2,3 4)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwline_is_closed((LWLINE *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 2D */
+	geom = lwgeom_from_wkt("LINESTRING(1 2,3 4,1 2)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwline_is_closed((LWLINE *) geom));
+	lwgeom_free(geom);
+
+	/* Not closed on 3D */
+	geom = lwgeom_from_wkt("LINESTRING(1 2 3,4 5 6)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwline_is_closed((LWLINE *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 3D */
+	geom = lwgeom_from_wkt("LINESTRING(1 2 3,4 5 6,1 2 3)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwline_is_closed((LWLINE *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 4D, even if M is not the same */
+	geom = lwgeom_from_wkt("LINESTRING(1 2 3 4,5 6 7 8,1 2 3 0)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwline_is_closed((LWLINE *) geom));
+	lwgeom_free(geom);
+
+
+	/* CIRCULARSTRING */
+
+	/* Not Closed on 2D */
+	geom = lwgeom_from_wkt("CIRCULARSTRING(1 2,3 4,5 6)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwcircstring_is_closed((LWCIRCSTRING *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 2D */
+	geom = lwgeom_from_wkt("CIRCULARSTRING(1 2,3 4,1 2)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcircstring_is_closed((LWCIRCSTRING *) geom));
+	lwgeom_free(geom);
+
+	/* Not closed on 3D */
+	geom = lwgeom_from_wkt("CIRCULARSTRING(1 2 3,4 5 6,7 8 9)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwcircstring_is_closed((LWCIRCSTRING *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 3D */
+	geom = lwgeom_from_wkt("CIRCULARSTRING(1 2 3,4 5 6,1 2 3)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcircstring_is_closed((LWCIRCSTRING *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 4D, even if M is not the same */
+	geom = lwgeom_from_wkt("CIRCULARSTRING(1 2 3 4,5 6 7 8,1 2 3 0)", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcircstring_is_closed((LWCIRCSTRING *) geom));
+	lwgeom_free(geom);
+
+
+	/* COMPOUNDCURVE */
+
+	/* Not Closed on 2D */
+	geom = lwgeom_from_wkt("COMPOUNDCURVE(CIRCULARSTRING(1 2,3 4,1 2),(1 2,7 8,5 6))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	geom = lwgeom_from_wkt("COMPOUNDCURVE((1 2,3 4,1 2),CIRCULARSTRING(1 2,7 8,5 6))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 2D */
+	geom = lwgeom_from_wkt("COMPOUNDCURVE(CIRCULARSTRING(1 2,3 4,5 6), (5 6,7 8,1 2))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	geom = lwgeom_from_wkt("COMPOUNDCURVE((1 2,3 4,5 6),CIRCULARSTRING(5 6,7 8,1 2))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	/* Not Closed on 3D */
+	geom = lwgeom_from_wkt("COMPOUNDCURVE(CIRCULARSTRING(1 2 3,4 5 6,1 2 3),(1 2 3,7 8 9,10 11 12))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	geom = lwgeom_from_wkt("COMPOUNDCURVE((1 2 3,4 5 6,1 2 3),CIRCULARSTRING(1 2 3,7 8 9,10 11 12))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(!lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 3D */
+	geom = lwgeom_from_wkt("COMPOUNDCURVE(CIRCULARSTRING(1 2 3,4 5 6,7 8 9),(7 8 9,10 11 12,1 2 3))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	geom = lwgeom_from_wkt("COMPOUNDCURVE((1 2 3,4 5 6,7 8 9),CIRCULARSTRING(7 8 9,10 11 12,1 2 3))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+
+	/* Closed on 4D, even if M is not the same */
+	geom = lwgeom_from_wkt("COMPOUNDCURVE((1 2 3 4,5 6 7 8,9 10 11 12),CIRCULARSTRING(9 10 11 12,13 14 15 16,1 2 3 0))", LW_PARSER_CHECK_NONE);
+	CU_ASSERT(lwcompound_is_closed((LWCOMPOUND *) geom));
+	lwgeom_free(geom);
+}
+
+/*
+** Used by test harness to register the tests in this file.
+*/
+CU_TestInfo algorithms_tests[] =
+{
+	PG_TEST(test_lw_segment_side),
+	PG_TEST(test_lw_segment_intersects),
+	PG_TEST(test_lwline_crossing_short_lines),
+	PG_TEST(test_lwline_crossing_long_lines),
+	PG_TEST(test_lwline_crossing_bugs),
+	PG_TEST(test_lwpoint_set_ordinate),
+	PG_TEST(test_lwpoint_get_ordinate),
+	PG_TEST(test_point_interpolate),
+	PG_TEST(test_lwline_clip),
+	PG_TEST(test_lwline_clip_big),
+	PG_TEST(test_lwmline_clip),
+	PG_TEST(test_geohash_point),
+	PG_TEST(test_geohash_precision),
+	PG_TEST(test_geohash),
+	PG_TEST(test_isclosed),
+	CU_TEST_INFO_NULL
+};
+CU_SuiteInfo algorithms_suite = {"PostGIS Computational Geometry Suite",  init_cg_suite,  clean_cg_suite, algorithms_tests};

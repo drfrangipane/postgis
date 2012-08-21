@@ -11,16 +11,41 @@
 # **********************************************************************
 
 CC=@CC@
-CFLAGS=@CFLAGS@ @WARNFLAGS@
+CFLAGS=@CFLAGS@ @WARNFLAGS@ @GEOS_CPPFLAGS@ @PROJ_CPPFLAGS@ 
+LDFLAGS = @GEOS_LDFLAGS@ -lgeos_c
+top_builddir = @top_builddir@
+SHELL = @SHELL@
+LIBTOOL = @LIBTOOL@
 
 CUNIT_LDFLAGS=@CUNIT_LDFLAGS@
 CUNIT_CPPFLAGS=@CUNIT_CPPFLAGS@ -I..
 
+# ADD YOUR NEW TEST FILE HERE (1/1)
 OBJS=	\
 	cu_algorithm.o \
+	cu_buildarea.o \
+	cu_clean.o \
+	cu_print.o \
+	cu_misc.o \
+	cu_ptarray.o \
 	cu_geodetic.o \
+	cu_geos.o \
 	cu_measures.o \
+	cu_node.o \
 	cu_libgeom.o \
+	cu_split.o \
+	cu_stringbuffer.o \
+	cu_homogenize.o \
+	cu_out_wkt.o \
+	cu_out_wkb.o \
+	cu_out_gml.o \
+	cu_out_kml.o \
+	cu_out_geojson.o \
+	cu_out_svg.o \
+	cu_surface.o \
+	cu_out_x3d.o \
+	cu_in_wkb.o \
+	cu_in_wkt.o \
 	cu_tester.o 
 
 # If we couldn't find the cunit library then display a helpful message
@@ -39,8 +64,9 @@ check: cu_tester
 endif
 
 # Build the main unit test executable
-cu_tester: ../liblwgeom.a $(OBJS)
-	$(CC) -o $@ $(OBJS) ../liblwgeom.a -lm $(CUNIT_LDFLAGS)
+cu_tester: ../liblwgeom.la $(OBJS)
+	$(LIBTOOL) --mode=link $(CC) $(CFLAGS) -o $@ $(OBJS) ../liblwgeom.la $(CUNIT_LDFLAGS)
+	#$(CC) -o $@ $(OBJS) ../.libs/liblwgeom.a -lm $(CUNIT_LDFLAGS) $(LDFLAGS)
 
 # Command to build each of the .o files
 $(OBJS): %.o: %.c
@@ -48,8 +74,11 @@ $(OBJS): %.o: %.c
 
 # Clean target
 clean:
-	@rm $(OBJS)
-	@rm cu_tester
+	rm -f $(OBJS)
+	rm -f cu_tester
+
+distclean: clean
+	rm -f Makefile
 
 # Requirements message
 requirements_not_met_cunit:

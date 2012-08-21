@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwsegmentize.c 5181 2010-02-01 17:35:55Z pramsey $
+ * $Id: lwsegmentize.c 9324 2012-02-27 22:08:12Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -14,27 +14,21 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <math.h>
 
-#include "liblwgeom.h"
+#include "liblwgeom_internal.h"
+#include "lwgeom_log.h"
 
 
-double interpolate_arc(double angle, double zm1, double a1, double zm2, double a2);
-POINTARRAY *lwcircle_segmentize(POINT4D *p1, POINT4D *p2, POINT4D *p3, uint32 perQuad);
-LWLINE *lwcurve_segmentize(LWCIRCSTRING *icurve, uint32 perQuad);
-LWLINE *lwcompound_segmentize(LWCOMPOUND *icompound, uint32 perQuad);
-LWPOLY *lwcurvepoly_segmentize(LWCURVEPOLY *curvepoly, uint32 perQuad);
-LWMLINE *lwmcurve_segmentize(LWMCURVE *mcurve, uint32 perQuad);
-LWMPOLY *lwmsurface_segmentize(LWMSURFACE *msurface, uint32 perQuad);
-LWCOLLECTION *lwcollection_segmentize(LWCOLLECTION *collection, uint32 perQuad);
-LWGEOM *append_segment(LWGEOM *geom, POINTARRAY *pts, int type, int SRID);
-LWGEOM *pta_desegmentize(POINTARRAY *points, int type, int SRID);
+LWMLINE *lwmcurve_segmentize(LWMCURVE *mcurve, uint32_t perQuad);
+LWMPOLY *lwmsurface_segmentize(LWMSURFACE *msurface, uint32_t perQuad);
+LWCOLLECTION *lwcollection_segmentize(LWCOLLECTION *collection, uint32_t perQuad);
+
+LWGEOM *pta_desegmentize(POINTARRAY *points, int type, int srid);
 LWGEOM *lwline_desegmentize(LWLINE *line);
 LWGEOM *lwpolygon_desegmentize(LWPOLY *poly);
 LWGEOM *lwmline_desegmentize(LWMLINE *mline);
 LWGEOM *lwmpolygon_desegmentize(LWMPOLY *mpoly);
 LWGEOM *lwgeom_desegmentize(LWGEOM *geom);
-
 
 
 /*
@@ -46,33 +40,37 @@ LWGEOM *lwgeom_desegmentize(LWGEOM *geom);
  * Determines (recursively in the case of collections) whether the geometry
  * contains at least on arc geometry or segment.
  */
-uint32
-has_arc(LWGEOM *geom)
+int
+lwgeom_has_arc(const LWGEOM *geom)
 {
 	LWCOLLECTION *col;
 	int i;
 
-	LWDEBUG(2, "has_arc called.");
+	LWDEBUG(2, "lwgeom_has_arc called.");
 
-	switch (lwgeom_getType(geom->type))
+	switch (geom->type)
 	{
 	case POINTTYPE:
 	case LINETYPE:
 	case POLYGONTYPE:
+	case TRIANGLETYPE:
 	case MULTIPOINTTYPE:
 	case MULTILINETYPE:
 	case MULTIPOLYGONTYPE:
-		return 0;
+	case POLYHEDRALSURFACETYPE:
+	case TINTYPE:
+		return LW_FALSE;
 	case CIRCSTRINGTYPE:
-		return 1;
-		/* It's a collection that MAY contain an arc */
+		return LW_TRUE;
+	/* It's a collection that MAY contain an arc */
 	default:
 		col = (LWCOLLECTION *)geom;
 		for (i=0; i<col->ngeoms; i++)
 		{
-			if (has_arc(col->geoms[i]) == 1) return 1;
+			if (lwgeom_has_arc(col->geoms[i]) == LW_TRUE) 
+				return LW_TRUE;
 		}
-		return 0;
+		return LW_FALSE;
 	}
 }
 
@@ -84,25 +82,26 @@ has_arc(LWGEOM *geom)
  * point is coincident with either end point, they are taken as colinear.
  */
 double
-lwcircle_center(POINT4D *p1, POINT4D *p2, POINT4D *p3, POINT4D **result)
+lwcircle_center(const POINT4D *p1, const POINT4D *p2, const POINT4D *p3, POINT4D *result)
 {
-	POINT4D *c;
+	POINT4D c;
 	double cx, cy, cr;
 	double temp, bc, cd, det;
 
-	LWDEBUGF(2, "lwcircle_center called (%.16f, %.16f), (%.16f, %.16f), (%.16f, %.16f).", p1->x, p1->y, p2->x, p2->y, p3->x, p3->y);
+    c.x = c.y = c.z = c.m = 0.0;
+
+	LWDEBUGF(2, "lwcircle_center called (%.16f,%.16f), (%.16f,%.16f), (%.16f,%.16f).", p1->x, p1->y, p2->x, p2->y, p3->x, p3->y);
 
 	/* Closed circle */
-	if (fabs(p1->x - p3->x) < EPSILON_SQLMM
-	        && fabs(p1->y - p3->y) < EPSILON_SQLMM)
+	if (fabs(p1->x - p3->x) < EPSILON_SQLMM &&
+	    fabs(p1->y - p3->y) < EPSILON_SQLMM)
 	{
 		cx = p1->x + (p2->x - p1->x) / 2.0;
 		cy = p1->y + (p2->y - p1->y) / 2.0;
-		c = lwalloc(sizeof(POINT2D));
-		c->x = cx;
-		c->y = cy;
+		c.x = cx;
+		c.y = cy;
 		*result = c;
-		cr = sqrt((cx-p1->x)*(cx-p1->x)+(cy-p1->y)*(cy-p1->y));
+		cr = sqrt(pow(cx - p1->x, 2.0) + pow(cy - p1->y, 2.0));
 		return cr;
 	}
 
@@ -113,291 +112,234 @@ lwcircle_center(POINT4D *p1, POINT4D *p2, POINT4D *p3, POINT4D **result)
 
 	/* Check colinearity */
 	if (fabs(det) < EPSILON_SQLMM)
-	{
-		*result = NULL;
 		return -1.0;
-	}
+
 
 	det = 1.0 / det;
 	cx = (bc*(p2->y - p3->y)-cd*(p1->y - p2->y))*det;
 	cy = ((p1->x - p2->x)*cd-(p2->x - p3->x)*bc)*det;
-	c = lwalloc(sizeof(POINT4D));
-	c->x = cx;
-	c->y = cy;
+	c.x = cx;
+	c.y = cy;
 	*result = c;
 	cr = sqrt((cx-p1->x)*(cx-p1->x)+(cy-p1->y)*(cy-p1->y));
+	
+	LWDEBUGF(2, "lwcircle_center center is (%.16f,%.16f)", result->x, result->y);
+	
 	return cr;
 }
 
-double
-interpolate_arc(double angle, double zm1, double a1, double zm2, double a2)
-{
-	double frac = fabs((angle - a1) / (a2 - a1));
-	double result = frac * (zm2 - zm1) + zm1;
-
-	LWDEBUG(2, "interpolate_arc called.");
-
-	LWDEBUGF(3, "interpolate_arc: angle=%.16f, a1=%.16f, a2=%.16f, z1=%.16f, z2=%.16f, frac=%.16f, result=%.16f", angle, a1, a2, zm1, zm2, frac, result);
-
-	return result;
-}
 
 /*******************************************************************************
  * Begin curve segmentize functions
  ******************************************************************************/
 
-POINTARRAY *
-lwcircle_segmentize(POINT4D *p1, POINT4D *p2, POINT4D *p3, uint32 perQuad)
+static double interpolate_arc(double angle, double a1, double a2, double a3, double zm1, double zm2, double zm3)
 {
-	POINTARRAY *result;
-	POINT4D pbuf;
-	size_t ptsize = sizeof(POINT4D);
-	unsigned int ptcount;
-	uchar *pt;
-
-	POINT4D *center;
-	double radius = 0.0,
-	                sweep = 0.0,
-	                        angle = 0.0,
-	                                increment = 0.0;
-	double a1, a2, a3, i;
-
-	LWDEBUG(2, "lwcircle_segmentize called. ");
-
-	radius = lwcircle_center(p1, p2, p3, &center);
-	if (radius < 0)
+	LWDEBUGF(4,"angle %.05g a1 %.05g a2 %.05g a3 %.05g zm1 %.05g zm2 %.05g zm3 %.05g",angle,a1,a2,a3,zm1,zm2,zm3);
+	/* Counter-clockwise sweep */
+	if ( a1 < a2 )
 	{
-		/* No center because points are colinear */
-		LWDEBUGF(3, "lwcircle_segmentize, (NULL) radius=%.16f", radius);
-
-		return NULL;
+		if ( angle <= a2 )
+			return zm1 + (zm2-zm1) * (angle-a1) / (a2-a1);
+		else
+			return zm2 + (zm3-zm2) * (angle-a2) / (a3-a2);
 	}
-
-	LWDEBUGF(3, "lwcircle_segmentize, (%.16f, %.16f) radius=%.16f", center->x, center->y, radius);
-
-	a1 = atan2(p1->y - center->y, p1->x - center->x);
-	a2 = atan2(p2->y - center->y, p2->x - center->x);
-	a3 = atan2(p3->y - center->y, p3->x - center->x);
-
-	LWDEBUGF(3, "a1 = %.16f, a2 = %.16f, a3 = %.16f", a1, a2, a3);
-
-	if (fabs(p1->x - p3->x) < EPSILON_SQLMM
-	        && fabs(p1->y - p3->y) < EPSILON_SQLMM)
-	{
-		sweep = 2*M_PI;
-	}
-	/* Clockwise */
-	else if (a1 > a2 && a2 > a3)
-	{
-		sweep = a3 - a1;
-	}
-	/* Counter-clockwise */
-	else if (a1 < a2 && a2 < a3)
-	{
-		sweep = a3 - a1;
-	}
-	/* Clockwise, wrap */
-	else if ((a1 < a2 && a1 > a3) || (a2 < a3 && a1 > a3))
-	{
-		sweep = a3 - a1 + 2*M_PI;
-	}
-	/* Counter-clockwise, wrap */
-	else if ((a1 > a2 && a1 < a3) || (a2 > a3 && a1 < a3))
-	{
-		sweep = a3 - a1 - 2*M_PI;
-	}
+	/* Clockwise sweep */
 	else
 	{
-		sweep = 0.0;
-	}
-
-	ptcount = ceil(fabs(perQuad * sweep / M_PI_2));
-
-	result = ptarray_construct(1, 1, ptcount);
-
-	increment = M_PI_2 / perQuad;
-	if (sweep < 0) increment *= -1.0;
-	angle = a1;
-
-	LWDEBUGF(3, "ptcount: %d, perQuad: %d, sweep: %.16f, increment: %.16f", ptcount, perQuad, sweep, increment);
-
-	for (i = 0; i < ptcount - 1; i++)
-	{
-		pt = getPoint_internal(result, i);
-		angle += increment;
-		if (increment > 0.0 && angle > M_PI) angle -= 2*M_PI;
-		if (increment < 0.0 && angle < -1*M_PI) angle -= 2*M_PI;
-		pbuf.x = center->x + radius*cos(angle);
-		pbuf.y = center->y + radius*sin(angle);
-		if ((sweep > 0 && angle < a2) || (sweep < 0 && angle > a2))
-		{
-			if ((sweep > 0 && a1 < a2) || (sweep < 0 && a1 > a2))
-			{
-				pbuf.z = interpolate_arc(angle, p1->z, a1, p2->z, a2);
-				pbuf.m = interpolate_arc(angle, p1->m, a1, p2->m, a2);
-			}
-			else
-			{
-				if (sweep > 0)
-				{
-					pbuf.z = interpolate_arc(angle, p1->z, a1-(2*M_PI), p2->z, a2);
-					pbuf.m = interpolate_arc(angle, p1->m, a1-(2*M_PI), p2->m, a2);
-				}
-				else
-				{
-					pbuf.z = interpolate_arc(angle, p1->z, a1+(2*M_PI), p2->z, a2);
-					pbuf.m = interpolate_arc(angle, p1->m, a1+(2*M_PI), p2->m, a2);
-				}
-			}
-		}
+		if ( angle >= a2 )
+			return zm1 + (zm2-zm1) * (a1-angle) / (a1-a2);
 		else
-		{
-			if ((sweep > 0 && a2 < a3) || (sweep < 0 && a2 > a3))
-			{
-				pbuf.z = interpolate_arc(angle, p2->z, a2, p3->z, a3);
-				pbuf.m = interpolate_arc(angle, p2->m, a2, p3->m, a3);
-			}
-			else
-			{
-				if (sweep > 0)
-				{
-					pbuf.z = interpolate_arc(angle, p2->z, a2-(2*M_PI), p3->z, a3);
-					pbuf.m = interpolate_arc(angle, p2->m, a2-(2*M_PI), p3->m, a3);
-				}
-				else
-				{
-					pbuf.z = interpolate_arc(angle, p2->z, a2+(2*M_PI), p3->z, a3);
-					pbuf.m = interpolate_arc(angle, p2->m, a2+(2*M_PI), p3->m, a3);
-				}
-			}
-		}
-		memcpy(pt, (uchar *)&pbuf, ptsize);
+			return zm2 + (zm3-zm2) * (a2-angle) / (a2-a3);
 	}
+}
 
-	pt = getPoint_internal(result, ptcount - 1);
-	memcpy(pt, (uchar *)p3, ptsize);
+static POINTARRAY *
+lwcircle_segmentize(POINT4D *p1, POINT4D *p2, POINT4D *p3, uint32_t perQuad)
+{
+	POINT4D center;
+	POINT4D pt;
+	int p2_side = 0;
+	int clockwise = LW_TRUE;
+	double radius; /* Arc radius */
+	double increment; /* Angle per segment */
+	double a1, a2, a3, angle;
+	POINTARRAY *pa;
+	int result;
+	int is_circle = LW_FALSE;
 
-	lwfree(center);
+	LWDEBUG(2, "lwcircle_calculate_gbox called.");
 
-	return result;
+	radius = lwcircle_center(p1, p2, p3, &center);
+	p2_side = signum(lw_segment_side((POINT2D*)p1, (POINT2D*)p3, (POINT2D*)p2));
+
+	/* Matched start/end points imply circle */
+	if ( p1->x == p3->x && p1->y == p3->y )
+		is_circle = LW_TRUE;
+	
+	/* Negative radius signals straight line, p1/p2/p3 are colinear */
+	if ( radius < 0.0 || p2_side == 0 )
+	    return NULL;
+		
+	/* The side of the p1/p3 line that p2 falls on dictates the sweep  
+	   direction from p1 to p3. */
+	if ( p2_side == -1 )
+		clockwise = LW_TRUE;
+	else
+		clockwise = LW_FALSE;
+		
+	increment = fabs(M_PI_2 / perQuad);
+	
+	/* Angles of each point that defines the arc section */
+	a1 = atan2(p1->y - center.y, p1->x - center.x);
+	a2 = atan2(p2->y - center.y, p2->x - center.x);
+	a3 = atan2(p3->y - center.y, p3->x - center.x);
+
+	/* p2 on left side => clockwise sweep */
+	if ( clockwise )
+	{
+		increment *= -1;
+		/* Adjust a3 down so we can decrement from a1 to a3 cleanly */
+		if ( a3 > a1 )
+			a3 -= 2.0 * M_PI;
+		if ( a2 > a1 )
+			a2 -= 2.0 * M_PI;
+	}
+	/* p2 on right side => counter-clockwise sweep */
+	else
+	{
+		/* Adjust a3 up so we can increment from a1 to a3 cleanly */
+		if ( a3 < a1 )
+			a3 += 2.0 * M_PI;
+		if ( a2 < a1 )
+			a2 += 2.0 * M_PI;
+	}
+	
+	/* Override angles for circle case */
+	if( is_circle )
+	{
+		a3 = a1 + 2.0 * M_PI;
+		a2 = a1 + M_PI;
+		increment = fabs(increment);
+		clockwise = LW_FALSE;
+	}
+	
+	/* Initialize point array */
+	pa = ptarray_construct_empty(1, 1, 32);
+
+	/* Sweep from a1 to a3 */
+	for ( angle = a1; clockwise ? angle > a3 : angle < a3; angle += increment ) 
+	{
+		pt.x = center.x + radius * cos(angle);
+		pt.y = center.y + radius * sin(angle);
+		pt.z = interpolate_arc(angle, a1, a2, a3, p1->z, p2->z, p3->z);
+		pt.m = interpolate_arc(angle, a1, a2, a3, p1->m, p2->m, p3->m);
+		result = ptarray_append_point(pa, &pt, LW_FALSE);
+	}	
+	return pa;
 }
 
 LWLINE *
-lwcurve_segmentize(LWCIRCSTRING *icurve, uint32 perQuad)
+lwcircstring_segmentize(const LWCIRCSTRING *icurve, uint32_t perQuad)
 {
 	LWLINE *oline;
-	DYNPTARRAY *ptarray;
+	POINTARRAY *ptarray;
 	POINTARRAY *tmp;
-	uint32 i, j;
-	POINT4D *p1 = lwalloc(sizeof(POINT4D));
-	POINT4D *p2 = lwalloc(sizeof(POINT4D));
-	POINT4D *p3 = lwalloc(sizeof(POINT4D));
-	POINT4D *p4 = lwalloc(sizeof(POINT4D));
+	uint32_t i, j;
+	POINT4D p1, p2, p3, p4;
 
+	LWDEBUGF(2, "lwcircstring_segmentize called., dim = %d", icurve->points->flags);
 
-	LWDEBUGF(2, "lwcurve_segmentize called., dim = %d", icurve->points->dims);
-
-	ptarray = dynptarray_create(icurve->points->npoints, icurve->points->dims);
-	if (!getPoint4d_p(icurve->points, 0, p4))
-	{
-		lwerror("lwcurve_segmentize: Cannot extract point.");
-	}
-	dynptarray_addPoint4d(ptarray, p4, 1);
+	ptarray = ptarray_construct_empty(FLAGS_GET_Z(icurve->points->flags), FLAGS_GET_M(icurve->points->flags), 64);
 
 	for (i = 2; i < icurve->points->npoints; i+=2)
 	{
-		LWDEBUGF(3, "lwcurve_segmentize: arc ending at point %d", i);
+		LWDEBUGF(3, "lwcircstring_segmentize: arc ending at point %d", i);
 
-		getPoint4d_p(icurve->points, i - 2, p1);
-		getPoint4d_p(icurve->points, i - 1, p2);
-		getPoint4d_p(icurve->points, i, p3);
-		tmp = lwcircle_segmentize(p1, p2, p3, perQuad);
+		getPoint4d_p(icurve->points, i - 2, &p1);
+		getPoint4d_p(icurve->points, i - 1, &p2);
+		getPoint4d_p(icurve->points, i, &p3);
+		tmp = lwcircle_segmentize(&p1, &p2, &p3, perQuad);
 
 		if (tmp)
 		{
-			LWDEBUGF(3, "lwcurve_segmentize: generated %d points", tmp->npoints);
+			LWDEBUGF(3, "lwcircstring_segmentize: generated %d points", tmp->npoints);
 
 			for (j = 0; j < tmp->npoints; j++)
 			{
-				getPoint4d_p(tmp, j, p4);
-				dynptarray_addPoint4d(ptarray, p4, 1);
+				getPoint4d_p(tmp, j, &p4);
+				ptarray_append_point(ptarray, &p4, LW_TRUE);
 			}
-			lwfree(tmp);
+			ptarray_free(tmp);
 		}
 		else
 		{
-			LWDEBUG(3, "lwcurve_segmentize: points are colinear, returning curve points as line");
+			LWDEBUG(3, "lwcircstring_segmentize: points are colinear, returning curve points as line");
 
 			for (j = i - 1 ; j <= i ; j++)
 			{
-				getPoint4d_p(icurve->points, j, p4);
-				dynptarray_addPoint4d(ptarray, p4, 1);
+				getPoint4d_p(icurve->points, j, &p4);
+				ptarray_append_point(ptarray, &p4, LW_TRUE);
 			}
 		}
 
 	}
-	oline = lwline_construct(icurve->SRID, NULL, ptarray_clone(ptarray->pa));
-
-	lwfree(p1);
-	lwfree(p2);
-	lwfree(p3);
-	lwfree(p4);
-	lwfree(ptarray);
+	getPoint4d_p(icurve->points, icurve->points->npoints-1, &p1);
+	ptarray_append_point(ptarray, &p1, LW_TRUE);
+		
+	oline = lwline_construct(icurve->srid, NULL, ptarray);
 	return oline;
 }
 
 LWLINE *
-lwcompound_segmentize(LWCOMPOUND *icompound, uint32 perQuad)
+lwcompound_segmentize(const LWCOMPOUND *icompound, uint32_t perQuad)
 {
-	LWLINE *oline;
 	LWGEOM *geom;
-	DYNPTARRAY *ptarray = NULL;
+	POINTARRAY *ptarray = NULL, *ptarray_out = NULL;
 	LWLINE *tmp = NULL;
-	uint32 i, j;
-	POINT4D *p = NULL;
+	uint32_t i, j;
+	POINT4D p;
 
 	LWDEBUG(2, "lwcompound_segmentize called.");
 
-	p = lwalloc(sizeof(POINT4D));
-
-	ptarray = dynptarray_create(2, ((POINTARRAY *)icompound->geoms[0]->data)->dims);
+	ptarray = ptarray_construct_empty(FLAGS_GET_Z(icompound->flags), FLAGS_GET_M(icompound->flags), 64);
 
 	for (i = 0; i < icompound->ngeoms; i++)
 	{
 		geom = icompound->geoms[i];
-		if (lwgeom_getType(geom->type) == CIRCSTRINGTYPE)
+		if (geom->type == CIRCSTRINGTYPE)
 		{
-			tmp = lwcurve_segmentize((LWCIRCSTRING *)geom, perQuad);
+			tmp = lwcircstring_segmentize((LWCIRCSTRING *)geom, perQuad);
 			for (j = 0; j < tmp->points->npoints; j++)
 			{
-				getPoint4d_p(tmp->points, j, p);
-				dynptarray_addPoint4d(ptarray, p, 0);
+				getPoint4d_p(tmp->points, j, &p);
+				ptarray_append_point(ptarray, &p, LW_TRUE);
 			}
 			lwfree(tmp);
 		}
-		else if (lwgeom_getType(geom->type) == LINETYPE)
+		else if (geom->type == LINETYPE)
 		{
 			tmp = (LWLINE *)geom;
 			for (j = 0; j < tmp->points->npoints; j++)
 			{
-				getPoint4d_p(tmp->points, j, p);
-				dynptarray_addPoint4d(ptarray, p, 0);
+				getPoint4d_p(tmp->points, j, &p);
+				ptarray_append_point(ptarray, &p, LW_TRUE);
 			}
 		}
 		else
 		{
-			lwerror("Unsupported geometry type %d found.", lwgeom_getType(geom->type));
+			lwerror("Unsupported geometry type %d found.",
+			        geom->type, lwtype_name(geom->type));
 			return NULL;
 		}
 	}
-	oline = lwline_construct(icompound->SRID, NULL, ptarray_clone(ptarray->pa));
-	lwfree(ptarray);
-	lwfree(p);
-	return oline;
+	ptarray_out = ptarray_remove_repeated_points(ptarray);
+	ptarray_free(ptarray);
+	return lwline_construct(icompound->srid, NULL, ptarray_out);
 }
 
 LWPOLY *
-lwcurvepoly_segmentize(LWCURVEPOLY *curvepoly, uint32 perQuad)
+lwcurvepoly_segmentize(const LWCURVEPOLY *curvepoly, uint32_t perQuad)
 {
 	LWPOLY *ogeom;
 	LWGEOM *tmp;
@@ -412,21 +354,21 @@ lwcurvepoly_segmentize(LWCURVEPOLY *curvepoly, uint32 perQuad)
 	for (i = 0; i < curvepoly->nrings; i++)
 	{
 		tmp = curvepoly->rings[i];
-		if (lwgeom_getType(tmp->type) == CIRCSTRINGTYPE)
+		if (tmp->type == CIRCSTRINGTYPE)
 		{
-			line = lwcurve_segmentize((LWCIRCSTRING *)tmp, perQuad);
-			ptarray[i] = ptarray_clone(line->points);
+			line = lwcircstring_segmentize((LWCIRCSTRING *)tmp, perQuad);
+			ptarray[i] = ptarray_clone_deep(line->points);
 			lwfree(line);
 		}
-		else if (lwgeom_getType(tmp->type) == LINETYPE)
+		else if (tmp->type == LINETYPE)
 		{
 			line = (LWLINE *)tmp;
-			ptarray[i] = ptarray_clone(line->points);
+			ptarray[i] = ptarray_clone_deep(line->points);
 		}
-		else if (lwgeom_getType(tmp->type) == COMPOUNDTYPE)
+		else if (tmp->type == COMPOUNDTYPE)
 		{
 			line = lwcompound_segmentize((LWCOMPOUND *)tmp, perQuad);
-			ptarray[i] = ptarray_clone(line->points);
+			ptarray[i] = ptarray_clone_deep(line->points);
 			lwfree(line);
 		}
 		else
@@ -436,32 +378,32 @@ lwcurvepoly_segmentize(LWCURVEPOLY *curvepoly, uint32 perQuad)
 		}
 	}
 
-	ogeom = lwpoly_construct(curvepoly->SRID, NULL, curvepoly->nrings, ptarray);
+	ogeom = lwpoly_construct(curvepoly->srid, NULL, curvepoly->nrings, ptarray);
 	return ogeom;
 }
 
 LWMLINE *
-lwmcurve_segmentize(LWMCURVE *mcurve, uint32 perQuad)
+lwmcurve_segmentize(LWMCURVE *mcurve, uint32_t perQuad)
 {
 	LWMLINE *ogeom;
 	LWGEOM *tmp;
 	LWGEOM **lines;
 	int i;
 
-	LWDEBUGF(2, "lwmcurve_segmentize called, geoms=%d, dim=%d.", mcurve->ngeoms, TYPE_NDIMS(mcurve->type));
+	LWDEBUGF(2, "lwmcurve_segmentize called, geoms=%d, dim=%d.", mcurve->ngeoms, FLAGS_NDIMS(mcurve->flags));
 
 	lines = lwalloc(sizeof(LWGEOM *)*mcurve->ngeoms);
 
 	for (i = 0; i < mcurve->ngeoms; i++)
 	{
 		tmp = mcurve->geoms[i];
-		if (lwgeom_getType(tmp->type) == CIRCSTRINGTYPE)
+		if (tmp->type == CIRCSTRINGTYPE)
 		{
-			lines[i] = (LWGEOM *)lwcurve_segmentize((LWCIRCSTRING *)tmp, perQuad);
+			lines[i] = (LWGEOM *)lwcircstring_segmentize((LWCIRCSTRING *)tmp, perQuad);
 		}
-		else if (lwgeom_getType(tmp->type) == LINETYPE)
+		else if (tmp->type == LINETYPE)
 		{
-			lines[i] = (LWGEOM *)lwline_construct(mcurve->SRID, NULL, ptarray_clone(((LWLINE *)tmp)->points));
+			lines[i] = (LWGEOM *)lwline_construct(mcurve->srid, NULL, ptarray_clone_deep(((LWLINE *)tmp)->points));
 		}
 		else
 		{
@@ -470,12 +412,12 @@ lwmcurve_segmentize(LWMCURVE *mcurve, uint32 perQuad)
 		}
 	}
 
-	ogeom = (LWMLINE *)lwcollection_construct(MULTILINETYPE, mcurve->SRID, NULL, mcurve->ngeoms, lines);
+	ogeom = (LWMLINE *)lwcollection_construct(MULTILINETYPE, mcurve->srid, NULL, mcurve->ngeoms, lines);
 	return ogeom;
 }
 
 LWMPOLY *
-lwmsurface_segmentize(LWMSURFACE *msurface, uint32 perQuad)
+lwmsurface_segmentize(LWMSURFACE *msurface, uint32_t perQuad)
 {
 	LWMPOLY *ogeom;
 	LWGEOM *tmp;
@@ -491,27 +433,27 @@ lwmsurface_segmentize(LWMSURFACE *msurface, uint32 perQuad)
 	for (i = 0; i < msurface->ngeoms; i++)
 	{
 		tmp = msurface->geoms[i];
-		if (lwgeom_getType(tmp->type) == CURVEPOLYTYPE)
+		if (tmp->type == CURVEPOLYTYPE)
 		{
 			polys[i] = (LWGEOM *)lwcurvepoly_segmentize((LWCURVEPOLY *)tmp, perQuad);
 		}
-		else if (lwgeom_getType(tmp->type) == POLYGONTYPE)
+		else if (tmp->type == POLYGONTYPE)
 		{
 			poly = (LWPOLY *)tmp;
 			ptarray = lwalloc(sizeof(POINTARRAY *)*poly->nrings);
 			for (j = 0; j < poly->nrings; j++)
 			{
-				ptarray[j] = ptarray_clone(poly->rings[j]);
+				ptarray[j] = ptarray_clone_deep(poly->rings[j]);
 			}
-			polys[i] = (LWGEOM *)lwpoly_construct(msurface->SRID, NULL, poly->nrings, ptarray);
+			polys[i] = (LWGEOM *)lwpoly_construct(msurface->srid, NULL, poly->nrings, ptarray);
 		}
 	}
-	ogeom = (LWMPOLY *)lwcollection_construct(MULTIPOLYGONTYPE, msurface->SRID, NULL, msurface->ngeoms, polys);
+	ogeom = (LWMPOLY *)lwcollection_construct(MULTIPOLYGONTYPE, msurface->srid, NULL, msurface->ngeoms, polys);
 	return ogeom;
 }
 
 LWCOLLECTION *
-lwcollection_segmentize(LWCOLLECTION *collection, uint32 perQuad)
+lwcollection_segmentize(LWCOLLECTION *collection, uint32_t perQuad)
 {
 	LWCOLLECTION *ocol;
 	LWGEOM *tmp;
@@ -525,10 +467,10 @@ lwcollection_segmentize(LWCOLLECTION *collection, uint32 perQuad)
 	for (i=0; i<collection->ngeoms; i++)
 	{
 		tmp = collection->geoms[i];
-		switch (lwgeom_getType(tmp->type))
+		switch (tmp->type)
 		{
 		case CIRCSTRINGTYPE:
-			geoms[i] = (LWGEOM *)lwcurve_segmentize((LWCIRCSTRING *)tmp, perQuad);
+			geoms[i] = (LWGEOM *)lwcircstring_segmentize((LWCIRCSTRING *)tmp, perQuad);
 			break;
 		case COMPOUNDTYPE:
 			geoms[i] = (LWGEOM *)lwcompound_segmentize((LWCOMPOUND *)tmp, perQuad);
@@ -544,18 +486,18 @@ lwcollection_segmentize(LWCOLLECTION *collection, uint32 perQuad)
 			break;
 		}
 	}
-	ocol = lwcollection_construct(COLLECTIONTYPE, collection->SRID, NULL, collection->ngeoms, geoms);
+	ocol = lwcollection_construct(COLLECTIONTYPE, collection->srid, NULL, collection->ngeoms, geoms);
 	return ocol;
 }
 
 LWGEOM *
-lwgeom_segmentize(LWGEOM *geom, uint32 perQuad)
+lwgeom_segmentize(LWGEOM *geom, uint32_t perQuad)
 {
 	LWGEOM * ogeom = NULL;
-	switch (lwgeom_getType(geom->type))
+	switch (geom->type)
 	{
 	case CIRCSTRINGTYPE:
-		ogeom = (LWGEOM *)lwcurve_segmentize((LWCIRCSTRING *)geom, perQuad);
+		ogeom = (LWGEOM *)lwcircstring_segmentize((LWCIRCSTRING *)geom, perQuad);
 		break;
 	case COMPOUNDTYPE:
 		ogeom = (LWGEOM *)lwcompound_segmentize((LWCOMPOUND *)geom, perQuad);
@@ -578,397 +520,207 @@ lwgeom_segmentize(LWGEOM *geom, uint32 perQuad)
 	return ogeom;
 }
 
-/*******************************************************************************
- * End curve segmentize functions
- ******************************************************************************/
-LWGEOM *
-append_segment(LWGEOM *geom, POINTARRAY *pts, int type, int SRID)
+
+/**
+* Returns LW_TRUE if b is on the arc formed by a1/a2/a3, but not within
+* that portion already described by a1/a2/a3
+*/
+static int pt_continues_arc(const POINT4D *a1, const POINT4D *a2, const POINT4D *a3, const POINT4D *b)
 {
-	LWGEOM *result;
-	int currentType, i;
+	POINT4D center;
+	POINT4D *centerptr=&center;
+	double radius = lwcircle_center(a1, a2, a3, &center);
+	double b_distance, diff;
 
-	LWDEBUGF(2, "append_segment called %p, %p, %d, %d", geom, pts, type, SRID);
+	/* Co-linear a1/a2/a3 */
+	if ( radius < 0.0 )
+		return LW_FALSE;
 
-	if (geom == NULL)
+	b_distance = distance2d_pt_pt((POINT2D*)b, (POINT2D*)centerptr);
+	diff = fabs(radius - b_distance);
+	LWDEBUGF(4, "circle_radius=%g, b_distance=%g, diff=%g, percentage=%g", radius, b_distance, diff, diff/radius);
+	
+	/* Is the point b on the circle? */
+	if ( diff < EPSILON_SQLMM ) 
 	{
-		if (type == LINETYPE)
+		int a2_side = signum(lw_segment_side((POINT2D*)a1, (POINT2D*)a3, (POINT2D*)a2));
+		int b_side = signum(lw_segment_side((POINT2D*)a1, (POINT2D*)a3, (POINT2D*)b));
+		
+		/* Is the point b on the same side of a1/a3 as the mid-point a2 is? */
+		/* If not, it's in the unbounded part of the circle, so it continues the arc, return true. */
+		if ( b_side != a2_side )
+			return LW_TRUE;
+	}
+	return LW_FALSE;
+}
+
+static LWGEOM*
+linestring_from_pa(const POINTARRAY *pa, int srid, int start, int end)
+{
+	int i = 0, j = 0;
+	POINT4D p;
+	POINTARRAY *pao = ptarray_construct(ptarray_has_z(pa), ptarray_has_m(pa), end-start+2);
+	LWDEBUGF(4, "srid=%d, start=%d, end=%d", srid, start, end);
+	for( i = start; i < end + 2; i++ )
+	{
+		getPoint4d_p(pa, i, &p);
+		ptarray_set_point4d(pao, j++, &p);	
+	}
+	return lwline_as_lwgeom(lwline_construct(srid, NULL, pao));
+}
+
+static LWGEOM*
+circstring_from_pa(const POINTARRAY *pa, int srid, int start, int end)
+{
+	
+	POINT4D p0, p1, p2;
+	POINTARRAY *pao = ptarray_construct(ptarray_has_z(pa), ptarray_has_m(pa), 3);
+	LWDEBUGF(4, "srid=%d, start=%d, end=%d", srid, start, end);
+	getPoint4d_p(pa, start, &p0);
+	ptarray_set_point4d(pao, 0, &p0);	
+	getPoint4d_p(pa, (start+end)/2, &p1);
+	ptarray_set_point4d(pao, 1, &p1);	
+	getPoint4d_p(pa, end+1, &p2);
+	ptarray_set_point4d(pao, 2, &p2);	
+	return lwcircstring_as_lwgeom(lwcircstring_construct(srid, NULL, pao));
+}
+
+static LWGEOM*
+geom_from_pa(const POINTARRAY *pa, int srid, int is_arc, int start, int end)
+{
+	LWDEBUGF(4, "srid=%d, is_arc=%d, start=%d, end=%d", srid, is_arc, start, end);
+	if ( is_arc )
+		return circstring_from_pa(pa, srid, start, end);
+	else
+		return linestring_from_pa(pa, srid, start, end);
+}
+
+LWGEOM*
+pta_desegmentize(POINTARRAY *points, int type, int srid)
+{
+	int i = 0, j, k;
+	POINT4D a1, a2, a3, b;
+	char *edges_in_arcs;
+	int found_arc = LW_FALSE;
+	int current_arc = 1;
+	int num_edges;
+	int edge_type = -1;
+	int start, end;
+	LWCOLLECTION *outcol;
+
+	/* Die on null input */
+	if ( ! points )
+		lwerror("pta_desegmentize called with null pointarray");
+
+	/* Null on empty input? */
+	if ( points->npoints == 0 )
+		return NULL;
+	
+	/* We can't desegmentize anything shorter than four points */
+	if ( points->npoints < 4 )
+	{
+		/* Return a linestring here*/
+		lwerror("pta_desegmentize needs implementation for npoints < 4");
+	}
+	
+	/* Allocate our result array of vertices that are part of arcs */
+	num_edges = points->npoints - 1;
+	edges_in_arcs = lwalloc(num_edges);
+	memset(edges_in_arcs, 0, num_edges);
+	
+	/* We make a candidate arc of the first two edges, */
+	/* And then see if the next edge follows it */
+	while( i < num_edges-2 )
+	{
+		found_arc = LW_FALSE;
+		/* Make candidate arc */
+		getPoint4d_p(points, i  , &a1);
+		getPoint4d_p(points, i+1, &a2);
+		getPoint4d_p(points, i+2, &a3);
+		for( j = i+3; j < num_edges+1; j++ )
 		{
-			LWDEBUG(3, "append_segment: line to NULL");
-
-			return (LWGEOM *)lwline_construct(SRID, NULL, pts);
-		}
-		else if (type == CIRCSTRINGTYPE)
-		{
-#if POSTGIS_DEBUG_LEVEL >= 4
-			POINT4D tmp;
-
-			LWDEBUGF(4, "append_segment: curve to NULL %d", pts->npoints);
-
-			for (i=0; i<pts->npoints; i++)
+			LWDEBUGF(4, "i=%d, j=%d", i, j);
+			getPoint4d_p(points, j, &b);
+			/* Does this point fall on our candidate arc? */
+			if ( pt_continues_arc(&a1, &a2, &a3, &b) )
 			{
-				getPoint4d_p(pts, i, &tmp);
-				LWDEBUGF(4, "new point: (%.16f,%.16f)",tmp.x,tmp.y);
+				/* Yes. Mark this edge and the two preceding it as arc components */
+				LWDEBUGF(4, "pt_continues_arc #%d", current_arc);
+				found_arc = LW_TRUE;
+				for ( k = j-1; k > j-4; k-- )
+					edges_in_arcs[k] = current_arc;
 			}
+			else
+			{
+				/* No. So we're done with this candidate arc */
+				LWDEBUG(4, "pt_continues_arc = false");
+				current_arc++;
+				break;
+			}
+		}
+		/* Jump past all the edges that were added to the arc */
+		if ( found_arc )
+		{
+			i = j-1;
+		}
+		else
+		{
+			/* Mark this edge as a linear edge */
+			edges_in_arcs[i] = 0;
+			i = i+1;
+		}
+	}
+	
+#if POSTGIS_DEBUG_LEVEL > 3
+	{
+		char *edgestr = lwalloc(num_edges+1);
+		for ( i = 0; i < num_edges; i++ )
+		{
+			if ( edges_in_arcs[i] )
+				edgestr[i] = 48 + edges_in_arcs[i];
+			else
+				edgestr[i] = '.';
+		}
+		edgestr[num_edges] = 0;
+		LWDEBUGF(3, "edge pattern %s", edgestr);
+		lwfree(edgestr);
+	}
 #endif
-			return (LWGEOM *)lwcircstring_construct(SRID, NULL, pts);
-		}
-		else
-		{
-			lwerror("Invalid segment type %d.", type);
-		}
-	}
 
-	currentType = lwgeom_getType(geom->type);
-	if (currentType == LINETYPE && type == LINETYPE)
+	start = 0;
+	edge_type = edges_in_arcs[0];
+	outcol = lwcollection_construct_empty(COMPOUNDTYPE, srid, ptarray_has_z(points), ptarray_has_m(points));
+	for( i = 1; i < num_edges; i++ )
 	{
-		POINTARRAY *newPoints;
-		POINT4D pt;
-		LWLINE *line = (LWLINE *)geom;
-
-		LWDEBUG(3, "append_segment: line to line");
-
-		newPoints = ptarray_construct(TYPE_HASZ(pts->dims), TYPE_HASM(pts->dims), pts->npoints + line->points->npoints - 1);
-		for (i=0; i<line->points->npoints; i++)
+		if( edge_type != edges_in_arcs[i] )
 		{
-			getPoint4d_p(line->points, i, &pt);
-			LWDEBUGF(5, "copying to %p [%d]", newPoints, i);
-			setPoint4d(newPoints, i, &pt);
+			end = i - 1;
+			lwcollection_add_lwgeom(outcol, geom_from_pa(points, srid, edge_type, start, end));
+			start = i;
+			edge_type = edges_in_arcs[i];
 		}
-		for (i=1; i<pts->npoints; i++)
-		{
-			getPoint4d_p(pts, i, &pt);
-			setPoint4d(newPoints, i + line->points->npoints - 1, &pt);
-		}
-		result = (LWGEOM *)lwline_construct(SRID, NULL, newPoints);
-		lwgeom_release(geom);
-		return result;
 	}
-	else if (currentType == CIRCSTRINGTYPE && type == CIRCSTRINGTYPE)
+	/* Roll out last item */
+	end = num_edges - 1;
+	lwcollection_add_lwgeom(outcol, geom_from_pa(points, srid, edge_type, start, end));
+	
+	/* Strip down to singleton if only one entry */
+	if ( outcol->ngeoms == 1 )
 	{
-		POINTARRAY *newPoints;
-		POINT4D pt;
-		LWCIRCSTRING *curve = (LWCIRCSTRING *)geom;
-
-		LWDEBUG(3, "append_segment: circularstring to circularstring");
-
-		newPoints = ptarray_construct(TYPE_HASZ(pts->dims), TYPE_HASM(pts->dims), pts->npoints + curve->points->npoints - 1);
-
-		LWDEBUGF(3, "New array length: %d", pts->npoints + curve->points->npoints - 1);
-
-		for (i=0; i<curve->points->npoints; i++)
-		{
-			getPoint4d_p(curve->points, i, &pt);
-
-			LWDEBUGF(3, "orig point %d: (%.16f,%.16f)", i, pt.x, pt.y);
-
-			setPoint4d(newPoints, i, &pt);
-		}
-		for (i=1; i<pts->npoints; i++)
-		{
-			getPoint4d_p(pts, i, &pt);
-
-			LWDEBUGF(3, "new point %d: (%.16f,%.16f)", i + curve->points->npoints - 1, pt.x, pt.y);
-
-			setPoint4d(newPoints, i + curve->points->npoints - 1, &pt);
-		}
-		result = (LWGEOM *)lwcircstring_construct(SRID, NULL, newPoints);
-		lwgeom_release(geom);
-		return result;
+		LWGEOM *outgeom = outcol->geoms[0];
+		lwfree(outcol);
+		return outgeom;
 	}
-	else if (currentType == CIRCSTRINGTYPE && type == LINETYPE)
-	{
-		LWLINE *line;
-		LWGEOM **geomArray;
-
-		LWDEBUG(3, "append_segment: line to curve");
-
-		geomArray = lwalloc(sizeof(LWGEOM *)*2);
-		geomArray[0] = lwgeom_clone(geom);
-
-		line = lwline_construct(SRID, NULL, pts);
-		geomArray[1] = lwgeom_clone((LWGEOM *)line);
-
-		result = (LWGEOM *)lwcollection_construct(COMPOUNDTYPE, SRID, NULL, 2, geomArray);
-		lwfree((LWGEOM *)line);
-		lwgeom_release(geom);
-		return result;
-	}
-	else if (currentType == LINETYPE && type == CIRCSTRINGTYPE)
-	{
-		LWCIRCSTRING *curve;
-		LWGEOM **geomArray;
-
-		LWDEBUG(3, "append_segment: circularstring to line");
-
-		geomArray = lwalloc(sizeof(LWGEOM *)*2);
-		geomArray[0] = lwgeom_clone(geom);
-
-		curve = lwcircstring_construct(SRID, NULL, pts);
-		geomArray[1] = lwgeom_clone((LWGEOM *)curve);
-
-		result = (LWGEOM *)lwcollection_construct(COMPOUNDTYPE, SRID, NULL, 2, geomArray);
-		lwfree((LWGEOM *)curve);
-		lwgeom_release(geom);
-		return result;
-	}
-	else if (currentType == COMPOUNDTYPE)
-	{
-		LWGEOM *newGeom;
-		LWCOMPOUND *compound;
-		int count;
-		LWGEOM **geomArray;
-
-		compound = (LWCOMPOUND *)geom;
-		count = compound->ngeoms + 1;
-		geomArray = lwalloc(sizeof(LWGEOM *)*count);
-		for (i=0; i<compound->ngeoms; i++)
-		{
-			geomArray[i] = lwgeom_clone(compound->geoms[i]);
-		}
-		if (type == LINETYPE)
-		{
-			LWDEBUG(3, "append_segment: line to compound");
-
-			newGeom = (LWGEOM *)lwline_construct(SRID, NULL, pts);
-		}
-		else if (type == CIRCSTRINGTYPE)
-		{
-			LWDEBUG(3, "append_segment: circularstring to compound");
-
-			newGeom = (LWGEOM *)lwcircstring_construct(SRID, NULL, pts);
-		}
-		else
-		{
-			lwerror("Invalid segment type %d.", type);
-			return NULL;
-		}
-		geomArray[compound->ngeoms] = lwgeom_clone(newGeom);
-
-		result = (LWGEOM *)lwcollection_construct(COMPOUNDTYPE, SRID, NULL, count, geomArray);
-		lwfree(newGeom);
-		lwgeom_release(geom);
-		return result;
-	}
-	lwerror("Invalid state %d-%d", currentType, type);
-	return NULL;
+	return lwcollection_as_lwgeom(outcol);
 }
 
-LWGEOM *
-pta_desegmentize(POINTARRAY *points, int type, int SRID)
-{
-	int i, j, commit, isline, count;
-	double last_angle, last_length;
-	double dxab, dyab, dxbc, dybc, theta, length;
-	POINT4D a, b, c, tmp;
-	POINTARRAY *pts;
-	LWGEOM *geom = NULL;
-
-	LWDEBUG(2, "pta_desegmentize called.");
-
-	getPoint4d_p(points, 0, &a);
-	getPoint4d_p(points, 1, &b);
-	getPoint4d_p(points, 2, &c);
-
-	dxab = b.x - a.x;
-	dyab = b.y - a.y;
-	dxbc = c.x - b.x;
-	dybc = c.y - b.y;
-
-	theta = atan2(dyab, dxab);
-	last_angle = theta - atan2(dybc, dxbc);
-	last_length = sqrt(dxbc*dxbc+dybc*dybc);
-	length = sqrt(dxab*dxab+dyab*dyab);
-	if ((last_length - length) < EPSILON_SQLMM)
-	{
-		isline = -1;
-		LWDEBUG(3, "Starting as unknown.");
-	}
-	else
-	{
-		isline = 1;
-		LWDEBUG(3, "Starting as line.");
-	}
-
-	commit = 0;
-	for (i=3; i<points->npoints; i++)
-	{
-		getPoint4d_p(points, i-2, &a);
-		getPoint4d_p(points, i-1, &b);
-		getPoint4d_p(points, i, &c);
-
-		dxab = b.x - a.x;
-		dyab = b.y - a.y;
-		dxbc = c.x - b.x;
-		dybc = c.y - b.y;
-
-		LWDEBUGF(3, "(dxab, dyab, dxbc, dybc) (%.16f, %.16f, %.16f, %.16f)", dxab, dyab, dxbc, dybc);
-
-		theta = atan2(dyab, dxab);
-		theta = theta - atan2(dybc, dxbc);
-		length = sqrt(dxbc*dxbc+dybc*dybc);
-
-		LWDEBUGF(3, "Last/current length and angle %.16f/%.16f, %.16f/%.16f", last_angle, theta, last_length, length);
-
-		/* Found a line segment */
-		if (fabs(length - last_length) > EPSILON_SQLMM ||
-		        fabs(theta - last_angle) > EPSILON_SQLMM)
-		{
-			last_length = length;
-			last_angle = theta;
-			/* We are tracking a line, keep going */
-			if (isline > 0)
-				{}
-			/* We were tracking a circularstring, commit it and start line*/
-			else if (isline == 0)
-			{
-				LWDEBUGF(3, "Building circularstring, %d - %d", commit, i);
-
-				count = i - commit;
-				pts = ptarray_construct(
-				          TYPE_HASZ(type),
-				          TYPE_HASM(type),
-				          3);
-				getPoint4d_p(points, commit, &tmp);
-				setPoint4d(pts, 0, &tmp);
-				getPoint4d_p(points,
-				             commit + count/2, &tmp);
-				setPoint4d(pts, 1, &tmp);
-				getPoint4d_p(points, i - 1, &tmp);
-				setPoint4d(pts, 2, &tmp);
-
-				commit = i-1;
-				geom = append_segment(geom, pts, CIRCSTRINGTYPE, SRID);
-				isline = -1;
-
-				/*
-				 * We now need to move ahead one point to
-				 * determine if it's a potential new curve,
-				 * since the last_angle value is corrupt.
-				 *
-				 * Note we can only look ahead one point if
-				 * we are not already at the end of our
-				 * set of points.
-				 */
-				if (i < points->npoints - 1)
-				{
-					i++;
-
-					getPoint4d_p(points, i-2, &a);
-					getPoint4d_p(points, i-1, &b);
-					getPoint4d_p(points, i, &c);
-
-					dxab = b.x - a.x;
-					dyab = b.y - a.y;
-					dxbc = c.x - b.x;
-					dybc = c.y - b.y;
-
-					theta = atan2(dyab, dxab);
-					last_angle = theta - atan2(dybc, dxbc);
-					last_length = sqrt(dxbc*dxbc+dybc*dybc);
-					length = sqrt(dxab*dxab+dyab*dyab);
-					if ((last_length - length) < EPSILON_SQLMM)
-					{
-						isline = -1;
-						LWDEBUG(3, "Restarting as unknown.");
-					}
-					else
-					{
-						isline = 1;
-						LWDEBUG(3, "Restarting as line.");
-					}
-				}
-				else
-				{
-					/* Indicate that we have tracked a CIRCSTRING */
-					isline = 0;
-				}
-			}
-			/* We didn't know what we were tracking, now we do. */
-			else
-			{
-				LWDEBUG(3, "It's a line");
-				isline = 1;
-			}
-		}
-		/* Found a circularstring segment */
-		else
-		{
-			/* We were tracking a circularstring, commit it and start line */
-			if (isline > 0)
-			{
-				LWDEBUGF(3, "Building line, %d - %d", commit, i-2);
-
-				count = i - commit - 2;
-
-				pts = ptarray_construct(
-				          TYPE_HASZ(type),
-				          TYPE_HASM(type),
-				          count);
-				for (j=commit; j<i-2; j++)
-				{
-					getPoint4d_p(points, j, &tmp);
-					setPoint4d(pts, j-commit, &tmp);
-				}
-
-				commit = i-3;
-				geom = append_segment(geom, pts, LINETYPE, SRID);
-				isline = -1;
-			}
-			/* We are tracking a circularstring, keep going */
-			else if (isline == 0)
-			{
-				;
-			}
-			/* We didn't know what we were tracking, now we do */
-			else
-			{
-				LWDEBUG(3, "It's a circularstring");
-				isline = 0;
-			}
-		}
-	}
-	count = i - commit;
-	if (isline == 0 && count > 2)
-	{
-		LWDEBUGF(3, "Finishing circularstring %d,%d.", commit, i);
-
-		pts = ptarray_construct(
-		          TYPE_HASZ(type),
-		          TYPE_HASM(type),
-		          3);
-		getPoint4d_p(points, commit, &tmp);
-		setPoint4d(pts, 0, &tmp);
-		getPoint4d_p(points, commit + count/2, &tmp);
-		setPoint4d(pts, 1, &tmp);
-		getPoint4d_p(points, i - 1, &tmp);
-		setPoint4d(pts, 2, &tmp);
-
-		geom = append_segment(geom, pts, CIRCSTRINGTYPE, SRID);
-	}
-	else
-	{
-		LWDEBUGF(3, "Finishing line %d,%d.", commit, i);
-
-		pts = ptarray_construct(
-		          TYPE_HASZ(type),
-		          TYPE_HASM(type),
-		          count);
-		for (j=commit; j<i; j++)
-		{
-			getPoint4d_p(points, j, &tmp);
-			setPoint4d(pts, j-commit, &tmp);
-		}
-		geom = append_segment(geom, pts, LINETYPE, SRID);
-	}
-	return geom;
-}
 
 LWGEOM *
 lwline_desegmentize(LWLINE *line)
 {
 	LWDEBUG(2, "lwline_desegmentize called.");
 
-	return pta_desegmentize(line->points, line->type, line->SRID);
+	return pta_desegmentize(line->points, line->flags, line->srid);
 }
 
 LWGEOM *
@@ -982,9 +734,8 @@ lwpolygon_desegmentize(LWPOLY *poly)
 	geoms = lwalloc(sizeof(LWGEOM *)*poly->nrings);
 	for (i=0; i<poly->nrings; i++)
 	{
-		geoms[i] = pta_desegmentize(poly->rings[i], poly->type, poly->SRID);
-		if (lwgeom_getType(geoms[i]->type) == CIRCSTRINGTYPE ||
-		        lwgeom_getType(geoms[i]->type) == COMPOUNDTYPE)
+		geoms[i] = pta_desegmentize(poly->rings[i], poly->flags, poly->srid);
+		if (geoms[i]->type == CIRCSTRINGTYPE || geoms[i]->type == COMPOUNDTYPE)
 		{
 			hascurve = 1;
 		}
@@ -998,7 +749,7 @@ lwpolygon_desegmentize(LWPOLY *poly)
 		return lwgeom_clone((LWGEOM *)poly);
 	}
 
-	return (LWGEOM *)lwcollection_construct(CURVEPOLYTYPE, poly->SRID, NULL, poly->nrings, geoms);
+	return (LWGEOM *)lwcollection_construct(CURVEPOLYTYPE, poly->srid, NULL, poly->nrings, geoms);
 }
 
 LWGEOM *
@@ -1013,8 +764,7 @@ lwmline_desegmentize(LWMLINE *mline)
 	for (i=0; i<mline->ngeoms; i++)
 	{
 		geoms[i] = lwline_desegmentize((LWLINE *)mline->geoms[i]);
-		if (lwgeom_getType(geoms[i]->type) == CIRCSTRINGTYPE ||
-		        lwgeom_getType(geoms[i]->type) == COMPOUNDTYPE)
+		if (geoms[i]->type == CIRCSTRINGTYPE || geoms[i]->type == COMPOUNDTYPE)
 		{
 			hascurve = 1;
 		}
@@ -1027,7 +777,7 @@ lwmline_desegmentize(LWMLINE *mline)
 		}
 		return lwgeom_clone((LWGEOM *)mline);
 	}
-	return (LWGEOM *)lwcollection_construct(MULTICURVETYPE, mline->SRID, NULL, mline->ngeoms, geoms);
+	return (LWGEOM *)lwcollection_construct(MULTICURVETYPE, mline->srid, NULL, mline->ngeoms, geoms);
 }
 
 LWGEOM *
@@ -1042,7 +792,7 @@ lwmpolygon_desegmentize(LWMPOLY *mpoly)
 	for (i=0; i<mpoly->ngeoms; i++)
 	{
 		geoms[i] = lwpolygon_desegmentize((LWPOLY *)mpoly->geoms[i]);
-		if (lwgeom_getType(geoms[i]->type) == CURVEPOLYTYPE)
+		if (geoms[i]->type == CURVEPOLYTYPE)
 		{
 			hascurve = 1;
 		}
@@ -1055,17 +805,15 @@ lwmpolygon_desegmentize(LWMPOLY *mpoly)
 		}
 		return lwgeom_clone((LWGEOM *)mpoly);
 	}
-	return (LWGEOM *)lwcollection_construct(MULTISURFACETYPE, mpoly->SRID, NULL, mpoly->ngeoms, geoms);
+	return (LWGEOM *)lwcollection_construct(MULTISURFACETYPE, mpoly->srid, NULL, mpoly->ngeoms, geoms);
 }
 
 LWGEOM *
 lwgeom_desegmentize(LWGEOM *geom)
 {
-	int type = lwgeom_getType(geom->type);
-
 	LWDEBUG(2, "lwgeom_desegmentize called.");
 
-	switch (type)
+	switch (geom->type)
 	{
 	case LINETYPE:
 		return lwline_desegmentize((LWLINE *)geom);

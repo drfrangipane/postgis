@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: ValueSetter.java 1774 2005-06-28 08:12:45Z mschaber $
+ * $Id: ValueSetter.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package org.postgis.binary;

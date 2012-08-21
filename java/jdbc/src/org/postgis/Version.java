@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: Version.java 2512 2006-10-14 09:26:13Z mschaber $
+ * $Id: Version.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package org.postgis;
@@ -29,7 +29,7 @@ import java.util.Properties;
 
 /** Corresponds to the appropriate PostGIS that carried this source */
 public class Version {
-    /** We read our version information from this ressource... */
+    /** We read our version information from this resource... */
     private static final String RESSOURCENAME = "org/postgis/version.properties";
 
     /** The major version */

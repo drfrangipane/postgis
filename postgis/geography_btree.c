@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: geography_btree.c 5184 2010-02-01 18:24:09Z pramsey $
+ * $Id: geography_btree.c 9324 2012-02-27 22:08:12Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * Copyright 2009 Paul Ramsey <pramsey@cleverelephant.ca>
@@ -14,8 +14,10 @@
 
 #include "../postgis_config.h"
 
-#include "libgeom.h"         /* For standard geometry types. */
+#include "liblwgeom.h"         /* For standard geometry types. */
+#include "liblwgeom_internal.h"         /* For FP comparators. */
 #include "lwgeom_pg.h"       /* For debugging macros. */
+#include "gserialized_gist.h"
 #include "geography.h"	     /* For utility functions. */
 
 Datum geography_lt(PG_FUNCTION_ARGS);
@@ -53,8 +55,8 @@ Datum geography_lt(PG_FUNCTION_ARGS)
 	POINT3D p1, p2;
 
 	/* Must be able to build box for each argument (ie, not empty geometry) */
-	if ( ! geography_datum_gidx(PG_GETARG_DATUM(0), gbox1) ||
-	        ! geography_datum_gidx(PG_GETARG_DATUM(1), gbox2) )
+	if ( ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(0), gbox1) ||
+	        ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(1), gbox2) )
 	{
 		PG_RETURN_BOOL(FALSE);
 	}
@@ -83,8 +85,8 @@ Datum geography_le(PG_FUNCTION_ARGS)
 	POINT3D p1, p2;
 
 	/* Must be able to build box for each argument (ie, not empty geometry) */
-	if ( ! geography_datum_gidx(PG_GETARG_DATUM(0), gbox1) ||
-	        ! geography_datum_gidx(PG_GETARG_DATUM(1), gbox2) )
+	if ( ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(0), gbox1) ||
+	        ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(1), gbox2) )
 	{
 		PG_RETURN_BOOL(FALSE);
 	}
@@ -113,8 +115,8 @@ Datum geography_gt(PG_FUNCTION_ARGS)
 	POINT3D p1, p2;
 
 	/* Must be able to build box for each argument (ie, not empty geometry) */
-	if ( ! geography_datum_gidx(PG_GETARG_DATUM(0), gbox1) ||
-	        ! geography_datum_gidx(PG_GETARG_DATUM(1), gbox2) )
+	if ( ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(0), gbox1) ||
+	        ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(1), gbox2) )
 	{
 		PG_RETURN_BOOL(FALSE);
 	}
@@ -143,8 +145,8 @@ Datum geography_ge(PG_FUNCTION_ARGS)
 	POINT3D p1, p2;
 
 	/* Must be able to build box for each argument (ie, not empty geometry) */
-	if ( ! geography_datum_gidx(PG_GETARG_DATUM(0), gbox1) ||
-	        ! geography_datum_gidx(PG_GETARG_DATUM(1), gbox2) )
+	if ( ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(0), gbox1) ||
+	        ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(1), gbox2) )
 	{
 		PG_RETURN_BOOL(FALSE);
 	}
@@ -207,8 +209,8 @@ Datum geography_eq(PG_FUNCTION_ARGS)
 	POINT3D p1, p2;
 
 	/* Must be able to build box for each argument (ie, not empty geometry) */
-	if ( ! geography_datum_gidx(PG_GETARG_DATUM(0), gbox1) ||
-	        ! geography_datum_gidx(PG_GETARG_DATUM(1), gbox2) )
+	if ( ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(0), gbox1) ||
+	        ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(1), gbox2) )
 	{
 		PG_RETURN_BOOL(FALSE);
 	}
@@ -238,8 +240,8 @@ Datum geography_cmp(PG_FUNCTION_ARGS)
 	POINT3D p1, p2;
 
 	/* Must be able to build box for each argument (ie, not empty geometry) */
-	if ( ! geography_datum_gidx(PG_GETARG_DATUM(0), gbox1) ||
-	        ! geography_datum_gidx(PG_GETARG_DATUM(1), gbox2) )
+	if ( ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(0), gbox1) ||
+	        ! gserialized_datum_get_gidx_p(PG_GETARG_DATUM(1), gbox2) )
 	{
 		PG_RETURN_BOOL(FALSE);
 	}

@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: uninstall_long_xact.sql.in.c 4494 2009-09-14 10:54:33Z mcayland $
+-- $Id: uninstall_long_xact.sql.in.c 9324 2012-02-27 22:08:12Z pramsey $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.refractions.net

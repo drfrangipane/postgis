@@ -19,7 +19,7 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: TestAutoregister.java 2497 2006-10-02 23:26:34Z mschaber $
+ * $Id: TestAutoregister.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package examples;

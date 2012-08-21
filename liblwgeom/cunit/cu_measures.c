@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: cu_measures.c 5181 2010-02-01 17:35:55Z pramsey $
+ * $Id: cu_measures.c 9959 2012-06-20 03:02:07Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
@@ -10,149 +10,96 @@
  *
  **********************************************************************/
 
-#include "cu_measures.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "CUnit/Basic.h"
 
-/*
-** Called from test harness to register the tests in this file.
-*/
-CU_pSuite register_measures_suite(void)
+#include "liblwgeom_internal.h"
+#include "cu_tester.h"
+#include "measures.h"
+#include "lwtree.h"
+
+static void do_test_mindistance2d_tolerance(char *in1, char *in2, double expected_res)
 {
-	CU_pSuite pSuite;
-	pSuite = CU_add_suite("PostGIS Measures Suite", init_measures_suite, clean_measures_suite);
-	if (NULL == pSuite)
-	{
-		CU_cleanup_registry();
-		return NULL;
-	}
-
-	if (
-	    (NULL == CU_add_test(pSuite, "test_mindistance2d_tolerance()", test_mindistance2d_tolerance)) ||
-	    (NULL == CU_add_test(pSuite, "test_rect_tree_contains_point()", test_rect_tree_contains_point)) ||
-	    (NULL == CU_add_test(pSuite, "test_rect_tree_intersects_tree()", test_rect_tree_intersects_tree))
-	)
-	{
-		CU_cleanup_registry();
-		return NULL;
-	}
-	return pSuite;
-}
-
-/*
-** The suite initialization function.
-** Create any re-used objects.
-*/
-int init_measures_suite(void)
-{
-	return 0;
-}
-
-/*
-** The suite cleanup function.
-** Frees any global objects.
-*/
-int clean_measures_suite(void)
-{
-	return 0;
-}
-
-void test_mindistance2d_tolerance(void)
-{
-	LWGEOM_PARSER_RESULT gp1;
-	LWGEOM_PARSER_RESULT gp2;
+	LWGEOM *lw1;
+	LWGEOM *lw2;
 	double distance;
-	int result1, result2;
 
+	lw1 = lwgeom_from_wkt(in1, LW_PARSER_CHECK_NONE);
+	lw2 = lwgeom_from_wkt(in2, LW_PARSER_CHECK_NONE);
+
+	distance = lwgeom_mindistance2d_tolerance(lw1, lw2, 0.0);
+	CU_ASSERT_EQUAL(distance, expected_res);
+	lwgeom_free(lw1);
+	lwgeom_free(lw2);
+
+}
+static void test_mindistance2d_tolerance(void)
+{
 	/*
 	** Simple case.
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "POINT(0 0)", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "MULTIPOINT(0 1.5,0 2,0 2.5)", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("\ndistance #1 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 1.5);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("POINT(0 0)", "MULTIPOINT(0 1.5,0 2,0 2.5)", 1.5);
 
 	/*
 	** Point vs Geometry Collection.
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "POINT(0 0)", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "GEOMETRYCOLLECTION(POINT(3 4))", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("distance #2 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 5.0);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("POINT(0 0)", "GEOMETRYCOLLECTION(POINT(3 4))", 5.0);
 
 	/*
 	** Point vs Geometry Collection Collection.
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "POINT(0 0)", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(3 4)))", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("distance #3 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 5.0);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("POINT(0 0)", "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(3 4)))", 5.0);
 
 	/*
 	** Point vs Geometry Collection Collection Collection.
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "POINT(0 0)", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(3 4))))", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("distance #4 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 5.0);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("POINT(0 0)", "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(3 4))))", 5.0);
 
 	/*
 	** Point vs Geometry Collection Collection Collection Multipoint.
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "POINT(0 0)", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(MULTIPOINT(3 4))))", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("distance #5 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 5.0);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("POINT(0 0)", "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(MULTIPOINT(3 4))))", 5.0);
 
 	/*
 	** Geometry Collection vs Geometry Collection
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "GEOMETRYCOLLECTION(POINT(0 0))", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "GEOMETRYCOLLECTION(POINT(3 4))", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("distance #6 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 5.0);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("GEOMETRYCOLLECTION(POINT(0 0))", "GEOMETRYCOLLECTION(POINT(3 4))", 5.0);
 
 	/*
 	** Geometry Collection Collection vs Geometry Collection Collection
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(0 0)))", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(3 4)))", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("distance #7 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 5.0);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(0 0)))", "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(3 4)))", 5.0);
 
 	/*
 	** Geometry Collection Collection Multipoint vs Geometry Collection Collection Multipoint
 	*/
-	result1 = serialized_lwgeom_from_ewkt(&gp1, "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(MULTIPOINT(0 0)))", PARSER_CHECK_NONE);
-	result2 = serialized_lwgeom_from_ewkt(&gp2, "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(MULTIPOINT(3 4)))", PARSER_CHECK_NONE);
-	distance = lwgeom_mindistance2d_tolerance(gp1.serialized_lwgeom, gp2.serialized_lwgeom, 0.0);
-	//printf("distance #8 = %g\n",distance);
-	CU_ASSERT_EQUAL(distance, 5.0);
-	free(gp1.serialized_lwgeom);
-	free(gp2.serialized_lwgeom);
+	do_test_mindistance2d_tolerance("GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(MULTIPOINT(0 0)))", "GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(MULTIPOINT(3 4)))", 5.0);
+
+	/*
+	** Linestring vs its start point 
+	*/
+	do_test_mindistance2d_tolerance("LINESTRING(-2 0, -0.2 0)", "POINT(-2 0)", 0);
+
+	/*
+	** Linestring vs its end point 
+	*/
+	do_test_mindistance2d_tolerance("LINESTRING(-0.2 0, -2 0)", "POINT(-2 0)", 0);
+
+	/*
+	** Linestring vs its start point (tricky number, see #1459)
+	*/
+	do_test_mindistance2d_tolerance("LINESTRING(-1e-8 0, -0.2 0)", "POINT(-1e-8 0)", 0);
+
+	/*
+	** Linestring vs its end point (tricky number, see #1459)
+	*/
+	do_test_mindistance2d_tolerance("LINESTRING(-0.2 0, -1e-8 0)", "POINT(-1e-8 0)", 0);
 
 }
 
-void test_rect_tree_contains_point(void)
+static void test_rect_tree_contains_point(void)
 {
 	LWPOLY *poly;
 	POINT2D p;
@@ -161,7 +108,7 @@ void test_rect_tree_contains_point(void)
 	int boundary = 0;
 
 	/* square */
-	poly = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))", PARSER_CHECK_NONE);
+	poly = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))", LW_PARSER_CHECK_NONE);
 	tree = rect_tree_new(poly->rings[0]);
 
 	/* inside square */
@@ -182,7 +129,7 @@ void test_rect_tree_contains_point(void)
 	lwpoly_free(poly);
 
 	/* ziggy zaggy horizontal saw tooth polygon */
-	poly = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 1 3, 2 0, 3 3, 4 0, 4 5, 0 5, 0 0))", PARSER_CHECK_NONE);
+	poly = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 1 3, 2 0, 3 3, 4 0, 4 5, 0 5, 0 0))", LW_PARSER_CHECK_NONE);
 	tree = rect_tree_new(poly->rings[0]);
 
 	/* not in, left side */
@@ -238,7 +185,7 @@ void test_rect_tree_contains_point(void)
 	lwpoly_free(poly);
 
 	/* ziggy zaggy vertical saw tooth polygon */
-	poly = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", PARSER_CHECK_NONE);
+	poly = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", LW_PARSER_CHECK_NONE);
 	tree = rect_tree_new(poly->rings[0]);
 
 	/* not in, left side */
@@ -302,15 +249,15 @@ void test_rect_tree_contains_point(void)
 
 }
 
-void test_rect_tree_intersects_tree(void)
+static void test_rect_tree_intersects_tree(void)
 {
 	LWPOLY *poly1, *poly2;
 	RECT_NODE *tree1, *tree2;
 	int result;
 
 	/* total overlap, A == B */
-	poly1 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", PARSER_CHECK_NONE);
-	poly2 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", PARSER_CHECK_NONE);
+	poly1 = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", LW_PARSER_CHECK_NONE);
+	poly2 = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", LW_PARSER_CHECK_NONE);
 	tree1 = rect_tree_new(poly1->rings[0]);
 	tree2 = rect_tree_new(poly2->rings[0]);
 	result = rect_tree_intersects_tree(tree1, tree2);
@@ -321,8 +268,8 @@ void test_rect_tree_intersects_tree(void)
 	rect_tree_free(tree2);
 
 	/* hiding between the tines of the comb */
-	poly1 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", PARSER_CHECK_NONE);
-	poly2 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0.3 0.7, 0.3 0.8, 0.4 0.8, 0.4 0.7, 0.3 0.7))", PARSER_CHECK_NONE);
+	poly1 = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", LW_PARSER_CHECK_NONE);
+	poly2 = (LWPOLY*)lwgeom_from_wkt("POLYGON((0.3 0.7, 0.3 0.8, 0.4 0.8, 0.4 0.7, 0.3 0.7))", LW_PARSER_CHECK_NONE);
 	tree1 = rect_tree_new(poly1->rings[0]);
 	tree2 = rect_tree_new(poly2->rings[0]);
 	result = rect_tree_intersects_tree(tree1, tree2);
@@ -333,8 +280,8 @@ void test_rect_tree_intersects_tree(void)
 	rect_tree_free(tree2);
 
 	/* between the tines, but with a corner overlapping */
-	poly1 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", PARSER_CHECK_NONE);
-	poly2 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0.3 0.7, 0.3 0.8, 0.4 0.8, 1.3 0.3, 0.3 0.7))", PARSER_CHECK_NONE);
+	poly1 = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", LW_PARSER_CHECK_NONE);
+	poly2 = (LWPOLY*)lwgeom_from_wkt("POLYGON((0.3 0.7, 0.3 0.8, 0.4 0.8, 1.3 0.3, 0.3 0.7))", LW_PARSER_CHECK_NONE);
 	tree1 = rect_tree_new(poly1->rings[0]);
 	tree2 = rect_tree_new(poly2->rings[0]);
 	result = rect_tree_intersects_tree(tree1, tree2);
@@ -345,8 +292,8 @@ void test_rect_tree_intersects_tree(void)
 	rect_tree_free(tree2);
 
 	/* Just touching the top left corner of the comb */
-	poly1 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", PARSER_CHECK_NONE);
-	poly2 = (LWPOLY*)lwgeom_from_ewkt("POLYGON((-1 5, 0 5, 0 7, -1 7, -1 5))", PARSER_CHECK_NONE);
+	poly1 = (LWPOLY*)lwgeom_from_wkt("POLYGON((0 0, 3 1, 0 2, 3 3, 0 4, 3 5, 0 6, 5 6, 5 0, 0 0))", LW_PARSER_CHECK_NONE);
+	poly2 = (LWPOLY*)lwgeom_from_wkt("POLYGON((-1 5, 0 5, 0 7, -1 7, -1 5))", LW_PARSER_CHECK_NONE);
 	tree1 = rect_tree_new(poly1->rings[0]);
 	tree2 = rect_tree_new(poly2->rings[0]);
 	result = rect_tree_intersects_tree(tree1, tree2);
@@ -359,3 +306,55 @@ void test_rect_tree_intersects_tree(void)
 
 }
 
+static void
+test_lwgeom_segmentize2d(void)
+{
+	LWGEOM *linein = lwgeom_from_wkt("LINESTRING(0 0,10 0)", LW_PARSER_CHECK_NONE);
+	LWGEOM *lineout = lwgeom_segmentize2d(linein, 5);
+	char *strout = lwgeom_to_ewkt(lineout);
+	CU_ASSERT_STRING_EQUAL(strout, "LINESTRING(0 0,5 0,10 0)");
+	lwfree(strout);
+	lwgeom_free(linein);
+	lwgeom_free(lineout);
+}
+
+static void
+test_lwgeom_locate_along(void)
+{
+	LWGEOM *geom = NULL;
+	LWGEOM *out = NULL;
+	double measure = 105.0;
+	char *str;
+	
+	/* ST_Locatealong(ST_GeomFromText('MULTILINESTRING M ((1 2 3, 5 4 5), (50 50 1, 60 60 200))'), 105) */
+	geom = lwgeom_from_wkt("MULTILINESTRING M ((1 2 3, 5 4 5), (50 50 1, 60 60 200))", LW_PARSER_CHECK_NONE);
+	out = lwgeom_locate_along(geom, measure, 0.0);
+	str = lwgeom_to_wkt(out, WKT_ISO, 8, NULL);
+	lwgeom_free(geom);
+	lwgeom_free(out);
+	CU_ASSERT_STRING_EQUAL("MULTIPOINT M (55.226131 55.226131 105)", str);
+	lwfree(str);
+	
+	/* ST_Locatealong(ST_GeomFromText('MULTILINESTRING M ((1 2 3, 5 4 5), (50 50 1, 60 60 200))'), 105) */
+	geom = lwgeom_from_wkt("MULTILINESTRING M ((1 2 3, 3 4 2, 9 4 3), (1 2 3, 5 4 5), (50 50 1, 60 60 200))", LW_PARSER_CHECK_NONE);
+	out = lwgeom_locate_along(geom, measure, 0.0);
+	str = lwgeom_to_wkt(out, WKT_ISO, 8, NULL);
+	lwgeom_free(geom);
+	lwgeom_free(out);
+	CU_ASSERT_STRING_EQUAL("MULTIPOINT M (55.226131 55.226131 105)", str);
+	lwfree(str);
+}
+
+/*
+** Used by test harness to register the tests in this file.
+*/
+CU_TestInfo measures_tests[] =
+{
+	PG_TEST(test_mindistance2d_tolerance),
+	PG_TEST(test_rect_tree_contains_point),
+	PG_TEST(test_rect_tree_intersects_tree),
+	PG_TEST(test_lwgeom_segmentize2d),
+	PG_TEST(test_lwgeom_locate_along),
+	CU_TEST_INFO_NULL
+};
+CU_SuiteInfo measures_suite = {"PostGIS Measures Suite",  NULL,  NULL, measures_tests};

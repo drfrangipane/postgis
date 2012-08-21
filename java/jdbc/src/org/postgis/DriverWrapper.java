@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: DriverWrapper.java 2570 2007-01-08 10:48:31Z mschaber $
+ * $Id: DriverWrapper.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package org.postgis;
@@ -75,7 +75,7 @@ public class DriverWrapper extends Driver {
     
     public static final String POSTGRES_PROTOCOL = "jdbc:postgresql:";
     public static final String POSTGIS_PROTOCOL = "jdbc:postgresql_postGIS:";
-    public static final String REVISION = "$Revision: 2570 $";
+    public static final String REVISION = "$Revision: 9324 $";
     protected static TypesAdder ta72 = null;
     protected static TypesAdder ta74 = null;
     protected static TypesAdder ta80 = null;
@@ -224,7 +224,7 @@ public class DriverWrapper extends Driver {
      * 
      * @throws SQLException
      */
-    public static void addGISTypes72(org.postgresql.Connection pgconn) throws SQLException {
+    public static void addGISTypes72(org.postgresql.PGConnection pgconn) throws SQLException {
         loadTypesAdder("72").addGT((Connection) pgconn, false);
     }
 
@@ -264,39 +264,39 @@ public class DriverWrapper extends Driver {
 
     /** addGISTypes for V7.3 and V7.4 pgjdbc */
     protected static final class TypesAdder74 extends TypesAdder {
-        public void addGeometries(Connection conn) {
+        public void addGeometries(Connection conn) throws SQLException {
             PGConnection pgconn = (PGConnection) conn;
-            pgconn.addDataType("geometry", "org.postgis.PGgeometry");
+            pgconn.addDataType("geometry", org.postgis.PGgeometry.class);
         }
 
-        public void addBoxen(Connection conn) {
+        public void addBoxen(Connection conn) throws SQLException {
             PGConnection pgconn = (PGConnection) conn;
-            pgconn.addDataType("box3d", "org.postgis.PGbox3d");
-            pgconn.addDataType("box2d", "org.postgis.PGbox2d");
+            pgconn.addDataType("box3d", org.postgis.PGbox3d.class);
+            pgconn.addDataType("box2d", org.postgis.PGbox2d.class);
         }
 
-        public void addBinaryGeometries(Connection conn) {
+        public void addBinaryGeometries(Connection conn) throws SQLException {
             PGConnection pgconn = (PGConnection) conn;
-            pgconn.addDataType("geometry", "org.postgis.PGgeometryLW");
+            pgconn.addDataType("geometry", org.postgis.PGgeometryLW.class);
         }
     }
 
     /** addGISTypes for V7.2 pgjdbc */
     protected static class TypesAdder72 extends TypesAdder {
-        public void addGeometries(Connection conn) {
-            org.postgresql.Connection pgconn = (org.postgresql.Connection) conn;
-            pgconn.addDataType("geometry", "org.postgis.PGgeometry");
+        public void addGeometries(Connection conn) throws SQLException {
+            org.postgresql.PGConnection pgconn = (org.postgresql.PGConnection) conn;
+            pgconn.addDataType("geometry", org.postgis.PGgeometry.class);
         }
 
-        public void addBoxen(Connection conn) {
-            org.postgresql.Connection pgconn = (org.postgresql.Connection) conn;
-            pgconn.addDataType("box3d", "org.postgis.PGbox3d");
-            pgconn.addDataType("box2d", "org.postgis.PGbox2d");
+		public void addBoxen(Connection conn) throws SQLException {
+            org.postgresql.PGConnection pgconn = (org.postgresql.PGConnection) conn;
+            pgconn.addDataType("box3d", org.postgis.PGbox3d.class);
+            pgconn.addDataType("box2d", org.postgis.PGbox2d.class);
         }
 
-        public void addBinaryGeometries(Connection conn) {
-            org.postgresql.Connection pgconn = (org.postgresql.Connection) conn;
-            pgconn.addDataType("geometry", "org.postgis.PGgeometryLW");
+        public void addBinaryGeometries(Connection conn) throws SQLException {
+            org.postgresql.PGConnection pgconn = (org.postgresql.PGConnection) conn;
+            pgconn.addDataType("geometry", org.postgis.PGgeometryLW.class);
         }
     }
 

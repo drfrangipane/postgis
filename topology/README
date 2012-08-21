@@ -1,34 +1,56 @@
 =Introduction
 
-This module contains an initial implementation of Topology
-model support.
+This module contains support for topological geometry modelling.
+Functions exist to satisfy the ISO/SQLMM topology-geometry model
+and more are provided to add an additional abstraction level for
+topological features and layers, both simple and hierarchical.
 
-All routines, types and other management objects are stored
-in the "topology" SCHEMA.
+You can see an ER diagram of the full conceptual model in the ER dir.
+You need xfig (http://epb.lbl.gov/xfig/).
 
-You can see an ER diagram of the conceptual model under the ER
-directory. You need xfig (http://epb.lbl.gov/xfig/).
+All routines, types and other management objects are stored in the
+"topology" SCHEMA.
 
-Comments welcome --strk(2005-10-13);
+Comments welcome --strk(2012-03-13);
 
 =Requirements
 
-        * schema-aware postgresql (7.3 and up)
-        * PostGIS-1.1.x 
-        * Geos-2.1 or up
+  Many ISO/SQLMM functions use GEOS-3.3.0+ signatures.
+  The script is still buildable with previous GEOS versions
+  but you'll need 3.3.0+ at runtime for most uses.
+
+=Building
+
+  To build the topology support:
+ 
+  $ make
+
+=Testing
+
+  To run regression tests:
+
+  $ make check
 
 =Install, upgrade, uninstall
 
 To enable topology support:
 
-	$ make
-	$ psql -f topology.sql
+	$ psql -f topology.sql <your_postgis_enabled_db>
 
+	It will create a 'topology' schema in <your_postgis_enabled_db>
+	hosting all the topology functions. To be run with db-owner perms.
+	Remember to grant execute to users.
+	
 To uninstall:
 
-	psql -c 'drop schema topology cascade'
+	$ psql -c 'drop schema topology cascade'
 
-Upgrading currently requires uninstall.
+To upgrade between minor releases:
+
+	$ psql -f topology_upgrade_<version>_minor.sql <your_postgis_enabled_db>
+
+Major releases upgrades should follow the "HARD UPGRADE" procedure
+described in main postgis manual.
 
 =Usage
 
@@ -38,10 +60,27 @@ name is the name of the SCHEMA containing its data.
 A catalogue of avalable topologies is kept under the
 "topology"."topology" table.
 
-To create/destroy a topology:
+==Creating a topology
 
-	SELECT topology.CreateTopology(name, [srid], [tolerance]);
-	SELECT topology.DropTopology(name);
+To create a topology:
+
+	SELECT topology.CreateTopology(<name>, [srid], [tolerance]);
+
+Example:
+
+	SELECT topology.CreateTopology('test_schema', 4326 , 0.0001);
+	or
+	-- unknown srid, 0 tolerance
+	SELECT topology.CreateTopology('test_schema');
+
+	NOTE: the new schema ('test_schema' in example) will be create
+	      so it must not exist before.
+
+==Destroying a topology
+
+To destroy a topology:
+		
+	SELECT topology.DropTopology(<name>);
 
 ==Loading topology data
 
@@ -70,7 +109,14 @@ under you topology schema:
 	 * face_id integer PRIMARY KEY
 	 * mbr box2d ( can be NULL )
 
-Details on semantic are contained in the SQL/MM specification, which
+The next_*_edge of an edge is the edge you encounter next while going
+around the specified face (right or left) in counterclockwise order
+(so that the face is on your left). Note that due to this definition
+the edge being considered is traversed in reverse order when traversing
+its "right" face. The values are signed to indicate wheter the next edge
+will be traversed in its original or reversed orientation.
+
+More details on semantic are contained in the SQL/MM specification, which
 this implementation follows as for these views structure.
 
 ==Validating topology data
@@ -129,22 +175,26 @@ For Hierarchical TopoGeometry objects this would be:
 
 	{{child_layer_id, topogeoemtry_id}, ...}
 
+==Converting Geometry to TopoGeometry while populating the topology
+
+You can import a Geometry into an existing topology and at the same
+time get its topological definition (its TopoGeometry equivalent)
+using the toTopoGeom function:
+
+    topology.toTopoGeom(
+
+        geometry, -- the simple geometry
+
+        topology_name,
+
+        layer_id -- as returned by AddTopoGeometryColumn
+    );
+
 ==Getting simple Geometry values from TopoGeometry objects
 
-You currently need to explicit call the TopoGeometry=>Geometry
-cast function. This will probably be made implicit when the
-code is more tested:
-
-	SELECT topology.Geometry(TopoGeometry);
-
-=Tests
-
-Tests are included under the test/ directory.
-Run make w/out args to see a list of supported targets:
-
-	$ cd test
-	$ make 
-
+TopoGeometry to Geometry casting is implicit, so any function accepting
+a Geometry would transparently also accept a TopoGeometry. Some functions
+may be optimized for TopoGeometry.
 
 =Issues
 
@@ -184,18 +234,4 @@ be slower then overloading the predicates.
 In addition to the constraints defined in SQL/MM specification,
 this implementation adds constraints to enforce Node and Edge
 geometry types to be 'POINT' and 'LINESTRING' respectively.
-
-===SRID constraint
-
-One of the things that the ValidateTopology is required to
-check is SRID consistency: all geometry value must be in
-the same SRID. I avoided that check as any SRID mismatch
-would be cought by spacial predicates and will result
-in an exception being thrown.
-
-We might add the check as a constraint on the topology tables
-instead, possibly dropping the SRID after checking it. This
-would reduce database, while topology SRID could be re-attached
-to any output geometry reading it from the topology.topology
-metadata table.
 

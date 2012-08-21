@@ -1,5 +1,5 @@
 /**********************************************************************
- * $Id: lwgeodetic.h 4948 2009-11-30 20:52:16Z pramsey $
+ * $Id: lwgeodetic.h 9324 2012-02-27 22:08:12Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * Copyright 2009 Paul Ramsey <pramsey@cleverelephant.ca>
@@ -9,8 +9,15 @@
  *
  **********************************************************************/
 
+#include "liblwgeom_internal.h"
+
+/* For NAN */
+#define _GNU_SOURCE
 #include <math.h>
-#include "libgeom.h"
+
+#ifndef NAN
+#define NAN 0.0/0.0
+#endif
 
 extern int gbox_geocentric_slow;
 
@@ -40,7 +47,7 @@ typedef struct
 typedef struct
 {
 	double measure;
-	uint32 index;
+	uint32_t index;
 } DISTANCE_ORDER;
 
 /**
@@ -55,9 +62,8 @@ typedef struct
 #define signum(a) ((a) < 0 ? -1 : ((a) > 0 ? 1 : (a)))
 
 /*
-** Prototypes for internal functions.
+* Geodetic calculations
 */
-
 void geog2cart(const GEOGRAPHIC_POINT *g, POINT3D *p);
 void cart2geog(const POINT3D *p, GEOGRAPHIC_POINT *g);
 void robust_cross_product(const GEOGRAPHIC_POINT *p, const GEOGRAPHIC_POINT *q, POINT3D *a);
@@ -80,7 +86,7 @@ double edge_distance_to_point(const GEOGRAPHIC_EDGE *e, const GEOGRAPHIC_POINT *
 double edge_distance_to_edge(const GEOGRAPHIC_EDGE *e1, const GEOGRAPHIC_EDGE *e2, GEOGRAPHIC_POINT *closest1, GEOGRAPHIC_POINT *closest2);
 void geographic_point_init(double lon, double lat, GEOGRAPHIC_POINT *g);
 int ptarray_point_in_ring_winding(const POINTARRAY *pa, const POINT2D *pt_to_test);
-int lwpoly_covers_point2d(const LWPOLY *poly, const GBOX *gbox, const POINT2D *pt_to_test);
+int lwpoly_covers_point2d(const LWPOLY *poly, const POINT2D *pt_to_test);
 int ptarray_point_in_ring(const POINTARRAY *pa, const POINT2D *pt_outside, const POINT2D *pt_to_test);
 double ptarray_area_sphere(const POINTARRAY *pa, const POINT2D *pt_outside);
 double latitude_degrees_normalize(double lat);

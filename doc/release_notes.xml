@@ -3,14 +3,220 @@
   <title>Appendix</title>
     <subtitle>Release Notes</subtitle>
       <sect1>
+		<title>Release 2.0.1</title>
+		<para>Release date: 2012/06/22</para>
+		<para>This is a bug fix release, addressing issues that have been filed since the 2.0.0 release.</para>
+		<simplesect>
+			 <title>Bug Fixes</title>
+			 <para>#1264, fix st_dwithin(geog, geog, 0). </para>
+			 <para>#1468  shp2pgsql-gui table column schema get shifted</para>
+			 <para>#1694, fix building with clang. (vince)</para>
+			 <para>#1708, improve restore of pre-PostGIS 2.0 backups.</para>
+			 <para>#1714, more robust handling of high topology tolerance.</para>
+			 <para>#1755, ST_GeographyFromText support for higher dimensions.</para>
+			 <para>#1759, loading transformed shapefiles in raster enabled db.</para>
+			 <para>#1761, handling of subdatasets in NetCDF, HDF4 and HDF5 in raster2pgsql.</para>
+			 <para>#1763, topology.toTopoGeom use with custom search_path.</para>
+			 <para>#1766, don't let ST_RemEdge* destroy peripheral TopoGeometry objects.</para>
+			 <para>#1774, Clearer error on setting an edge geometry to an invalid one.</para>
+			 <para>#1775, ST_ChangeEdgeGeom collision detection with 2-vertex target.</para>
+			 <para>#1776, fix ST_SymDifference(empty, geom) to return geom.</para>
+			 <para>#1779, install SQL comment files.</para>
+			 <para>#1782, fix spatial reference string handling in raster.</para>
+			 <para>#1789, fix false edge-node crossing report in ValidateTopology.</para>
+			 <para>#1790, fix toTopoGeom handling of duplicated primitives.</para>
+			 <para>#1791, fix ST_Azimuth with very close but distinct points.</para>
+			 <para>#1797, fix (ValidateTopology(xxx)).* syntax calls.</para>
+			 <para>#1805, put back the 900913 SRID entry.</para>
+			 <para>#1813, Only show readable relations in metadata tables.</para> 
+			 <para>#1819, fix floating point issues with ST_World2RasterCoord and
+					   ST_Raster2WorldCoord variants.</para>
+			 <para>#1820  compilation on 9.2beta1.</para>
+			 <para>#1822, topology load on PostgreSQL 9.2beta1.</para>
+			 <para>#1825, fix prepared geometry cache lookup</para>
+			 <para>#1829, fix uninitialized read in GeoJSON parser</para>
+			 <para>#1834, revise postgis extension to only backup 
+					   user specified spatial_ref_sys</para>
+			 <para>#1839, handling of subdatasets in GeoTIFF in raster2pgsql.</para>
+			 <para>#1840, fix logic of when to compute # of tiles in raster2pgsql.</para>
+			 <para>#1851, fix spatial_ref_system parameters for EPSG:3844</para>
+			 <para>#1857, fix failure to detect endpoint mismatch in ST_AddEdge*Face*</para> 
+			 <para>#1865, data loss in postgis_restore.pl when data rows have leading
+					   dashes.</para>
+			 <para>#1867, catch invalid topology name passed to topogeo_add*</para>
+			 <para>#1872, fix ST_ApproxSummarystats to prevent division by zero</para>
+			 <para>#1873, fix ptarray_locate_point to return interpolated Z/M values for 
+			              on-the-line case</para>
+			 <para>#1875, ST_SummaryStats returns NULL for all parameters except count 
+			              when count is zero </para>
+
+		</simplesect>
+		<simplesect>
+			 <title>Enhancements</title>
+				<para>More detailed exception message from topology editing functions.</para>
+				<para>#1786, improved build dependencies</para> 
+				<para>#1806, speedup of ST_BuildArea, ST_MakeValid and ST_GetFaceGeometry.</para>
+				<para>#1812, Add lwgeom_normalize in LIBLWGEOM for more stable testing.</para>
+		</simplesect>
+	</sect1>
+      <sect1>
+        <title>Release 2.0.0</title>
+        <para>Release date: 2012/04/03</para>
+        <para>This is a major release.  A hard upgrade is required.  Yes this means a full dump reload and some special preparations if you are using obsolete functions. Refer
+        to <xref linkend="hard_upgrade" /> for details on upgrading.
+        Refer to <xref linkend="NewFunctions_2_0" /> for more details and changed/new functions.</para>
+       <simplesect>
+        	<title>Testers - Our unsung heroes</title>
+        	<para>We are most indebted to the numerous members in the PostGIS community 
+ 	who were brave enough to test out the new features in this release.  
+ 	No major release can be successful without these folk.</para>
+			<para>Below are those who have been most valiant, provided very detailed
+			and thorough bug reports,
+			and detailed analysis.</para>
+<simplelist>
+			<member>Andrea Peri - Lots of testing on topology, checking for correctness</member>
+			<member>Andreas Forø Tollefsen - raster testing</member>
+			<member>Chris English - topology stress testing loader functions</member>
+			<member>Salvatore Larosa - topology robustness testing</member>
+			<member>Brian Hamlin - Benchmarking 
+				(also experimental experimental branches 
+					before they are folded into core)
+				, general testing of various pieces 
+			   including Tiger and Topology. Testing on various server VMs</member>
+			<member>Mike Pease -  Tiger geocoder testing - very detailed reports of issues</member>
+			<member>Tom van Tilburg - raster testing</member>
+</simplelist>
+        </simplesect>
+        <simplesect>
+        	<title>Important / Breaking Changes</title>
+        	<para>#722, #302, Most deprecated functions removed (over 250 functions) (Regina Obe, Paul Ramsey)</para>
+        	<para>Unknown SRID changed from -1 to 0. (Paul Ramsey)</para>
+        	<para> -- (most deprecated in 1.2) removed non-ST variants buffer, length, intersects 
+        	 (and internal functions renamed) etc. </para>
+        	<para>-- If you have been using deprecated functions CHANGE your apps or suffer the consequences.
+     If you don't see a function documented -- it ain't supported or it is an internal function.
+     Some constraints in older tables were built with deprecated functions.
+     If you restore you may need to rebuild table constraints with populate_geometry_columns().  If you have applications or tools
+					that rely on deprecated functions, please refer to <link linkend="legacy_faq" /> for more details.</para>
+		<para>#944 geometry_columns is now a view instead of a table 
+    (Paul Ramsey, Regina Obe)
+    for tables created the old way reads (srid, type, dims) constraints
+    for geometry columns created with type modifiers 
+    reads rom column definition</para>
+        <para>#1081, #1082, #1084, #1088 - Mangement functions support typmod 
+    geometry column creation functions now default to typmod creation
+    (Regina Obe)</para>
+        <para>#1083 probe_geometry_columns(), rename_geometry_table_constraints(),
+        fix_geometry_columns(); removed
+    - now obsolete with geometry_column view
+    (Regina Obe)</para>
+        <para>#817 Renaming old 3D functions to the convention ST_3D (Nicklas Avén)</para>
+        <para>#548 (sorta), ST_NumGeometries,ST_GeometryN now returns 1 (or the geometry) instead of null 
+     for single geometries (Sandro Santilli, Maxime van Noppen)</para>
+        </simplesect>
+        <simplesect>
+          <title>New Features</title>
+          <para><ulink url='http://blog.opengeo.org/2011/09/28/indexed-nearest-neighbour-search-in-postgis/'>KNN Gist index based centroid (&lt;-&gt;) and box (&lt;#&gt;) distance operators (Paul Ramsey / funded by Vizzuality)</ulink></para> 
+          <para>Support for TIN and PolyHedralSurface and enhancement of many functions to support 3D (Olivier Courtin / Oslandia)</para>
+          <para><ulink url='http://trac.osgeo.org/postgis/wiki/WKTRaster/PlanningAndFunding'>Raster support integrated and documented</ulink>
+          		(Pierre Racine, Jorge Arévalo, Mateusz Loskot, Sandro Santilli, David Zwarg, Regina Obe, Bborie Park)
+          		(Company developer and funding: University Laval, Deimos Space, CadCorp,  Michigan Tech Research Institute, Azavea, Paragon Corporation, UC Davis Center for Vectorborne Diseases)</para>
+          <para>Making spatial indexes 3D aware - in progress (Paul Ramsey, Mark Cave-Ayland)</para>
+          <para>Topology support improved (more functions), documented, testing (Sandro Santilli / Faunalia for RT-SIGTA), Andrea Peri, Regina Obe, Jose Carlos Martinez Llari</para>
+          <para>3D relationship and measurement support functions  (Nicklas Avén)</para>
+          <para>   ST_3DDistance, ST_3DClosestPoint, ST_3DIntersects, ST_3DShortestLine and more...</para>
+          <para>N-Dimensional spatial indexes (Paul Ramsey / OpenGeo)</para>
+          <para>ST_Split (Sandro Santilli / Faunalia for RT-SIGTA)</para>
+          <para>ST_IsValidDetail (Sandro Santilli / Faunalia for RT-SIGTA)</para>
+          <para>ST_MakeValid (Sandro Santilli / Faunalia for RT-SIGTA)</para>
+          <para>ST_RemoveRepeatedPoints (Sandro Santilli / Faunalia for RT-SIGTA)</para>
+          <para>ST_GeometryN and ST_NumGeometries support for non-collections (Sandro Santilli)</para>
+          <para>ST_IsCollection (Sandro Santilli, Maxime van Noppen)</para>
+          <para>ST_SharedPaths (Sandro Santilli / Faunalia for RT-SIGTA)</para>
+          <para>ST_Snap (Sandro Santilli)</para>
+          <para>ST_RelateMatch (Sandro Santilli / Faunalia for RT-SIGTA)</para>
+          <para>ST_ConcaveHull (Regina Obe and Leo Hsu / Paragon Corporation)</para>
+          <para>ST_UnaryUnion (Sandro Santilli / Faunalia for RT-SIGTA)</para>
+          <para>ST_AsX3D (Regina Obe / Arrival 3D funding)</para>
+          <para>ST_OffsetCurve (Sandro Santilli, Rafal Magda)</para>
+          <para><ulink url='http://blog.opengeo.org/2011/11/21/st_geomfromgeojson/'>ST_GeomFromGeoJSON (Kashif Rasul, Paul Ramsey / Vizzuality funding)</ulink></para>
+        </simplesect>
+        <simplesect>
+        	<title>Enhancements</title>
+        	<para>Made shape file loader tolerant of truncated multibyte values found in some free worldwide shapefiles (Sandro Santilli)</para>
+        	<para>Lots of bug fixes and enhancements to shp2pgsql
+        	       Beefing up regression tests for loaders 
+        	       Reproject support for both geometry and geography during import
+        	       (Jeff Adams / Azavea, Mark Cave-Ayland)</para>
+        	<para>pgsql2shp conversion from predefined list 
+        	       (Loic Dachary / Mark Cave-Ayland)</para>
+        	<para>Shp-pgsql GUI loader - support loading multiple files at a time.  (Mark Leslie)</para>  
+        	<para>Extras - upgraded tiger_geocoder from using old TIGER format to use new TIGER shp and file structure format (Stephen Frost)</para>
+        	<para>Extras - revised tiger_geocoder to work with TIGER census 2010 data, addition of reverse geocoder function, various bug fixes, accuracy enhancements, 
+        	     limit max result return, speed improvements, loading routines. 
+        	   (Regina Obe, Leo Hsu / Paragon Corporation / funding provided by Hunter Systems Group)</para>
+        	<para>Overall Documentation proofreading and corrections. (Kasif Rasul)</para>
+        	<para>Cleanup PostGIS JDBC classes, revise to use Maven build. (Maria Arias de Reyna, Sandro Santilli)</para>
+        </simplesect>
+        <simplesect>
+        	<title>Bug Fixes</title>
+        	<para>#1335 ST_AddPoint returns incorrect result on Linux (Even Rouault)</para>
+        </simplesect>
+        <simplesect>
+        	<title>Release specific credits</title>
+        <para>We thank <ulink url="http://blog.opengeo.org/2012/02/01/it-goes-up-to-2-0/">U.S Department of State Human Information Unit (HIU)</ulink> and <ulink url="http://blog.cartodb.com/post/17318840209/postgis-core-committer-sandro-santilli-joins-cartodb">Vizzuality</ulink> for general monetary support to get PostGIS 2.0 out the door.</para>
+		<!-- TODO: expand this list -->
+	</simplesect>
+   </sect1>
+   <sect1>
+		<title>Release 1.5.4</title>
+		<para>Release date: 2012/05/07</para>
+		<para>This is a bug fix release, addressing issues that have been filed since the 1.5.3 release.</para>
+		<simplesect>
+			 <title>Bug Fixes</title>
+			 <para>#547, ST_Contains memory problems (Sandro Santilli)</para>
+			 <para>#621, Problem finding intersections with geography (Paul Ramsey)</para>
+			 <para>#627, PostGIS/PostgreSQL process die on invalid geometry (Paul Ramsey)</para>
+			 <para>#810, Increase accuracy of area calculation (Paul Ramsey)</para>
+			 <para>#852, improve spatial predicates robustness (Sandro Santilli, Nicklas Avén)</para>
+			 <para>#877, ST_Estimated_Extent returns NULL on empty tables (Sandro Santilli)</para>
+			 <para>#1028, ST_AsSVG kills whole postgres server when fails (Paul Ramsey)</para>
+			 <para>#1056, Fix boxes of arcs and circle stroking code (Paul Ramsey)</para>
+			 <para>#1121, populate_geometry_columns using deprecated functions (Regin Obe, Paul Ramsey)</para>
+			 <para>#1135, improve testsuite predictability (Andreas 'ads' Scherbaum)</para>
+			 <para>#1146, images generator crashes (bronaugh)</para>
+			 <para>#1170, North Pole intersection fails (Paul Ramsey)</para>
+			 <para>#1179, ST_AsText crash with bad value (kjurka)</para>
+			 <para>#1184, honour DESTDIR in documentation Makefile (Bryce L Nordgren)</para>
+			 <para>#1227, server crash on invalid GML </para>
+			 <para>#1252, SRID appearing in WKT (Paul Ramsey)</para>
+			 <para>#1264, st_dwithin(g, g, 0) doesn't work (Paul Ramsey)</para>
+			 <para>#1344, allow exporting tables with invalid geometries (Sandro Santilli)</para>
+			 <para>#1389, wrong proj4text for SRID 31300 and 31370 (Paul Ramsey)</para>
+			 <para>#1406, shp2pgsql crashes when loading into geography (Sandro Santilli)</para>
+			 <para>#1595, fixed SRID redundancy in ST_Line_SubString (Sandro Santilli)</para>
+			 <para>#1596, check SRID in UpdateGeometrySRID (Mike Toews, Sandro Santilli)</para>
+			 <para>#1602, fix ST_Polygonize to retain Z (Sandro Santilli)</para>
+			 <para>#1697, fix crash with EMPTY entries in GiST index (Paul Ramsey)</para>
+			 <para>#1772, fix ST_Line_Locate_Point with collapsed input (Sandro Santilli)</para>
+			 <para>#1799, Protect ST_Segmentize from max_length=0  (Sandro Santilli)</para>
+			 <para>Alter parameter order in 900913 (Paul Ramsey)</para>
+			 <para>Support builds with "gmake" (Greg Troxel)</para>
+		</simplesect>
+	</sect1>
+      
+      <sect1>
         <title>Release 1.5.3</title>
         <para>Release date: 2011/06/25</para>
-        <para>This is a bug fix release, addressing issues that have been filed since the 1.5.2 release.</para>
+        <para>This is a bug fix release, addressing issues that have been filed since the 1.5.2 release. If you are running PostGIS 1.3+, a soft upgrade is sufficient
+        	otherwise a hard upgrade is recommended.</para>
         <simplesect>
           <title>Bug Fixes</title>
+                <para>#1056, produce correct bboxes for arc geometries, fixes index errors
+                    (Paul Ramsey)</para>
 			   <para>#1007, ST_IsValid crash fix requires GEOS 3.3.0+ or 3.2.3+ 
 				 (Sandro Santilli, reported by Birgit Laggner)</para>
-			   <para> #940, support for PostgreSQL 9.1 beta 1 
+			   <para>#940, support for PostgreSQL 9.1 beta 1 
 				 (Regina Obe, Paul Ramsey, patch submitted by stl)</para>
 			   <para>#845, ST_Intersects precision error (Sandro Santilli, Nicklas Avén)
 				 Reported by cdestigter</para>
@@ -40,7 +246,8 @@
       <sect1>
         <title>Release 1.5.2</title>
         <para>Release date: 2010/09/27</para>
-        <para>This is a bug fix release, addressing issues that have been filed since the 1.5.1 release.</para>
+        <para>This is a bug fix release, addressing issues that have been filed since the 1.5.1 release. If you are running PostGIS 1.3+, a soft upgrade is sufficient
+        	otherwise a hard upgrade is recommended.</para>
         <simplesect>
           <title>Bug Fixes</title>
            <para>Loader: fix handling of empty (0-verticed) geometries in shapefiles. (Sandro Santilli)</para>
@@ -62,15 +269,16 @@
            <para>#581, LWGEOM-expand produces inconsistent results (Mark Cave-Ayland)</para>
            <para>#513, Add dbf filter to shp2pgsql-gui and allow uploading dbf only (Paul Ramsey)</para>
            <para>Fix further build issues against PostgreSQL 9.0 (Mark Cave-Ayland)</para>
-           <para>#572, Password whitespace for Shape File</para> 
+           <para>#572, Password whitespace for Shape File (Mark Cave-Ayland)</para> 
            <para>#603, shp2pgsql: "-w" produces invalid WKT for MULTI* objects. (Mark Cave-Ayland)</para>
         </simplesect>
       </sect1>
-      
+          
       <sect1>
         <title>Release 1.5.1</title>
         <para>Release date: 2010/03/11</para>
-        <para>This is a bug fix release, addressing issues that have been filed since the 1.4.1 release.</para>
+        <para>This is a bug fix release, addressing issues that have been filed since the 1.4.1 release. If you are running PostGIS 1.3+, a soft upgrade is sufficient
+        	otherwise a hard upgrade is recommended.</para>
         <simplesect>
           <title>Bug Fixes</title>
            <para>#410, update embedded bbox when applying ST_SetPoint, ST_AddPoint ST_RemovePoint to a linestring (Paul Ramsey)</para>
@@ -84,7 +292,7 @@
            <para>Ensure support for upcoming 9.0 PgSQL release (Paul Ramsey)</para>
         </simplesect>
       </sect1>
-
+      
       <sect1>
         <title>Release 1.5.0</title>
         <para>Release date: 2010/02/04</para>
@@ -119,7 +327,7 @@
         		<listitem><para>ST_MaxDistance</para></listitem>
         		<listitem><para>ST_ShortestLine</para></listitem>
       	  </itemizedlist>  
-          <para>ST_DumpPoints (Maxime van Noppen)</para>    	  
+          <para>ST_DumpPoints (Maxime van Noppen)</para>     	  
           <para>KML, GML input via ST_GeomFromGML and ST_GeomFromKML (Olivier Courtin)</para>
           <para>Extract homogeneous collection with ST_CollectionExtract (Paul Ramsey)</para>
           <para>Add measure values to an existing linestring with ST_AddMeasure (Paul Ramsey)</para>
@@ -146,14 +354,16 @@
         
         <simplesect>
           <title>Bug fixes</title>
-          <para>http://trac.osgeo.org/postgis/query?status=closed&amp;milestone=postgis+1.5.0&amp;order=priority</para>
+          <para><ulink url="http://trac.osgeo.org/postgis/query?status=closed&amp;milestone=PostGIS+1.5.0&amp;order=priority">http://trac.osgeo.org/postgis/query?status=closed&amp;milestone=PostGIS+1.5.0&amp;order=priority</ulink></para>
         </simplesect>
       </sect1>
       
       <sect1>
         <title>Release 1.4.0</title>
         <para>Release date: 2009/07/24</para>
-        <para>This release provides performance enhancements, improved internal structures and testing, new features, and upgraded documentation.</para>
+        <para>This release provides performance enhancements, improved internal structures and testing, new features, and upgraded documentation.
+        If you are running PostGIS 1.1+, a soft upgrade is sufficient
+        	otherwise a hard upgrade is recommended.</para>
   
         <simplesect>
           <title>API Stability</title>
@@ -173,7 +383,7 @@
           <para>ST_Union() uses high-speed cascaded union when compiled against
          GEOS 3.1+ (Paul Ramsey)</para>
           <para>ST_ContainsProperly() requires GEOS 3.1+</para>
-          <para>ST_Intersects(), ST_Contains(), ST_Within() use high-speed cached prepared geometry against GEOS 3.1+ (Paul Ramsey)</para>
+          <para>ST_Intersects(), ST_Contains(), ST_Within() use high-speed cached prepared geometry against GEOS 3.1+ (Paul Ramsey / funded by Zonar Systems)</para>
           <para>Vastly improved documentation and reference manual (Regina Obe &amp; Kevin Neufeld)</para>
           <para>Figures and diagram examples in the reference manual (Kevin Neufeld)</para>
           <para>ST_IsValidReason() returns readable explanations for validity failures (Paul Ramsey)</para>
@@ -210,14 +420,15 @@
         </simplesect>
         <simplesect>
           <title>Bug fixes</title>
-          <para>http://trac.osgeo.org/postgis/query?status=closed&amp;milestone=postgis+1.4.0&amp;order=priority</para>
+          <para><ulink url="http://trac.osgeo.org/postgis/query?status=closed&amp;milestone=PostGIS+1.4.0&amp;order=priority">http://trac.osgeo.org/postgis/query?status=closed&amp;milestone=PostGIS+1.4.0&amp;order=priority</ulink></para>
         </simplesect>
       </sect1>
 
 	  <sect1>
         <title>Release 1.3.6</title>
         <para>Release date: 2009/05/04</para>
-        <para>This release adds support for PostgreSQL 8.4, exporting
+        <para>If you are running PostGIS 1.1+, a soft upgrade is sufficient
+        	otherwise a hard upgrade is recommended. This release adds support for PostgreSQL 8.4, exporting
         prj files from the database with shape data, some crash fixes for shp2pgsql, and several small
         bug fixes in the handling of "curve" types, logical error importing dbf only files, improved error handling of AddGeometryColumns.</para>
       </sect1>
@@ -225,9 +436,10 @@
       <sect1>
         <title>Release 1.3.5</title>
         <para>Release date: 2008/12/15</para>
-        <para>This release is a bug fix release to address a failure
+        <para>If you are running PostGIS 1.1+, a soft upgrade is sufficient
+        	otherwise a hard upgrade is recommended. This release is a bug fix release to address a failure
         in ST_Force_Collection and related functions that critically
-        affects using Mapserver with LINE layers.</para>
+        affects using MapServer with LINE layers.</para>
       </sect1>
 
      <sect1>
@@ -291,7 +503,7 @@
 
         <para>Added ST_Covers and ST_CoveredBy relational functions.
         Description and justification of these functions can be found at
-        http://lin-ear-th-inking.blogspot.com/2007/06/subtleties-of-ogc-covers-spatial.html</para>
+        <ulink url="http://lin-ear-th-inking.blogspot.com/2007/06/subtleties-of-ogc-covers-spatial.html">http://lin-ear-th-inking.blogspot.com/2007/06/subtleties-of-ogc-covers-spatial.html</ulink></para>
 
         <para>Added ST_DWithin relational function.</para>
       </simplesect>
@@ -515,7 +727,7 @@
         GNU trove.</para>
 
         <para>Added EJB2 support generously donated by the "Geodetix s.r.l.
-        Company" http://www.geodetix.it/</para>
+        Company" <ulink url="http://www.geodetix.it/">http://www.geodetix.it/</ulink></para>
 
         <para>Added EJB3 tutorial / examples donated by Norman Barker
         &lt;nbarker@ittvis.com&gt;</para>

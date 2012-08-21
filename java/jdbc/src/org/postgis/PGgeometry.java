@@ -21,7 +21,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: PGgeometry.java 1622 2005-04-15 14:04:34Z mschaber $
+ * $Id: PGgeometry.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package org.postgis;
@@ -77,13 +77,13 @@ public class PGgeometry extends PGobject {
             throws SQLException {
         value = value.trim();
 
-        int srid = -1;
+        int srid = Geometry.UNKNOWN_SRID;
 
         if (value.startsWith(SRIDPREFIX)) {
             // break up geometry into srid and wkt
             String[] parts = PGgeometry.splitSRID(value);
             value = parts[1].trim();
-            srid = Integer.parseInt(parts[0].substring(5));
+            srid = Geometry.parseSRID(Integer.parseInt(parts[0].substring(5)));
         }
 
         Geometry result;
@@ -111,7 +111,7 @@ public class PGgeometry extends PGobject {
             throw new SQLException("Unknown type: " + value);
         }
 
-        if (srid != -1) {
+        if (srid != Geometry.UNKNOWN_SRID) {
             result.srid = srid;
         }
 

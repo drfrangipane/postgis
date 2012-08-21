@@ -1,8 +1,12 @@
 Todo for PostGIS 1.0 compatible JDBC classes
-$Id: todo.txt 2491 2006-09-27 15:50:33Z mschaber $
+$Id: todo.txt 9324 2012-02-27 22:08:12Z pramsey $
 
 - even more Testing, especialy against different postgis, 
   pgjdbc and postgresql releases.
+  
+- Use JUnit for testing (maven)
+
+- Unify the build of app java projects -> maven
 
 - Handling of length() - esp. with modifying the geometries
 
@@ -22,5 +26,3 @@ $Id: todo.txt 2491 2006-09-27 15:50:33Z mschaber $
 
 - Rework the BinaryParser/BinaryWriter to work on SQLInput/SQLOutput 
   instances, as well as reworking ValueGetter/ValueSetter to implment those interfaces.
-
-- Unify the build of app java projects

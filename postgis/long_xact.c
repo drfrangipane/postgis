@@ -1,9 +1,22 @@
+/**********************************************************************
+ *
+ * PostGIS - Spatial Types for PostgreSQL
+ * http://postgis.refractions.net
+ *
+ * Copyright (C) 2006 Refractions Research Inc.
+ *
+ * This is free software; you can redistribute and/or modify it under
+ * the terms of the GNU General Public Licence. See the COPYING file.
+ *
+ **********************************************************************/
+
 #include "postgres.h"
 #include "access/xact.h"
 #include "executor/spi.h"       /* this is what you need to work with SPI */
 #include "commands/trigger.h"   /* ... and triggers */
 #include "utils/lsyscache.h"	/* for get_namespace_name() */
-
+#include "utils/rel.h"
+#include "../postgis_config.h"
 #include "lwgeom_pg.h"
 
 #define ABORT_ON_AUTH_FAILURE 1

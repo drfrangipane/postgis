@@ -1,4 +1,4 @@
-$Id: README.txt 2505 2006-10-11 10:45:28Z mschaber $
+$Id: README.txt 9324 2012-02-27 22:08:12Z pramsey $
 (This code was contributed by Norman Barker <norman.barker@gmail.com>)
 
 Spatial EJB3

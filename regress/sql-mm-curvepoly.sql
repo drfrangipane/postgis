@@ -1,117 +1,3 @@
-SELECT 'ndims01', ndims(geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
-                -2 0 0 0,
-                -1 -1 1 2,
-                0 0 2 4,
-                1 -1 3 6,
-                2 0 4 8,
-                0 2 2 4,
-                -2 0 0 0),
-                (-1 0 1 2,
-                0 0.5 2 4,
-                1 0 3 6,
-                0 1 3 4,
-                -1 0 1 2))'));
-SELECT 'geometrytype01', geometrytype(geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
-                -2 0 0 0,
-                -1 -1 1 2,
-                0 0 2 4,
-                1 -1 3 6,
-                2 0 4 8,
-                0 2 2 4,
-                -2 0 0 0),
-                (-1 0 1 2,
-                0 0.5 2 4,
-                1 0 3 6,
-                0 1 3 4,
-                -1 0 1 2))'));
-SELECT 'ndims02', ndims(geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
-                -2 0 0,
-                -1 -1 1,
-                0 0 2,
-                1 -1 3,
-                2 0 4,
-                0 2 2,
-                -2 0 0),
-                (-1 0 1,
-                0 0.5 2,
-                1 0 3,
-                0 1 3,
-                -1 0 1))'));
-SELECT 'geometrytype02', geometrytype(geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
-                -2 0 0,
-                -1 -1 1,
-                0 0 2,
-                1 -1 3,
-                2 0 4,
-                0 2 2,
-                -2 0 0),
-                (-1 0 1,
-                0 0.5 2,
-                1 0 3,
-                0 1 3,
-                -1 0 1))'));
-SELECT 'ndims03', ndims(geomfromewkt('CURVEPOLYGONM(CIRCULARSTRING(
-                -2 0 0,
-                -1 -1 2,
-                0 0 4,
-                1 -1 6,
-                2 0 8,
-                0 2 4,
-                -2 0 0),
-                (-1 0 2,
-                0 0.5 4,
-                1 0 6,
-                0 1 4,
-                -1 0 2))'));
-SELECT 'geometrytype03', geometrytype(geomfromewkt('CURVEPOLYGONM(CIRCULARSTRING(
-                -2 0 0,
-                -1 -1 2,
-                0 0 4,
-                1 -1 6,
-                2 0 8,
-                0 2 4,
-                -2 0 0),
-                (-1 0 2,
-                0 0.5 4,
-                1 0 6,
-                0 1 4,
-                -1 0 2))'));
-SELECT 'ndims04', ndims(geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
-                -2 0,
-                -1 -1,
-                0 0,
-                1 -1,
-                2 0,
-                0 2,
-                -2 0),
-                (-1 0,
-                0 0.5,
-                1 0,
-                0 1,
-                -1 0))'));
-SELECT 'geometrytype04', geometrytype(geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
-                -2 0,
-                -1 -1,
-                0 0,
-                1 -1,
-                2 0,
-                0 2,
-                -2 0),
-                (-1 0,
-                0 0.5,
-                1 0,
-                0 1,
-                -1 0))'));
-SELECT 'ndims05', ndims(geomfromewkt('CURVEPOLYGON(
-                COMPOUNDCURVE(
-                    (5 5 1 0,5 0 1 1,0 0 1 2,0 5 1 3),
-                    CIRCULARSTRING(0 5 1 3,1.5 7.5 1 4,5 5 1 0)),
-                (1.5 5 2 0,2.5 6 3 1,3.5 5 2 2,1.5 5 2 0),
-                COMPOUNDCURVE(
-                    CIRCULARSTRING(1.5 2 2 0,1 2.5 3 1,3.5 2 2 2),
-                    (3.5 2 2 2,3.5 4 1 3,1.5 4 1 4,1.5 2 2 0)))'));
-
-
 -- Repeat tests with new function names.
 SELECT 'ndims01', ST_ndims(ST_geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
                 -2 0 0 0,
@@ -217,12 +103,21 @@ SELECT 'geometrytype04', geometrytype(ST_geomfromewkt('CURVEPOLYGON(CIRCULARSTRI
                 1 0,
                 0 1,
                 -1 0))'));
+                
+SELECT 'ndims05', ST_Ndims(ST_geomfromewkt('CURVEPOLYGON(
+                COMPOUNDCURVE(
+                    (5 5 1 0,5 0 1 1,0 0 1 2,0 5 1 3),
+                    CIRCULARSTRING(0 5 1 3,1.5 7.5 1 4,5 5 1 0)),
+                (1.5 5 2 0,2.5 6 3 1,3.5 5 2 2,1.5 5 2 0),
+                COMPOUNDCURVE(
+                    CIRCULARSTRING(1.5 2 2 0,1 2.5 3 1,3.5 2 2 2),
+                    (3.5 2 2 2,3.5 4 1 3,1.5 4 1 4,1.5 2 2 0)))'));
 
-CREATE TABLE public.curvepolygon (id INTEGER, description VARCHAR);
-SELECT AddGeometryColumn('public', 'curvepolygon', 'the_geom_2d', -1, 'CURVEPOLYGON', 2);
-SELECT AddGeometryColumn('public', 'curvepolygon', 'the_geom_3dm', -1, 'CURVEPOLYGONM', 3);
-SELECT AddGeometryColumn('public', 'curvepolygon', 'the_geom_3dz', -1, 'CURVEPOLYGON', 3);
-SELECT AddGeometryColumn('public', 'curvepolygon', 'the_geom_4d', -1, 'CURVEPOLYGON', 4);
+CREATE TABLE public.curvepolygon (id INTEGER, description VARCHAR,
+the_geom_2d GEOMETRY(CURVEPOLYGON),
+the_geom_3dm GEOMETRY(CURVEPOLYGONM),
+the_geom_3dz GEOMETRY(CURVEPOLYGONZ),
+the_geom_4d GEOMETRY(CURVEPOLYGONZM));
 
 INSERT INTO public.curvepolygon (
                 id,
@@ -230,7 +125,7 @@ INSERT INTO public.curvepolygon (
               ) VALUES (
                 1, 'curvepolygon');
 UPDATE public.curvepolygon
-        SET the_geom_4d = geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
+        SET the_geom_4d = ST_Geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
                 -2 0 0 0,
                 -1 -1 1 2,
                 0 0 2 4,
@@ -244,7 +139,7 @@ UPDATE public.curvepolygon
                 0 1 3 4,
                 -1 0 1 2))');
 UPDATE public.curvepolygon
-        SET the_geom_3dz = geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
+        SET the_geom_3dz = ST_Geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
                 -2 0 0,
                 -1 -1 1,
                 0 0 2,
@@ -258,7 +153,7 @@ UPDATE public.curvepolygon
                 0 1 3,
                 -1 0 1))');
 UPDATE public.curvepolygon
-        SET the_geom_3dm = geomfromewkt('CURVEPOLYGONM(CIRCULARSTRING(
+        SET the_geom_3dm = ST_Geomfromewkt('CURVEPOLYGONM(CIRCULARSTRING(
                 -2 0 0,
                 -1 -1 2,
                 0 0 4,
@@ -272,7 +167,7 @@ UPDATE public.curvepolygon
                 0 1 4,
                 -1 0 2))');
 UPDATE public.curvepolygon
-        SET the_geom_2d = geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
+        SET the_geom_2d = ST_Geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
                 -2 0,
                 -1 -1,
                 0 0,
@@ -286,16 +181,6 @@ UPDATE public.curvepolygon
                 0 1,
                 -1 0))');
 
-SELECT 'astext01', astext(the_geom_2d) FROM public.curvepolygon;
-SELECT 'astext02', astext(the_geom_3dm) FROM public.curvepolygon;
-SELECT 'astext03', astext(the_geom_3dz) FROM public.curvepolygon;
-SELECT 'astext04', astext(the_geom_4d) FROM public.curvepolygon;
-
-SELECT 'asewkt01', asewkt(the_geom_2d) FROM public.curvepolygon;
-SELECT 'asewkt02', asewkt(the_geom_3dm) FROM public.curvepolygon;
-SELECT 'asewkt03', asewkt(the_geom_3dz) FROM public.curvepolygon;
-SELECT 'asewkt04', asewkt(the_geom_4d) FROM public.curvepolygon;
-
 -- These tests will fail on different architectures
 -- We need a way to handle multiple byte orderings
 --SELECT 'asbinary01', encode(asbinary(the_geom_2d), 'hex') FROM public.curvepolygon;
@@ -308,20 +193,20 @@ SELECT 'asewkt04', asewkt(the_geom_4d) FROM public.curvepolygon;
 --SELECT 'asewkb03', encode(asewkb(the_geom_3dz), 'hex') FROM public.curvepolygon;
 --SELECT 'asewkb04', encode(asewkb(the_geom_4d), 'hex') FROM public.curvepolygon;
 
-SELECT 'ST_CurveToLine-201', asewkt(snapToGrid(ST_CurveToLine(the_geom_2d, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine-202', asewkt(snapToGrid(ST_CurveToLine(the_geom_3dm, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine-203', asewkt(snapToGrid(ST_CurveToLine(the_geom_3dz, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine-204', asewkt(snapToGrid(ST_CurveToLine(the_geom_4d, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-201',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_2d, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-202',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_3dm, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-203',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_3dz, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-204',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_4d, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
 
-SELECT 'ST_CurveToLine-401', asewkt(snapToGrid(ST_CurveToLine(the_geom_2d, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine-402', asewkt(snapToGrid(ST_CurveToLine(the_geom_3dm, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine-403', asewkt(snapToGrid(ST_CurveToLine(the_geom_3dz, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine-404', asewkt(snapToGrid(ST_CurveToLine(the_geom_4d, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-401',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_2d, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-402',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_3dm, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-403',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_3dz, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine-404',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_4d, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
 
-SELECT 'ST_CurveToLine01', asewkt(snapToGrid(ST_CurveToLine(the_geom_2d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine02', asewkt(snapToGrid(ST_CurveToLine(the_geom_3dm), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine03', asewkt(snapToGrid(ST_CurveToLine(the_geom_3dz), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'ST_CurveToLine04', asewkt(snapToGrid(ST_CurveToLine(the_geom_4d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine01',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_2d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine02',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_3dm), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine03',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_3dz), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
+SELECT 'ST_CurveToLine04',ST_asewkt(ST_SnapToGrid(ST_CurveToLine(the_geom_4d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
 
 -- Removed due to descrepencies between hardware
 --SELECT 'box2d01', box2d(the_geom_2d) FROM public.curvepolygon;
@@ -334,63 +219,13 @@ SELECT 'ST_CurveToLine04', asewkt(snapToGrid(ST_CurveToLine(the_geom_4d), 'POINT
 --SELECT 'box3d03', box3d(the_geom_3dz) FROM public.curvepolygon;
 --SELECT 'box3d04', box3d(the_geom_4d) FROM public.curvepolygon;
 
-SELECT 'isValid01', isValid(the_geom_2d) FROM public.curvepolygon;
-SELECT 'isValid02', isValid(the_geom_3dm) FROM public.curvepolygon;
-SELECT 'isValid03', isValid(the_geom_3dz) FROM public.curvepolygon;
-SELECT 'isValid04', isValid(the_geom_4d) FROM public.curvepolygon;
-
-SELECT 'dimension01', dimension(the_geom_2d) FROM public.curvepolygon;
-SELECT 'dimension02', dimension(the_geom_3dm) FROM public.curvepolygon;
-SELECT 'dimension03', dimension(the_geom_3dz) FROM public.curvepolygon;
-SELECT 'dimension04', dimension(the_geom_4d) FROM public.curvepolygon;
-
-SELECT 'SRID01', SRID(the_geom_2d) FROM public.curvepolygon;
-SELECT 'SRID02', SRID(the_geom_3dm) FROM public.curvepolygon;
-SELECT 'SRID03', SRID(the_geom_3dz) FROM public.curvepolygon;
-SELECT 'SRID04', SRID(the_geom_4d) FROM public.curvepolygon;
-
-SELECT 'envelope01', asText(snapToGrid(envelope(the_geom_2d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'envelope02', asText(snapToGrid(envelope(the_geom_3dm), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'envelope03', asText(snapToGrid(envelope(the_geom_3dz), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-SELECT 'envelope04', asText(snapToGrid(envelope(the_geom_4d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.curvepolygon;
-
-SELECT 'startPoint01', (startPoint(the_geom_2d) is null) FROM public.curvepolygon;
-SELECT 'startPoint02', (startPoint(the_geom_3dm) is null) FROM public.curvepolygon;
-SELECT 'startPoint03', (startPoint(the_geom_3dz) is null) FROM public.curvepolygon;
-SELECT 'startPoint04', (startPoint(the_geom_4d) is null) FROM public.curvepolygon;
-
-SELECT 'endPoint01', (endPoint(the_geom_2d) is null) FROM public.curvepolygon;
-SELECT 'endPoint02', (endPoint(the_geom_3dm) is null) FROM public.curvepolygon;
-SELECT 'endPoint03', (endPoint(the_geom_3dz) is null) FROM public.curvepolygon;
-SELECT 'endPoint04', (endPoint(the_geom_4d) is null) FROM public.curvepolygon;
-
-SELECT 'exteriorRing01', asEWKT(exteriorRing(the_geom_2d)) FROM public.curvepolygon;
-SELECT 'exteriorRing02', asEWKT(exteriorRing(the_geom_3dm)) FROM public.curvepolygon;
-SELECT 'exteriorRing03', asEWKT(exteriorRing(the_geom_3dz)) FROM public.curvepolygon;
-SELECT 'exteriorRing04', asEWKT(exteriorRing(the_geom_4d)) FROM public.curvepolygon;
-
-SELECT 'numInteriorRings01', numInteriorRings(the_geom_2d) FROM public.curvepolygon;
-SELECT 'numInteriorRings02', numInteriorRings(the_geom_3dm) FROM public.curvepolygon;
-SELECT 'numInteriorRings03', numInteriorRings(the_geom_3dz) FROM public.curvepolygon;
-SELECT 'numInteriorRings04', numInteriorRings(the_geom_4d) FROM public.curvepolygon;
-
-SELECT 'interiorRingN-101', asEWKT(interiorRingN(the_geom_2d, 1)) FROM public.curvepolygon;
-SELECT 'interiorRingN-102', asEWKT(interiorRingN(the_geom_3dm, 1)) FROM public.curvepolygon;
-SELECT 'interiorRingN-103', asEWKT(interiorRingN(the_geom_3dz, 1)) FROM public.curvepolygon;
-SELECT 'interiorRingN-104', asEWKT(interiorRingN(the_geom_4d, 1)) FROM public.curvepolygon;
-
-SELECT 'interiorRingN-201', asEWKT(interiorRingN(the_geom_2d, 2)) FROM public.curvepolygon;
-SELECT 'interiorRingN-202', asEWKT(interiorRingN(the_geom_3dm, 2)) FROM public.curvepolygon;
-SELECT 'interiorRingN-203', asEWKT(interiorRingN(the_geom_3dz, 2)) FROM public.curvepolygon;
-SELECT 'interiorRingN-204', asEWKT(interiorRingN(the_geom_4d, 2)) FROM public.curvepolygon;
-
 -- TODO: ST_SnapToGrid is required to remove platform dependent precision
 -- issues.  Until ST_SnapToGrid is updated to work against curves, these
 -- tests cannot be run.
---SELECT 'ST_LineToCurve01', asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_2d))) FROM public.curvepolygon;
---SELECT 'ST_LineToCurve02', asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_3dm))) FROM public.curvepolygon;
---SELECT 'ST_LineToCurve03', asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_3dz))) FROM public.curvepolygon;
---SELECT 'ST_LineToCurve04', asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_4d))) FROM public.curvepolygon;
+--SELECT 'ST_LineToCurve01',ST_asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_2d))) FROM public.curvepolygon;
+--SELECT 'ST_LineToCurve02',ST_asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_3dm))) FROM public.curvepolygon;
+--SELECT 'ST_LineToCurve03',ST_asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_3dz))) FROM public.curvepolygon;
+--SELECT 'ST_LineToCurve04',ST_asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_4d))) FROM public.curvepolygon;
 
 -- Repeat tests with new function names.
 SELECT 'astext01', ST_astext(the_geom_2d) FROM public.curvepolygon;
@@ -496,12 +331,12 @@ SELECT 'invalid wkt curve polygon 8', ST_GeomFromEWKT('CURVEPOLYGON(CIRCULARSTRI
 SELECT 'invalid wkt curve polygon 9', ST_GeomFromEWKT('CURVEPOLYGON((143.62025166838282 -30.037497356076827, 142.92857147299705 -32.75101196874403, 145.96132309891922 -34.985671061528784, 149.57565307617188 -33.41153335571289, 149.41972407584802 -29.824672680573517, 146.1209416055467 -30.19711586270431, 143.62025166838282 -30.037497356076827),COMPOUNDCURVE(CIRCULARSTRING(144.84399355252685 -31.26123924022086, 144.20551952601693 -32.27215644886158, 145.55230712890625 -33.49203872680664),CIRCULARSTRING(147.97080993652344 -32.03618621826172, 146.38697244992585 -31.47406391572417, 144.84399355252685 -31.26123924022086))');
 SELECT 'invalid wkt curve polygon a', ST_GeomFromEWKT('CURVEPOLYGON((143.62025166838282 -30.037497356076827, 142.92857147299705 -32.75101196874403, 145.96132309891922 -34.985671061528784, 149.57565307617188 -33.41153335571289, 149.41972407584802 -29.824672680573517, 146.1209416055467 -30.19711586270431, 143.62025166838282 -30.037497356076827),COMPOUNDCURVE(CIRCULARSTRING(144.84399355252685 -31.26123924022086, 144.20551952601693 -32.27215644886158, 145.55230712890625 -33.49203872680664),(145.55230712890625 -33.49203872680664, 147.97080993652344 -32.03618621826172),CIRCULARSTRING(147.97080993652344 -32.03618621826172, 146.38697244992585 -31.47406391572417, 144.84399355252685 -30.76123924022086))');
 SELECT 'invalid wkt curve polygon b', ST_GeomFromEWKT('CURVEPOLYGON((143.62025166838282 -30.037497356076827, 142.92857147299705 -32.75101196874403, 145.96132309891922 -34.985671061528784, 149.57565307617188 -33.41153335571289, 149.41972407584802 -29.824672680573517, 146.1209416055467 -30.19711586270431, 143.62025166838282 -30.037497356076827),COMPOUNDCURVE(CIRCULARSTRING(144.84399355252685 -31.26123924022086, 144.20551952601693 -32.27215644886158, 145.55230712890625 -33.49203872680664),(145.55230712890625 -33.49203872680664),CIRCULARSTRING(147.97080993652344 -32.03618621826172, 146.38697244992585 -31.47406391572417, 144.84399355252685 -31.26123924022086))');
-SELECT 'valid ewkb curve polygon 1', ST_asEWKT(ST_GeomFromEWKB(decode('010d00000001000000010200000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec0', 'hex')));
-SELECT 'valid ewkb curve polygon 2', ST_asEWKT(ST_GeomFromEWKB(decode('010d00000002000000010200000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec00102000000060000006844c4fe011b6240342e2993e0423fc0d45daf9d93066240c4a0c305d62240c000000080ac31624000000020fbbe40c0000000e0107f6240000000c0a10440c04e1c0c14624c6240bf3fb6405c793fc06844c4fe011b6240342e2993e0423fc0', 'hex')));
-SELECT 'valid ewkb curve polygon 3', ST_asEWKT(ST_GeomFromEWKB(decode('010d00000001000000010800000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec0', 'hex')));
-SELECT 'valid ewkb curve polygon 4', ST_asEWKT(ST_GeomFromEWKB(decode('010d00000002000000010800000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec00102000000060000006844c4fe011b6240342e2993e0423fc0d45daf9d93066240c4a0c305d62240c000000080ac31624000000020fbbe40c0000000e0107f6240000000c0a10440c04e1c0c14624c6240bf3fb6405c793fc06844c4fe011b6240342e2993e0423fc0', 'hex')));
-SELECT 'valid ewkb curve polygon 5', ST_asEWKT(ST_GeomFromEWKB(decode('010d00000002000000010200000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec00109000000030000000108000000030000006844c4fe011b6240342e2993e0423fc0d45daf9d93066240c4a0c305d62240c000000080ac31624000000020fbbe40c001020000000200000000000080ac31624000000020fbbe40c0000000e0107f6240000000c0a10440c0010800000003000000000000e0107f6240000000c0a10440c04e1c0c14624c6240bf3fb6405c793fc06844c4fe011b6240342e2993e0423fc0', 'hex')));
-SELECT ST_GeomFromEWKT('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 4 5, 1 4, 0 0)), CIRCULARSTRING(1.7 1, 1.4 0.4, 1.7 1) )');
-SELECT ST_GeomFromEWKT('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 4 5, 1 4, 0 0)), (1.7 1, 1.4 0.4, 1.7 1) )');
-SELECT ST_GeomFromEWKT('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 0 0)), CIRCULARSTRING(1.7 1, 1.4 0.4, 1.7 1) )');
+SELECT 'valid ewkb curve polygon 1', ST_asEWKT(ST_GeomFromEWKB(decode('010a00000001000000010200000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec0', 'hex')));
+SELECT 'valid ewkb curve polygon 2', ST_asEWKT(ST_GeomFromEWKB(decode('010a00000002000000010200000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec00102000000060000006844c4fe011b6240342e2993e0423fc0d45daf9d93066240c4a0c305d62240c000000080ac31624000000020fbbe40c0000000e0107f6240000000c0a10440c04e1c0c14624c6240bf3fb6405c793fc06844c4fe011b6240342e2993e0423fc0', 'hex')));
+SELECT 'valid ewkb curve polygon 3', ST_asEWKT(ST_GeomFromEWKB(decode('010a00000001000000010800000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec0', 'hex')));
+SELECT 'valid ewkb curve polygon 4', ST_asEWKT(ST_GeomFromEWKB(decode('010a00000002000000010800000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec00102000000060000006844c4fe011b6240342e2993e0423fc0d45daf9d93066240c4a0c305d62240c000000080ac31624000000020fbbe40c0000000e0107f6240000000c0a10440c04e1c0c14624c6240bf3fb6405c793fc06844c4fe011b6240342e2993e0423fc0', 'hex')));
+SELECT 'valid ewkb curve polygon 5', ST_asEWKT(ST_GeomFromEWKB(decode('010a00000002000000010200000007000000ccdf061ad9f3614054093e6d99093ec0ab9085dbb6dd614081540229216040c0ebd7a828c33e62409bf026782a7e41c0000000c06bb2624000000020adb440c08e632f616ead6240c9f7b0bf1dd33dc09011eec0de4362407dd6672f76323ec0ccdf061ad9f3614054093e6d99093ec00109000000030000000108000000030000006844c4fe011b6240342e2993e0423fc0d45daf9d93066240c4a0c305d62240c000000080ac31624000000020fbbe40c001020000000200000000000080ac31624000000020fbbe40c0000000e0107f6240000000c0a10440c0010800000003000000000000e0107f6240000000c0a10440c04e1c0c14624c6240bf3fb6405c793fc06844c4fe011b6240342e2993e0423fc0', 'hex')));
+SELECT 'valid curve 6', ST_GeomFromText('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 4 5, 1 4, 0 0)), CIRCULARSTRING(1.7 1, 1.4 0.4, 1.7 1) )');
+SELECT 'valid curve 7', ST_GeomFromText('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 4 5, 1 4, 0 0)), (1.7 1, 1.4 0.4, 1.7 1) )');
+SELECT 'valid curve 8', ST_GeomFromText('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 0 0)), CIRCULARSTRING(1.7 1, 1.4 0.4, 1.7 1) )');
 SELECT 'null response', ST_NumPoints(ST_GeomFromEWKT('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 4 5, 1 4, 0 0)), CIRCULARSTRING(1.7 1, 1.4 0.4, 1.7 1) )'));

@@ -14,11 +14,11 @@
 # not possible to merge into the main Makefile as has been done for
 # the shapefile loader)
 
-MODULE_doc=postgis-1.5
+MODULE_doc=postgis-2.0
 MODULEDIR=contrib/$(MODULE_doc)
 
 # Files to be copied to the contrib/ directory
-DATA_built=postgis_comments.sql
+DATA_built=postgis_comments.sql raster_comments.sql topology_comments.sql
 
 # PGXS information
 PG_CONFIG = /usr/local/pgsql/9.1/bin/pg_config 
@@ -35,5 +35,15 @@ include $(PGXS)
 PGXSOVERRIDE = 0
 ifeq ($(PGXSOVERRIDE),1)
 	include ../postgis/Makefile.pgxs
+endif
+
+# If REGRESS=1 passed as a parameter, change the default install paths
+# so that no prefix is included. This allows us to relocate to a temporary
+# directory for regression testing.
+ifeq ($(REGRESS),1)
+        bindir=/bin
+        pkglibdir=/lib
+        datadir=/share
+        datamoduledir=contrib/postgis
 endif
 

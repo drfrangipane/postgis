@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: PGShapeGeometry.java 2077 2005-11-25 17:22:34Z mschaber $
+ * $Id: PGShapeGeometry.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package org.postgis.java2d;
@@ -118,7 +118,7 @@ public class PGShapeGeometry extends PGobject implements Shape {
         return false;
     }
 
-    /** Return the SRID or -1 if none was available */
+    /** Return the SRID or Geometry.UNKNOWN_SRID if none was available */
     public int getSRID() {
         return srid;
     }

@@ -1,9 +1,9 @@
 /**********************************************************************
- * $Id: lwcompound.c 4168 2009-06-11 16:44:03Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
- * Copyright 2001-2006 Refractions Research Inc.
+ *
+ * Copyright (C) 2001-2006 Refractions Research Inc.
  *
  * This is free software; you can redistribute and/or modify it under
  * the terms of the GNU General Public Licence. See the COPYING file.
@@ -13,106 +13,96 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "liblwgeom.h"
+#include "liblwgeom_internal.h"
+#include "lwgeom_log.h"
 
-LWCOMPOUND *
-lwcompound_deserialize(uchar *serialized)
+
+
+int
+lwcompound_is_closed(const LWCOMPOUND *compound)
 {
-	LWCOMPOUND *result;
-	LWGEOM_INSPECTED *insp;
-	int type = lwgeom_getType(serialized[0]);
-	int i;
+	size_t size;
+	int npoints=0;
 
-	if (type != COMPOUNDTYPE)
-	{
-		lwerror("lwcompound_deserialize called on non compound: %d", type);
-		return NULL;
-	}
+	if (!FLAGS_GET_Z(compound->flags))
+		size = sizeof(POINT2D);
+	else    size = sizeof(POINT3D);
 
-	insp = lwgeom_inspect(serialized);
+	if      (compound->geoms[compound->ngeoms - 1]->type == CIRCSTRINGTYPE)
+		npoints = ((LWCIRCSTRING *)compound->geoms[compound->ngeoms - 1])->points->npoints;
+	else if (compound->geoms[compound->ngeoms - 1]->type == LINETYPE)
+		npoints = ((LWLINE *)compound->geoms[compound->ngeoms - 1])->points->npoints;
 
-	result = lwalloc(sizeof(LWCOMPOUND));
-	result->type = insp->type;
-	result->SRID = insp->SRID;
-	result->ngeoms = insp->ngeometries;
-	result->geoms = lwalloc(sizeof(LWGEOM *)*insp->ngeometries);
+	if ( memcmp(getPoint_internal( (POINTARRAY *)compound->geoms[0]->data, 0),
+	            getPoint_internal( (POINTARRAY *)compound->geoms[compound->ngeoms - 1]->data,
+	                               npoints - 1),
+	            size) ) return LW_FALSE;
 
-	if (lwgeom_hasBBOX(serialized[0]))
-	{
-		result->bbox = lwalloc(sizeof(BOX2DFLOAT4));
-		memcpy(result->bbox, serialized + 1, sizeof(BOX2DFLOAT4));
-	}
-	else result->bbox = NULL;
-
-	for (i = 0; i < insp->ngeometries; i++)
-	{
-		if (lwgeom_getType(insp->sub_geoms[i][0]) == LINETYPE)
-			result->geoms[i] = (LWGEOM *)lwline_deserialize(insp->sub_geoms[i]);
-		else
-			result->geoms[i] = (LWGEOM *)lwcircstring_deserialize(insp->sub_geoms[i]);
-		if (TYPE_NDIMS(result->geoms[i]->type) != TYPE_NDIMS(result->type))
-		{
-			lwerror("Mixed dimensions (compound: %d, line/circularstring %d:%d)",
-			        TYPE_NDIMS(result->type), i,
-			        TYPE_NDIMS(result->geoms[i]->type)
-			       );
-			lwfree(result);
-			return NULL;
-		}
-	}
-	return result;
+	return LW_TRUE;
 }
 
-/**
- * Add 'what' to this string at position 'where'
- * @param where if = 0 then prepend, if -1  then append
- * @param what an #LWGEOM object
- * @return a {@link #LWCOMPOUND} or a {@link #GEOMETRYCOLLECTION}
- */
-LWGEOM *
-lwcompound_add(const LWCOMPOUND *to, uint32 where, const LWGEOM *what)
+double lwcompound_length(const LWCOMPOUND *comp)
 {
-	LWCOLLECTION *col;
-	LWGEOM **geoms;
-	int newtype;
+	double length = 0.0;
+	LWLINE *line;
+	if ( lwgeom_is_empty((LWGEOM*)comp) )
+		return 0.0;
+	line = lwcompound_segmentize(comp, 32);
+	length = lwline_length(line);
+	lwline_free(line);
+	return length;
+}
 
-	LWDEBUG(2, "lwcompound_add called.");
+double lwcompound_length_2d(const LWCOMPOUND *comp)
+{
+	double length = 0.0;
+	LWLINE *line;
+	if ( lwgeom_is_empty((LWGEOM*)comp) )
+		return 0.0;
+	line = lwcompound_segmentize(comp, 32);
+	length = lwline_length_2d(line);
+	lwline_free(line);
+	return length;
+}
 
-	if (where != -1 && where != 0)
+int lwcompound_add_lwgeom(LWCOMPOUND *comp, LWGEOM *geom)
+{
+	LWCOLLECTION *col = (LWCOLLECTION*)comp;
+	
+	/* Empty things can't continuously join up with other things */
+	if ( lwgeom_is_empty(geom) )
 	{
-		lwerror("lwcompound_add only supports 0 or -1 as a second argument, not %d", where);
-		return NULL;
+		LWDEBUG(4, "Got an empty component for a compound curve!");
+		return LW_FAILURE;
 	}
-
-	/* dimensions compatibility are checked by caller */
-
-	/* Construct geoms array */
-	geoms = lwalloc(sizeof(LWGEOM *)*2);
-	if (where == -1) /* append */
+	
+	if( col->ngeoms > 0 )
 	{
-		geoms[0] = lwgeom_clone((LWGEOM *)to);
-		geoms[1] = lwgeom_clone(what);
+		POINT4D last, first;
+		/* First point of the component we are adding */
+		LWLINE *newline = (LWLINE*)geom;
+		/* Last point of the previous component */
+		LWLINE *prevline = (LWLINE*)(col->geoms[col->ngeoms-1]);
+
+		getPoint4d_p(newline->points, 0, &first);
+		getPoint4d_p(prevline->points, prevline->points->npoints-1, &last);
+		
+		if ( !(FP_EQUALS(first.x,last.x) && FP_EQUALS(first.y,last.y)) )
+		{
+			LWDEBUG(4, "Components don't join up end-to-end!");
+			LWDEBUGF(4, "first pt (%g %g %g %g) last pt (%g %g %g %g)", first.x, first.y, first.z, first.m, last.x, last.y, last.z, last.m);			
+			return LW_FAILURE;
+		}
 	}
-	else /* prepend */
-	{
-		geoms[0] = lwgeom_clone(what);
-		geoms[1] = lwgeom_clone((LWGEOM *)to);
-	}
+	
+	col = lwcollection_add_lwgeom(col, geom);
+	return LW_SUCCESS;
+}
 
-	/* reset SRID and wantbbox flag from component types */
-	geoms[0]->SRID = geoms[1]->SRID = -1;
-	TYPE_SETHASSRID(geoms[0]->type, 0);
-	TYPE_SETHASSRID(geoms[1]->type, 0);
-	TYPE_SETHASBBOX(geoms[0]->type, 0);
-	TYPE_SETHASBBOX(geoms[1]->type, 0);
-
-	/* Find appropriate geom type */
-	if (TYPE_GETTYPE(what->type) == LINETYPE || TYPE_GETTYPE(what->type) == CIRCSTRINGTYPE) newtype = COMPOUNDTYPE;
-	else newtype = COLLECTIONTYPE;
-
-	col = lwcollection_construct(newtype,
-	                             to->SRID, NULL, 2, geoms);
-
-	return (LWGEOM *)col;
+LWCOMPOUND *
+lwcompound_construct_empty(int srid, char hasz, char hasm)
+{
+        LWCOMPOUND *ret = (LWCOMPOUND*)lwcollection_construct_empty(COMPOUNDTYPE, srid, hasz, hasm);
+        return ret;
 }
 

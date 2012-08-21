@@ -1,17 +1,22 @@
 /**********************************************************************
- * $Id: lwgeom_geos_prepared.c 5181 2010-02-01 17:35:55Z pramsey $
  *
  * PostGIS - Spatial Types for PostgreSQL
  * http://postgis.refractions.net
- * Copyright 2007 Refractions Research Inc.
- * Copyright 2008 Paul Ramsey <pramsey@cleverelephant.ca>
+ *
+ * Copyright (C) 2012 Sandro Santilli <strk@keybit.net>
+ * Copyright (C) 2008 Paul Ramsey <pramsey@cleverelephant.ca>
+ * Copyright (C) 2007 Refractions Research Inc.
  *
  * This is free software; you can redistribute and/or modify it under
  * the terms of the GNU General Public Licence. See the COPYING file.
  *
  **********************************************************************/
 
+#include <assert.h>
+
+#include "../postgis_config.h"
 #include "lwgeom_geos_prepared.h"
+#include "lwgeom_cache.h"
 
 /***********************************************************************
 **
@@ -47,8 +52,6 @@
 **  is freed.
 **
 **/
-
-#ifdef PREPARED_GEOM
 
 /*
 ** Backend prepared hash table
@@ -272,25 +275,25 @@ DeletePrepGeomHashEntry(MemoryContext mcxt)
 ** cycling keys don't cause too much preparing.
 */
 PrepGeomCache*
-GetPrepGeomCache(FunctionCallInfoData *fcinfo, PG_LWGEOM *pg_geom1, PG_LWGEOM *pg_geom2)
+GetPrepGeomCache(FunctionCallInfoData *fcinfo, GSERIALIZED *pg_geom1, GSERIALIZED *pg_geom2)
 {
 	MemoryContext old_context;
-	PrepGeomCache* cache = fcinfo->flinfo->fn_extra;
+	GeomCache* supercache = GetGeomCache(fcinfo);
+	PrepGeomCache* cache = supercache->prep;
 	int copy_keys = 1;
 	size_t pg_geom1_size = 0;
 	size_t pg_geom2_size = 0;
 
-	/* Make sure this isn't someone else's cache object. */
-	if ( cache && cache->type != 2 ) cache = NULL;
+	assert ( ! cache || cache->type == 2 );
 
 	if (!PrepGeomHash)
 		CreatePrepGeomHash();
 
 	if ( pg_geom1 )
-		pg_geom1_size = VARSIZE(pg_geom1) + VARHDRSZ;
+		pg_geom1_size = VARSIZE(pg_geom1);
 
 	if ( pg_geom2 )
-		pg_geom2_size = VARSIZE(pg_geom2) + VARHDRSZ;
+		pg_geom2_size = VARSIZE(pg_geom2);
 
 	if ( cache == NULL)
 	{
@@ -326,7 +329,7 @@ GetPrepGeomCache(FunctionCallInfoData *fcinfo, PG_LWGEOM *pg_geom1, PG_LWGEOM *p
 		pghe.prepared_geom = 0;
 		AddPrepGeomHashEntry( pghe );
 
-		fcinfo->flinfo->fn_extra = cache;
+		supercache->prep = cache;
 
 		POSTGIS_DEBUGF(3, "GetPrepGeomCache: adding context to hash: %p", cache);
 	}
@@ -450,235 +453,4 @@ GetPrepGeomCache(FunctionCallInfoData *fcinfo, PG_LWGEOM *pg_geom1, PG_LWGEOM *p
 	return cache;
 
 }
-#endif /* PREPARED_GEOM */
-
-
-
-#if 0
-/*
-** No longer directly called. Left as example for now.
-** Functionality directly embedded in contains()
-*/
-PG_FUNCTION_INFO_V1(containsPrepared);
-Datum containsPrepared(PG_FUNCTION_ARGS)
-{
-#ifndef PREPARED_GEOM
-	elog(ERROR,"Not implemented in this version!");
-	PG_RETURN_NULL();
-#else
-	PG_LWGEOM *              geom1;
-	PG_LWGEOM *              geom2;
-	bool                     result;
-	BOX2DFLOAT4              box1, box2;
-	PrepGeomCache *          prep_cache;
-	int32                    key1;
-
-	geom1 = (PG_LWGEOM *)  PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	geom2 = (PG_LWGEOM *)  PG_DETOAST_DATUM(PG_GETARG_DATUM(1));
-	key1 = PG_GETARG_INT32(2);
-
-	errorIfGeometryCollection(geom1,geom2);
-	errorIfSRIDMismatch(pglwgeom_getSRID(geom1), pglwgeom_getSRID(geom2));
-
-	POSTGIS_DEBUG(3, "containsPrepared: entered function");
-
-	/*
-	* short-circuit: if geom2 bounding box is not completely inside
-	* geom1 bounding box we can prematurely return FALSE.
-	* Do the test IFF BOUNDING BOX AVAILABLE.
-	*/
-	if ( getbox2d_p(SERIALIZED_FORM(geom1), &box1) &&
-	        getbox2d_p(SERIALIZED_FORM(geom2), &box2) )
-	{
-		if (( box2.xmin < box1.xmin ) || ( box2.xmax > box1.xmax ) ||
-		        ( box2.ymin < box1.ymin ) || ( box2.ymax > box1.ymax ))
-			PG_RETURN_BOOL(FALSE);
-	}
-
-	prep_cache = GetPrepGeomCache( fcinfo, geom1, 0 );
-
-	initGEOS(lwnotice, lwnotice);
-
-	if ( prep_cache && prep_cache->prepared_geom && prep_cache->argnum == 1 )
-	{
-		GEOSGeom g = POSTGIS2GEOS(geom2);
-		POSTGIS_DEBUG(4, "containsPrepared: cache is live, running preparedcontains");
-		result = GEOSPreparedContains( prep_cache->prepared_geom, g);
-		GEOSGeom_destroy(g);
-	}
-	else
-	{
-		GEOSGeom g1 = POSTGIS2GEOS(geom1);
-		GEOSGeom g2 = POSTGIS2GEOS(geom2);
-		POSTGIS_DEBUG(4, "containsPrepared: cache is not ready, running standard contains");
-		result = GEOSContains( g1, g2);
-		GEOSGeom_destroy(g1);
-		GEOSGeom_destroy(g2);
-	}
-
-	if (result == 2)
-	{
-		elog(ERROR,"GEOS contains() threw an error!");
-		PG_RETURN_NULL(); /* never get here */
-	}
-
-	PG_FREE_IF_COPY(geom1, 0);
-	PG_FREE_IF_COPY(geom2, 1);
-
-	PG_RETURN_BOOL(result);
-#endif /* PREPARED_GEOM */
-}
-
-
-/*
-** No longer directly called. Left as example for now.
-** Functionality directly embedded in covers()
-*/
-PG_FUNCTION_INFO_V1(coversPrepared);
-Datum coversPrepared(PG_FUNCTION_ARGS)
-{
-#ifndef PREPARED_GEOM
-	elog(ERROR,"Not implemented in this version!");
-	PG_RETURN_NULL(); /* never get here */
-#else
-	PG_LWGEOM *				geom1;
-	PG_LWGEOM *				geom2;
-	bool 					result;
-	BOX2DFLOAT4 			box1, box2;
-	PrepGeomCache *	prep_cache;
-	int32					key1;
-
-	geom1 = (PG_LWGEOM *)  PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	geom2 = (PG_LWGEOM *)  PG_DETOAST_DATUM(PG_GETARG_DATUM(1));
-	key1 = PG_GETARG_INT32(2);
-
-	errorIfGeometryCollection(geom1,geom2);
-	errorIfSRIDMismatch(pglwgeom_getSRID(geom1), pglwgeom_getSRID(geom2));
-
-	/*
-	* short-circuit: if geom2 bounding box is not completely inside
-	* geom1 bounding box we can prematurely return FALSE.
-	* Do the test IFF BOUNDING BOX AVAILABLE.
-	*/
-	if ( getbox2d_p(SERIALIZED_FORM(geom1), &box1) &&
-	        getbox2d_p(SERIALIZED_FORM(geom2), &box2) )
-	{
-		if (( box2.xmin < box1.xmin ) || ( box2.xmax > box1.xmax ) ||
-		        ( box2.ymin < box1.ymin ) || ( box2.ymax > box1.ymax ))
-			PG_RETURN_BOOL(FALSE);
-	}
-
-	prep_cache = GetPrepGeomCache( fcinfo, geom1, 0 );
-
-	initGEOS(lwnotice, lwnotice);
-
-	if ( prep_cache && prep_cache->prepared_geom && prep_cache->argnum == 1 )
-	{
-		GEOSGeom g = POSTGIS2GEOS(geom2);
-		result = GEOSPreparedCovers( prep_cache->prepared_geom, g);
-		GEOSGeom_destroy(g);
-	}
-	else
-	{
-		GEOSGeom g1 = POSTGIS2GEOS(geom1);
-		GEOSGeom g2 = POSTGIS2GEOS(geom2);
-		result = GEOSRelatePattern( g1, g2, "******FF*" );
-		GEOSGeom_destroy(g1);
-		GEOSGeom_destroy(g2);
-	}
-
-	if (result == 2)
-	{
-		elog(ERROR,"GEOS contains() threw an error!");
-		PG_RETURN_NULL(); /* never get here */
-	}
-
-	PG_FREE_IF_COPY(geom1, 0);
-	PG_FREE_IF_COPY(geom2, 1);
-
-	PG_RETURN_BOOL(result);
-#endif /* PREPARED_GEOM */
-}
-
-
-/*
-** No longer directly called. Left as example for now.
-** Functionality directly embedded in intersects()
-*/
-PG_FUNCTION_INFO_V1(intersectsPrepared);
-Datum intersectsPrepared(PG_FUNCTION_ARGS)
-{
-#ifndef PREPARED_GEOM
-	elog(ERROR,"Not implemented in this version!");
-	PG_RETURN_NULL(); /* never get here */
-#else
-	PG_LWGEOM *				geom1;
-	PG_LWGEOM *				geom2;
-	bool 					result;
-	BOX2DFLOAT4 			box1, box2;
-	PrepGeomCache *	prep_cache;
-	int32					key1, key2;
-
-	geom1 = (PG_LWGEOM *)  PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
-	geom2 = (PG_LWGEOM *)  PG_DETOAST_DATUM(PG_GETARG_DATUM(1));
-	key1 = PG_GETARG_INT32(2);
-	key2 = PG_GETARG_INT32(3);
-
-	errorIfGeometryCollection(geom1,geom2);
-	errorIfSRIDMismatch(pglwgeom_getSRID(geom1), pglwgeom_getSRID(geom2));
-
-	/*
-	* short-circuit 1: if geom2 bounding box does not overlap
-	* geom1 bounding box we can prematurely return FALSE.
-	* Do the test IFF BOUNDING BOX AVAILABLE.
-	*/
-	if ( getbox2d_p(SERIALIZED_FORM(geom1), &box1) &&
-	        getbox2d_p(SERIALIZED_FORM(geom2), &box2) )
-	{
-		if (( box2.xmax < box1.xmin ) || ( box2.xmin > box1.xmax ) ||
-		        ( box2.ymax < box1.ymin ) || ( box2.ymin > box1.ymax ))
-			PG_RETURN_BOOL(FALSE);
-	}
-
-	prep_cache = GetPrepGeomCache( fcinfo, geom1, geom2 );
-
-	initGEOS(lwnotice, lwnotice);
-
-	if ( prep_cache && prep_cache->prepared_geom )
-	{
-		if ( prep_cache->argnum == 1 )
-		{
-			GEOSGeom g = POSTGIS2GEOS(geom2);
-			result = GEOSPreparedIntersects( prep_cache->prepared_geom, g);
-			GEOSGeom_destroy(g);
-		}
-		else
-		{
-			GEOSGeom g = POSTGIS2GEOS(geom1);
-			result = GEOSPreparedIntersects( prep_cache->prepared_geom, g);
-			GEOSGeom_destroy(g);
-		}
-	}
-	else
-	{
-		GEOSGeom g1 = POSTGIS2GEOS(geom1);
-		GEOSGeom g2 = POSTGIS2GEOS(geom2);
-		result = GEOSIntersects( g1, g2);
-		GEOSGeom_destroy(g1);
-		GEOSGeom_destroy(g2);
-	}
-
-	if (result == 2)
-	{
-		elog(ERROR,"GEOS contains() threw an error!");
-		PG_RETURN_NULL(); /* never get here */
-	}
-
-	PG_FREE_IF_COPY(geom1, 0);
-	PG_FREE_IF_COPY(geom2, 1);
-
-	PG_RETURN_BOOL(result);
-#endif /* PREPARED_GEOM */
-}
-#endif /* 0 */
 

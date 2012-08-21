@@ -21,7 +21,7 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: TestParser.java 2340 2006-05-03 08:30:25Z mschaber $
+ * $Id: TestParser.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package examples;

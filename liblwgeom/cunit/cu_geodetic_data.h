@@ -1,10 +1,22 @@
+/**********************************************************************
+ * $Id: cu_geodetic_data.h 9324 2012-02-27 22:08:12Z pramsey $
+ *
+ * PostGIS - Spatial Types for PostgreSQL
+ * http://postgis.refractions.net
+ * Copyright 2008 Paul Ramsey <pramsey@cleverelephant.ca>
+ *
+ * This is free software; you can redistribute and/or modify it under
+ * the terms of the GNU General Public Licence. See the COPYING file.
+ *
+ **********************************************************************/
+
 int gbox_data_length = 55;
 char gbox_data[][512] =
 {
 	"LINESTRING(-0 40,0 -30)",
 	"LINESTRING(-180 90,180 -80)",
-	"LINESTRING(-0 90,0 -90)",
-	"LINESTRING(0 90,80 -90)",
+	"LINESTRING(-0 90,0 -89)",
+	"LINESTRING(0 90,80 -89)",
 	"LINESTRING(0 -5,0 -5)",
 	"LINESTRING(180 -35,180 45)",
 	"LINESTRING(158 -85,-57 86)",
@@ -15,7 +27,7 @@ char gbox_data[][512] =
 	"LINESTRING(-3.083333333333333333333333333333333 9.83333333333333333333333333333333,15.5 -5.25)",
 	"LINESTRING(86.85 9.85,105.5 -5.25)",
 	"LINESTRING(-120.0 62.55,-120.0 62.55)",
-	"LINESTRING(-135.0 40.0,45.0 -40.0)",
+	"LINESTRING(-135.0 40.0,45.0 -39.0)",
 	"LINESTRING(-120.0 62.55,60.0 73.25)",
 	"LINESTRING(-120.0 -62.55,60.0 -73.25)",
 	"LINESTRING(-120.0 20.0,-120.5 20.0)",
@@ -55,6 +67,6 @@ char gbox_data[][512] =
 	"LINESTRING(-77.90029319006709 -20.61989357708765,-29.776541043747443 88.24497900223159)",
 	"LINESTRING(12.21419896647646 -2.2758177391540926,149.7713684095024 13.210117902931728)",
 	"LINESTRING(-49.891199414628915 66.72545480471234,-39.418865490450656 -89.97504625275525)",
-	"POLYGON((-40.0 52.0, 102.0 -6.0, -67.0 -29.0, -40.0 52.0))",
+	"POLYGON((-40.0 52.0, 102.0 -6.0, -67.0 -29.0, -40.0 52.0))"
 };
 

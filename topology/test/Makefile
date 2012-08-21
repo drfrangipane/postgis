@@ -1,80 +1,70 @@
 DATABASE=postgis_topo_regress
 
+PSQL=psql
+
 all: 
-	@echo
-	@echo "make test - create the database, run all tests except sqlmm"
-	@echo
-	@echo "make initdb - create the regress database"
-	@echo "make inittopo - create topology routines"
-	@echo
-	@echo "make load - load 'city_data' topology and feature tables"
-	@echo "make loadmore - define more TopoGeoms from the topology"
-	@echo "make validate - validate 'city_data' loaded topology"
-	@echo 
-	@echo "make hier - define some hierarchical TopoGeoms"
-	@echo 
-	@echo "make edit - test sqlmm editing functions"
-	@echo
-	@echo "make cache - create geom caches for features tables"
-	@echo "make topopred - run predicates on topogeoms"
-	@echo "make geompred - run predicates on geometries"
-	@echo
-	@echo "make invalid - create an invalid topology, and validate it"
-	@echo "make sqlmm - test SQL/MM functions (exceptions are expected)"
-	@echo
+	@echo "Use 'make check' to run all tests"
 
-pred:
-	@make geompred | grep -v make > /tmp/geompred.out
-	@make topopred | grep -v make > /tmp/topopred.out
-	@diff /tmp/geompred.out /tmp/topopred.out
-	@diff /tmp/geompred.out predicate.expected
+# TODO: make edit_topology.sql into a proper test
+edit:
+	$(PSQL) -X -f edit_topology.sql $(DATABASE)
 
-test: inittopo load loadmore hier cache pred invalid edit
-
-initdb:
-	createdb $(DATABASE)
-	createlang plpgsql $(DATABASE)
-	psql -f ../../lwpostgis.sql $(DATABASE)
-
-inittopo:
-	psql -f ../topology.sql $(DATABASE)
-
-load: 
-	psql -f load_topology.sql $(DATABASE)
-
-loadmore:
-	psql -f more_features.sql $(DATABASE)
-
-hier:
-	psql -f hierarchy.sql $(DATABASE)
-
-validate: 
-	psql -f validate_topology.sql $(DATABASE)
-
-cache:
-	psql -f cache_geometries.sql $(DATABASE)
-
-invalid: 
-	psql -f invalid_topology.sql $(DATABASE)
-
-sqlmm:
-	psql -f sqlmm_topology.sql $(DATABASE)
-
-topopred: topo_predicates.sql
-	@psql -tf topo_predicates.sql $(DATABASE)
-
-geompred: geom_predicates.sql 
-	@psql -tf geom_predicates.sql $(DATABASE)
 
 topo_predicates.sql: predicates.sql.in
-	@cpp -P -traditional-cpp predicates.sql.in | sed -e 's:@COLUMN@:feature:g;s:@SCHEMA@:topology.:g' > topo_predicates.sql
+	cpp -P -traditional-cpp predicates.sql.in | sed -e 's:@COLUMN@:feature:g;s:@SCHEMA@:topology.:g' > topo_predicates.sql
 
-geom_predicates.sql: predicates.sql.in
-	@cpp -P -traditional-cpp predicates.sql.in | sed -e 's:@COLUMN@:the_geom:g;s:@SCHEMA@::g' > geom_predicates.sql
+load_topology.sql: load_topology.sql.in
+	@cpp -P -traditional-cpp load_topology.sql.in | sed -e 's:@SRID@:-1:g' > load_topology.sql
 
-edit:
-	psql -f edit_topology.sql $(DATABASE)
+load_topology-4326.sql: load_topology.sql.in
+	@cpp -P -traditional-cpp load_topology.sql.in | sed -e 's:@SRID@:4326:g' > load_topology-4326.sql
 
 clean distclean:
-	rm -f geom_predicates.sql topo_predicates.sql
-	-dropdb $(DATABASE)
+	rm -f topo_predicates.sql load_topology.sql load_topology-4326.sql
+
+TESTS = regress/legacy_validate.sql regress/legacy_predicate.sql \
+	regress/legacy_invalid.sql regress/sqlmm.sql \
+	regress/legacy_query.sql regress/addnode.sql \
+	regress/addedge.sql regress/addface.sql \
+	regress/addface2.5d.sql \
+	regress/addtopogeometrycolumn.sql \
+	regress/polygonize.sql \
+	regress/st_addisoedge.sql \
+	regress/st_addisonode.sql \
+	regress/st_addedgemodface.sql \
+	regress/st_addedgenewfaces.sql \
+	regress/st_changeedgegeom.sql \
+	regress/st_createtopogeo.sql \
+	regress/st_getfacegeometry.sql \
+	regress/st_getfaceedges.sql \
+	regress/st_modedgeheal.sql \
+	regress/st_modedgesplit.sql \
+	regress/st_newedgeheal.sql \
+	regress/st_newedgessplit.sql \
+	regress/st_remedgenewface.sql \
+	regress/st_remedgemodface.sql \
+	regress/topoelement.sql \
+	regress/topoelementarray_agg.sql \
+	regress/topogeo_addlinestring \
+	regress/topogeo_addpoint.sql \
+	regress/topogeo_addpolygon.sql \
+	regress/topogeometry_type.sql \
+	regress/topo2.5d.sql \
+	regress/totopogeom.sql \
+	regress/droptopology.sql \
+	regress/copytopology.sql \
+	regress/createtopogeom.sql \
+	regress/createtopology.sql \
+	regress/gml.sql \
+	regress/getnodebypoint.sql \
+	regress/getedgebypoint.sql \
+	regress/getfacebypoint.sql \
+	regress/getringedges.sql \
+	regress/gettopogeomelements.sql \
+	regress/layertrigger.sql \
+	regress/validatetopology.sql
+
+check: topo_predicates.sql load_topology.sql load_topology-4326.sql
+	$(MAKE) -C ../../regress staged-install
+	../../regress/run_test --topology $(RUNTESTFLAGS) $(TESTS)
+	../../regress/run_test --upgrade --topology $(RUNTESTFLAGS) $(TESTS)

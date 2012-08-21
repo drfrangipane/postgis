@@ -21,7 +21,7 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsTestParser.java 2557 2006-12-18 14:12:20Z mschaber $
+ * $Id: JtsTestParser.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package examples;

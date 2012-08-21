@@ -20,7 +20,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: JtsWrapper.java 2570 2007-01-08 10:48:31Z mschaber $
+ * $Id: JtsWrapper.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 
 package org.postgis.jts;
@@ -61,7 +61,7 @@ public class JtsWrapper extends Driver {
 
     private static final String POSTGRES_PROTOCOL = "jdbc:postgresql:";
     private static final String POSTGIS_PROTOCOL = "jdbc:postgres_jts:";
-    public static final String REVISION = "$Revision: 2570 $";
+    public static final String REVISION = "$Revision: 9324 $";
 
     public JtsWrapper() {
         super();

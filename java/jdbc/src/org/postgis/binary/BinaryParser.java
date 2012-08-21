@@ -19,7 +19,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or visit the web at
  * http://www.gnu.org.
  * 
- * $Id: BinaryParser.java 1622 2005-04-15 14:04:34Z mschaber $
+ * $Id: BinaryParser.java 9324 2012-02-27 22:08:12Z pramsey $
  */
 package org.postgis.binary;
 
@@ -104,10 +104,10 @@ public class BinaryParser {
         boolean haveM = (typeword & 0x40000000) != 0;
         boolean haveS = (typeword & 0x20000000) != 0;
 
-        int srid = -1;
+        int srid = Geometry.UNKNOWN_SRID;
 
         if (haveS) {
-            srid = data.getInt();
+            srid = Geometry.parseSRID(data.getInt());
         }
         Geometry result1;
         switch (realtype) {
@@ -138,7 +138,7 @@ public class BinaryParser {
 
         Geometry result = result1;
 
-        if (haveS) {
+        if (srid != Geometry.UNKNOWN_SRID) {
             result.setSrid(srid);
         }
         return result;

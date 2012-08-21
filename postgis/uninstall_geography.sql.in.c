@@ -1,6 +1,6 @@
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- 
--- $Id: uninstall_geography.sql.in.c 4942 2009-11-30 19:56:27Z pramsey $
+-- $Id: uninstall_geography.sql.in.c 9324 2012-02-27 22:08:12Z pramsey $
 --
 -- PostGIS - Spatial Types for PostgreSQL
 -- http://postgis.org/
@@ -15,8 +15,8 @@
 DROP VIEW geography_columns; 
 
 -- indexes
-DROP OPERATOR CLASS gist_geography_ops USING gist CASCADE;
-DROP OPERATOR CLASS btree_geography_ops USING btree CASCADE;
+DROP OPERATOR FAMILY gist_geography_ops USING gist CASCADE;
+DROP OPERATOR FAMILY btree_geography_ops USING btree CASCADE;
 
 -- r-tree operator
 DROP OPERATOR && (geography,geography);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"  xmlns:pgis="http://postgis.refractions.net/pgis">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"  xmlns:pgis="http://www.postgis.org/pgis">
 <!-- ********************************************************************
- * $Id: postgis_gardentest_subset.sql.xsl 4866 2009-11-19 22:35:17Z colivier $
+ * $Id: postgis_gardentest_subset.sql.xsl 6790 2011-02-09 12:54:23Z robe $
  ********************************************************************
 	 Copyright 2009, Regina Obe
 	 License: BSD
@@ -74,6 +74,13 @@
 			CROSS JOIN generate_series(50,70, 20) As j
 			CROSS JOIN generate_series(1,2) As m
 			ORDER BY i, j, i+j+m, m, i*j*m)</pgis:gset>
+			
+		<pgis:gset ID='PolyhedralSurface' GeometryType='PolyhedralSurface'>(SELECT ST_GeomFromEWKT(
+'SRID=0;PolyhedralSurface( 
+((0 0 0, 0 0 1, 0 1 1, 0 1 0, 0 0 0)),  
+((0 0 0, 0 1 0, 1 1 0, 1 0 0, 0 0 0)), ((0 0 0, 1 0 0, 1 0 1, 0 0 1, 0 0 0)),  ((1 1 0, 1 1 1, 1 0 1, 1 0 0, 1 1 0)),  
+((0 1 0, 0 1 1, 1 1 1, 1 1 0, 0 1 0)),  ((0 0 1, 1 0 1, 1 1 1, 0 1 1, 0 0 1)) 
+)') )</pgis:gset>
 
 		<pgis:gset ID='GCSet3D' GeometryType='GEOMETRYCOLLECTIONZ' SkipUnary='1'>(SELECT ST_Collect(ST_Collect(ST_SetSRID(ST_MakePoint(i,j,m),4326),ST_SetSRID(ST_MakePolygon(ST_AddPoint(ST_AddPoint(ST_MakeLine(ST_MakePoint(i+m,j,m),ST_MakePoint(j+m,i-m,m)),ST_MakePoint(i,j,m)),ST_MakePointM(i+m,j,m))),4326)))  As the_geom
 		FROM (SELECT a*1.01234567890 FROM generate_series(-10,50,10) As a) As i(i)
@@ -172,7 +179,7 @@
 		<xsl:sort select="@id"/>
 
 			<xsl:for-each select="refsynopsisdiv/funcsynopsis/funcprototype">
-<!--Create dummy paramaters to be used later -->
+<!--Create dummy parameters to be used later -->
 				<xsl:variable name='fnfakeparams'><xsl:call-template name="replaceparams"><xsl:with-param name="func" select="." /></xsl:call-template></xsl:variable>
 				<xsl:variable name='fnargs'><xsl:call-template name="listparams"><xsl:with-param name="func" select="." /></xsl:call-template></xsl:variable>
 				<xsl:variable name='fnname'><xsl:value-of select="funcdef/function"/></xsl:variable>
