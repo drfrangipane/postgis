@@ -45,7 +45,6 @@ build-arch-stamp:
 clean: 
 	dh_testdir
 	dh_testroot
-	[ -f doc/html/postgis.html.prev ] && mv doc/html/postgis.html.prev doc/html/postgis.html || true
 	[ ! -f GNUmakefile ] || $(MAKE) distclean || true
 	dh_clean 
 
@@ -55,9 +54,7 @@ install-arch: build-arch
 	dh_testroot
 	dh_prep -s 
 	dh_installdirs -s
-	# Documentation and common files for PostGIS
-	[ ! -f doc/html/postgis.html.prev ] && cp doc/html/postgis.html doc/html/postgis.html.prev || true
-	
+
 	# PostGIS for PostgreSQL 9.1
 	./configure \
 		--host=$(DEB_HOST_GNU_TYPE) \
@@ -73,12 +70,8 @@ install-arch: build-arch
 		--with-raster \
 		--with-topology
 	$(MAKE)
-	$(MAKE) -C doc
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-9.1-postgis
-	$(MAKE) -C doc install \
-			PGSQL_DOCDIR=$(CURDIR)/debian/postgis/usr/share/doc/postgis \
-			PGSQL_MANDIR=$(CURDIR)/debian/postgis/usr/share/man \
-			PGSQL_SHAREDIR=$(CURDIR)/debian/postgis/usr/share/postgresql/9.1
+	$(MAKE) -C doc man-install DESTDIR=$(CURDIR)/debian/postgis PGSQL_MANDIR=/usr/share/man
 	install -o root -g root -d $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib
 	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
 	   $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib/.
