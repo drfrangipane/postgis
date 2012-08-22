@@ -71,8 +71,7 @@ install-arch: build-arch
 		--infodir=\$${prefix}/share/info \
 		--with-pgconfig=/usr/lib/postgresql/9.1/bin/pg_config \
 		--with-raster \
-		--with-topology \
-		--with-gui
+		--with-topology
 	$(MAKE)
 	$(MAKE) -C doc
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-9.1-postgis
