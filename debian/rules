@@ -72,10 +72,10 @@ install-arch: build-arch
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/postgresql-9.1-postgis
 	$(MAKE) -C doc man-install DESTDIR=$(CURDIR)/debian/postgis PGSQL_MANDIR=/usr/share/man
-	install -o root -g root -d $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib
-	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
-	   $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib/.
-	mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/bin $(CURDIR)/debian/postgis/usr/
+	# install -o root -g root -d $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib
+	# mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/lib/postgis-$(MAJOR_VERSION).$(MINOR_VERSION).so \
+	#    $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgis/$(VERSION)/postgres/9.1/lib/.
+	# mv $(CURDIR)/debian/postgresql-9.1-postgis/usr/lib/postgresql/9.1/bin $(CURDIR)/debian/postgis/usr/
 
 	dh_install -s
 	
